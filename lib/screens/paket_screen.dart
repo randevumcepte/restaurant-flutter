@@ -16,6 +16,8 @@ class _PaketScreenState extends State<PaketScreen> {
   bool loading = true;
   final _f = NumberFormat.decimalPattern('tr');
 
+  num _n(dynamic v) => v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0);
+
   @override
   void initState() {
     super.initState();
@@ -114,7 +116,7 @@ class _PaketScreenState extends State<PaketScreen> {
                                   ],
                                 ),
                               ),
-                              Text('${_f.format((s['toplam'] as num? ?? 0).round())} ₺',
+                              Text('${_f.format(_n(s['toplam']).round())} ₺',
                                   style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
                             ],
                           ),

@@ -16,6 +16,8 @@ class _MasalarScreenState extends State<MasalarScreen> {
   bool loading = true;
   final _f = NumberFormat.decimalPattern('tr');
 
+  num _n(dynamic v) => v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0);
+
   @override
   void initState() {
     super.initState();
@@ -116,10 +118,10 @@ class _MasalarScreenState extends State<MasalarScreen> {
                                     style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
                                 Text('${m['kapasite']} kişi',
                                     style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8))),
-                                if ((m['tutar'] as num? ?? 0) > 0)
+                                if (_n(m['tutar']) > 0)
                                   Padding(
                                     padding: const EdgeInsets.only(top: 4),
-                                    child: Text('${_f.format((m['tutar'] as num).round())} ₺',
+                                    child: Text('${_f.format(_n(m['tutar']).round())} ₺',
                                         style: const TextStyle(
                                             fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5))),
                                   )
