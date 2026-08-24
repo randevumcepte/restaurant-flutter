@@ -104,6 +104,10 @@ class _DetayScreenState extends State<DetayScreen> {
         return _kayip();
       case 'acik':
         return _acik();
+      case 'maliyet':
+        return _maliyet();
+      case 'kapali':
+        return _kapali();
       default:
         return [const Text('—', style: TextStyle(color: Colors.white))];
     }
@@ -257,6 +261,108 @@ class _DetayScreenState extends State<DetayScreen> {
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(k['garson'].toString(), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
                     Text('${k['kalem']} ürün · ${k['misafir']} kişi · ${k['sure_dk']} dk', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
+                  ]),
+                ),
+                Text(_tam(_n(k['tutar'])), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+              ]),
+            ),
+      ]),
+    ];
+  }
+
+  // ---------------- FOOD-COST (MALIYET) ----------------
+  List<Widget> _maliyet() {
+    final urunler = (d!['urunler'] as List?) ?? [];
+    final yuzde = _n(d!['maliyetYuzde']).toInt();
+    final renk = yuzde >= 35 ? _kirmizi : (yuzde >= 25 ? const Color(0xFFF59E0B) : _yesil);
+    return [
+      _ozetSerit('${_tam(_n(d!['toplamMaliyet']))}  ·  %$yuzde', 'toplam food-cost', renk),
+      const SizedBox(height: 12),
+      Row(children: [
+        Expanded(child: _statKart('Satış', _tam(_n(d!['toplamSatis'])))),
+        const SizedBox(width: 10),
+        Expanded(child: _statKart('Brüt Kâr', _tam(_n(d!['brutKar'])))),
+      ]),
+      const SizedBox(height: 14),
+      _kutu('🧾 Ürün Bazında Maliyet (yüksekten)', [
+        if (urunler.isEmpty)
+          const Text('Bu dönemde satış yok.', style: TextStyle(color: Color(0xFF64748B), fontSize: 12))
+        else
+          for (final u in urunler) _maliyetSatir(u as Map),
+      ]),
+    ];
+  }
+
+  Widget _maliyetSatir(Map u) {
+    final y = _n(u['yuzde']).toInt();
+    final renk = y >= 35 ? _kirmizi : (y >= 25 ? const Color(0xFFF59E0B) : _yesil);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(children: [
+        Container(
+          width: 40, padding: const EdgeInsets.symmetric(vertical: 2),
+          decoration: BoxDecoration(color: const Color(0xFF243049), borderRadius: BorderRadius.circular(6)),
+          child: Text('${_n(u['adet']).toInt()}×', textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11, fontWeight: FontWeight.bold)),
+        ),
+        const SizedBox(width: 10),
+        Expanded(child: Text(u['ad'].toString(), overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 13))),
+        const SizedBox(width: 8),
+        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          Text(_tam(_n(u['maliyet'])), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+          Text('satış ${_k(_n(u['satis']))}', style: const TextStyle(color: Color(0xFF64748B), fontSize: 9)),
+        ]),
+        const SizedBox(width: 8),
+        Container(
+          width: 38, padding: const EdgeInsets.symmetric(vertical: 3),
+          decoration: BoxDecoration(color: renk.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(6)),
+          child: Text('%$y', textAlign: TextAlign.center, style: TextStyle(color: renk, fontSize: 10, fontWeight: FontWeight.bold)),
+        ),
+      ]),
+    );
+  }
+
+  // ---------------- KAPANAN ADISYON ----------------
+  List<Widget> _kapali() {
+    final kayitlar = (d!['kayitlar'] as List?) ?? [];
+    final odeme = (d!['odemeDagilim'] as List?) ?? [];
+    return [
+      _ozetSerit(_tam(_n(d!['toplam'])), '${_n(d!['adet']).toInt()} kapanan adisyon', _yesil),
+      const SizedBox(height: 14),
+      if (odeme.isNotEmpty) ...[
+        _kutu('💳 Ödeme Dağılımı', [
+          for (final o in odeme)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 5),
+              child: Row(children: [
+                Expanded(child: Text((o as Map)['tip'].toString().toUpperCase(), style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 13))),
+                Text('${_n(o['adet']).toInt()} işlem', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                const SizedBox(width: 12),
+                Text(_k(_n(o['tutar'])), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+              ]),
+            ),
+        ]),
+        const SizedBox(height: 14),
+      ],
+      _kutu('Kapanan Adisyonlar', [
+        if (kayitlar.isEmpty)
+          const Text('Bu dönemde kapanan adisyon yok.', style: TextStyle(color: Color(0xFF64748B), fontSize: 12))
+        else
+          for (final k in kayitlar)
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(color: const Color(0xFF1E263B), borderRadius: BorderRadius.circular(12)),
+              child: Row(children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(color: _yesil.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(8)),
+                  child: Text((k as Map)['masa'].toString(), style: const TextStyle(color: Color(0xFF6EE7B7), fontSize: 12, fontWeight: FontWeight.bold)),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(k['garson'].toString(), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                    Text('${k['misafir']} kişi · ${k['zaman']}', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
                   ]),
                 ),
                 Text(_tam(_n(k['tutar'])), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),

@@ -211,10 +211,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
           const SizedBox(width: 10),
-          Expanded(child: _folioKart('Kapanan', _k(_n(d['kapaliTutar'])), '${d['kapaliAdet'] ?? 0} folyo', _yesil, true)),
+          Expanded(
+            child: GestureDetector(
+              onTap: () => _detayAc(tip: 'kapali', baslik: 'Kapanan Adisyonlar'),
+              child: _folioKart('Kapanan', _k(_n(d['kapaliTutar'])), '${d['kapaliAdet'] ?? 0} folyo ›', _yesil, true),
+            ),
+          ),
         ]),
         const SizedBox(height: 10),
-        _maliyetKart(maliyet, maliyetYuzde, ciro),
+        GestureDetector(
+          onTap: () => _detayAc(tip: 'maliyet', baslik: 'Food-Cost'),
+          child: _maliyetKart(maliyet, maliyetYuzde, ciro),
+        ),
         const SizedBox(height: 14),
 
         // KAYIP RADARI
@@ -233,7 +241,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             _kayipTap('silinen', _kayipKart('Silinen Ürün', kayip['silinen'], Icons.remove_circle_outline)),
             _kayipTap('iptal', _kayipKart('İptal Adisyon', kayip['iptal'], Icons.delete_outline)),
             _kayipTap('fire', _kayipKart('Fire / Zayi', kayip['fire'], Icons.delete_sweep_outlined)),
-            _kayipKart('Ödenmez', kayip['odenmez'], Icons.money_off),
+            _kayipTap('odenmez', _kayipKart('Ödenmez', kayip['odenmez'], Icons.money_off)),
           ],
         ),
         const SizedBox(height: 14),
