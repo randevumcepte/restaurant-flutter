@@ -14,9 +14,9 @@ class Api {
     return jsonDecode(r.body) as Map<String, dynamic>;
   }
 
-  static Future<Map<String, dynamic>> patronOzet(String token) async {
+  static Future<Map<String, dynamic>> _get(String path, String token) async {
     final r = await http.get(
-      Uri.parse('$base/api/patron/ozet'),
+      Uri.parse('$base$path'),
       headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
     );
     if (r.statusCode == 401) {
@@ -24,6 +24,11 @@ class Api {
     }
     return jsonDecode(r.body) as Map<String, dynamic>;
   }
+
+  static Future<Map<String, dynamic>> patronOzet(String token) => _get('/api/patron/ozet', token);
+  static Future<Map<String, dynamic>> masalar(String token) => _get('/api/masalar', token);
+  static Future<Map<String, dynamic>> paket(String token) => _get('/api/paket', token);
+  static Future<Map<String, dynamic>> raporlar(String token) => _get('/api/raporlar', token);
 }
 
 class ApiYetkiHatasi implements Exception {}

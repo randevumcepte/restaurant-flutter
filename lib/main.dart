@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'screens/login_screen.dart';
-import 'screens/dashboard_screen.dart';
+import 'screens/home_screen.dart';
 
 void main() {
   runApp(
@@ -28,7 +28,7 @@ class RestoOsApp extends StatelessWidget {
       ),
       home: Consumer<AuthProvider>(
         builder: (context, auth, child) =>
-            auth.girisli ? const DashboardScreen() : const LoginScreen(),
+            auth.girisli ? const HomeScreen() : const LoginScreen(),
       ),
     );
   }
