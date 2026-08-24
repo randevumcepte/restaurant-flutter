@@ -25,7 +25,8 @@ class Api {
     return jsonDecode(r.body) as Map<String, dynamic>;
   }
 
-  static Future<Map<String, dynamic>> patronOzet(String token) => _get('/api/patron/ozet', token);
+  static Future<Map<String, dynamic>> patronOzet(String token, {String period = 'gunluk'}) =>
+      _get('/api/patron/ozet?period=$period', token);
   static Future<Map<String, dynamic>> masalar(String token) => _get('/api/masalar', token);
   static Future<Map<String, dynamic>> paket(String token) => _get('/api/paket', token);
   static Future<Map<String, dynamic>> raporlar(String token) => _get('/api/raporlar', token);
