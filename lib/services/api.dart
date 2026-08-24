@@ -27,6 +27,10 @@ class Api {
 
   static Future<Map<String, dynamic>> patronOzet(String token, {String period = 'gunluk'}) =>
       _get('/api/patron/ozet?period=$period', token);
+  static Future<Map<String, dynamic>> detay(String token,
+          {required String tip, int? id, String? alt, String period = 'haftalik'}) =>
+      _get('/api/patron/detay?tip=$tip&period=$period${id != null ? '&id=$id' : ''}${alt != null ? '&alt=$alt' : ''}', token);
+
   static Future<Map<String, dynamic>> masalar(String token) => _get('/api/masalar', token);
   static Future<Map<String, dynamic>> paket(String token) => _get('/api/paket', token);
   static Future<Map<String, dynamic>> raporlar(String token) => _get('/api/raporlar', token);

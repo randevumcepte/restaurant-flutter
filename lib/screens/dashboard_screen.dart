@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
 import '../services/api.dart';
+import 'detay_screen.dart';
 
 /// Patron ana paneli — Kerzz BOSS yogunlugunda: tek ekranda her sey.
 /// Donem secici + karsilastirma + kayip radari + food-cost + odeme/servis dagilimi + 10 gunluk grafik.
@@ -95,6 +96,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
     setState(() => period = p);
     _yukle();
   }
+
+  // Drill-down: kart tiklaninca detay ekranini ac
+  void _detayAc({required String tip, int? id, String? alt, String baslik = 'Detay'}) {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => DetayScreen(tip: tip, id: id, alt: alt, period: period, baslikFallback: baslik),
+    ));
+  }
+
+  Widget _kayipTap(String alt, Widget child) => GestureDetector(
+        onTap: () => _detayAc(tip: 'kayip', alt: alt, baslik: 'Kayıp Detayı'),
+        child: child,
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -191,7 +204,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
         // Acik / Kapali folio + Maliyet
         Row(children: [
-          Expanded(child: _folioKart('Açık Adisyon', _tam(_n(d['acikTutar'])), '${d['acikAdet'] ?? 0} folyo', _mavi, false)),
+          Expanded(
+            child: GestureDetector(
+              onTap: () => _detayAc(tip: 'acik', baslik: 'Açık Adisyonlar'),
+              child: _folioKart('Açık Adisyon', _tam(_n(d['acikTutar'])), '${d['acikAdet'] ?? 0} folyo ›', _mavi, false),
+            ),
+          ),
           const SizedBox(width: 10),
           Expanded(child: _folioKart('Kapanan', _k(_n(d['kapaliTutar'])), '${d['kapaliAdet'] ?? 0} folyo', _yesil, true)),
         ]),
@@ -210,11 +228,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           mainAxisSpacing: 10,
           crossAxisSpacing: 10,
           children: [
-            _kayipKart('İskonto', kayip['iskonto'], Icons.local_offer_outlined),
-            _kayipKart('İkram', kayip['ikram'], Icons.card_giftcard),
-            _kayipKart('Silinen Ürün', kayip['silinen'], Icons.remove_circle_outline),
-            _kayipKart('İptal Adisyon', kayip['iptal'], Icons.delete_outline),
-            _kayipKart('Fire / Zayi', kayip['fire'], Icons.delete_sweep_outlined),
+            _kayipTap('iskonto', _kayipKart('İskonto', kayip['iskonto'], Icons.local_offer_outlined)),
+            _kayipTap('ikram', _kayipKart('İkram', kayip['ikram'], Icons.card_giftcard)),
+            _kayipTap('silinen', _kayipKart('Silinen Ürün', kayip['silinen'], Icons.remove_circle_outline)),
+            _kayipTap('iptal', _kayipKart('İptal Adisyon', kayip['iptal'], Icons.delete_outline)),
+            _kayipTap('fire', _kayipKart('Fire / Zayi', kayip['fire'], Icons.delete_sweep_outlined)),
             _kayipKart('Ödenmez', kayip['odenmez'], Icons.money_off),
           ],
         ),
@@ -552,7 +570,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         if (urunler.isEmpty)
           const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Text('Bu dönemde satış yok.', style: TextStyle(color: Color(0xFF64748B))))
         else
-          for (final u in urunler.take(15)) _urunSatir(u as Map),
+          for (final u in urunler.take(15))
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _detayAc(tip: 'urun', id: _n((u as Map)['urun_id']).toInt(), baslik: u['ad'].toString()),
+              child: _urunSatir(u),
+            ),
       ]),
     );
   }
