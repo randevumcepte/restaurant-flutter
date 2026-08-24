@@ -17,7 +17,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Map<String, dynamic>? data;
   bool loading = true;
   String? hata;
-  String period = 'gunluk';
+  String period = 'haftalik';
   final _f = NumberFormat.decimalPattern('tr');
 
   static const _bg = Color(0xFF0B1020); // koyu lacivert zemin (Kerzz BOSS gibi)
@@ -45,6 +45,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   String _tam(num v) => '₺${_f.format(v.round())}';
+
+  // Sayarak artan sayi (donem degisince sifirdan yukselir). key=period -> her degisimde yeniden animasyon.
+  Widget _sayiAnim(num deger, TextStyle style, {String Function(num)? bicim}) {
+    final f = bicim ?? _tam;
+    return TweenAnimationBuilder<double>(
+      key: ValueKey('n-$period-${deger.round()}'),
+      tween: Tween(begin: 0, end: deger.toDouble()),
+      duration: const Duration(milliseconds: 850),
+      curve: Curves.easeOutCubic,
+      builder: (_, v, child) => Text(f(v), style: style),
+    );
+  }
 
   Future<void> _yukle() async {
     final auth = context.read<AuthProvider>();
@@ -119,11 +131,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ],
       ),
-      body: loading
-          ? const Center(child: CircularProgressIndicator(color: _mor2))
-          : hata != null
-              ? _hataGorunum()
-              : RefreshIndicator(onRefresh: _yukle, color: _mor2, backgroundColor: _card, child: _icerik()),
+      body: data == null
+          ? (hata != null ? _hataGorunum() : const Center(child: CircularProgressIndicator(color: _mor2)))
+          : RefreshIndicator(
+              onRefresh: _yukle,
+              color: _mor2,
+              backgroundColor: _card,
+              child: Stack(children: [
+                _icerik(),
+                // Donem degisince tum ekrani spinner'a cevirme -> icerik kalir, ustte ince cizgi
+                if (loading)
+                  const Positioned(
+                    top: 0, left: 0, right: 0,
+                    child: LinearProgressIndicator(minHeight: 2, backgroundColor: Colors.transparent, color: _mor2),
+                  ),
+              ]),
+            ),
     );
   }
 
@@ -284,7 +307,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
           ]),
           const SizedBox(height: 4),
-          Text(_tam(ciro), style: const TextStyle(color: Colors.white, fontSize: 34, fontWeight: FontWeight.bold)),
+          _sayiAnim(ciro, const TextStyle(color: Colors.white, fontSize: 34, fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
           Text('önceki dönem: ${_tam(_n(data!['compCiro']))}', style: const TextStyle(color: Colors.white54, fontSize: 12)),
           const SizedBox(height: 14),
@@ -356,19 +379,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
         SizedBox(
           width: 66,
           height: 66,
-          child: Stack(alignment: Alignment.center, children: [
-            SizedBox(
-              width: 66,
-              height: 66,
-              child: CircularProgressIndicator(
-                value: (yuzde / 100).clamp(0.0, 1.0),
-                strokeWidth: 7,
-                backgroundColor: const Color(0xFF243049),
-                valueColor: AlwaysStoppedAnimation(renk),
+          child: TweenAnimationBuilder<double>(
+            key: ValueKey('ring-$period-$yuzde'),
+            tween: Tween(begin: 0, end: (yuzde / 100).clamp(0.0, 1.0)),
+            duration: const Duration(milliseconds: 900),
+            curve: Curves.easeOutCubic,
+            builder: (_, v, child) => Stack(alignment: Alignment.center, children: [
+              SizedBox(
+                width: 66,
+                height: 66,
+                child: CircularProgressIndicator(
+                  value: v,
+                  strokeWidth: 7,
+                  backgroundColor: const Color(0xFF243049),
+                  valueColor: AlwaysStoppedAnimation(renk),
+                ),
               ),
-            ),
-            Text('%$yuzde', style: TextStyle(color: renk, fontWeight: FontWeight.bold, fontSize: 15)),
-          ]),
+              Text('%${(v * 100).round()}', style: TextStyle(color: renk, fontWeight: FontWeight.bold, fontSize: 15)),
+            ]),
+          ),
         ),
       ]),
     );
@@ -472,8 +501,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           height: 120,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
-            children: gunluk.map<Widget>((e) {
-              final m = e as Map;
+            children: gunluk.asMap().entries.map<Widget>((entry) {
+              final i = entry.key;
+              final m = entry.value as Map;
               final v = _n(m['ciro']);
               final h = maks > 0 ? (v / maks * 96).clamp(3.0, 96.0).toDouble() : 3.0;
               return Expanded(
@@ -483,11 +513,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Text(v >= 1000 ? '${(v / 1000).toStringAsFixed(0)}K' : '${v.toInt()}',
                         style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 8)),
                     const SizedBox(height: 2),
-                    Container(
-                      height: h,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(colors: [_mor2, _mor1], begin: Alignment.topCenter, end: Alignment.bottomCenter),
-                        borderRadius: BorderRadius.circular(4),
+                    // Asagidan yukselen animasyon (donem degisince/ilk yuklemede sifirdan)
+                    TweenAnimationBuilder<double>(
+                      key: ValueKey('bar-$period-$i'),
+                      tween: Tween(begin: 0, end: h),
+                      duration: Duration(milliseconds: 500 + i * 45),
+                      curve: Curves.easeOutCubic,
+                      builder: (_, hv, child) => Container(
+                        height: hv,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(colors: [_mor2, _mor1], begin: Alignment.topCenter, end: Alignment.bottomCenter),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 4),
