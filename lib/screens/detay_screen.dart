@@ -34,6 +34,13 @@ class _DetayScreenState extends State<DetayScreen> {
 
   num _n(dynamic v) => v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0);
   String _tam(num v) => '₺${_f.format(v.round())}';
+
+  // Detaydan detaya gecis (adisyon satiri -> adisyon detay, urun satiri -> urun recete)
+  void _push({required String tip, int? id, String baslik = 'Detay'}) {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => DetayScreen(tip: tip, id: id, period: widget.period, baslikFallback: baslik),
+    ));
+  }
   String _k(num v) {
     final a = v.abs();
     if (a >= 1000000) return '₺${(v / 1000000).toStringAsFixed(2)}M';
@@ -108,6 +115,8 @@ class _DetayScreenState extends State<DetayScreen> {
         return _maliyet();
       case 'kapali':
         return _kapali();
+      case 'adisyon':
+        return _adisyon();
       default:
         return [const Text('—', style: TextStyle(color: Colors.white))];
     }
@@ -246,26 +255,8 @@ class _DetayScreenState extends State<DetayScreen> {
           const Text('Şu an açık adisyon yok.', style: TextStyle(color: Color(0xFF64748B), fontSize: 12))
         else
           for (final k in kayitlar)
-            Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(color: const Color(0xFF1E263B), borderRadius: BorderRadius.circular(12)),
-              child: Row(children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(color: _mavi.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)),
-                  child: Text((k as Map)['masa'].toString(), style: const TextStyle(color: Color(0xFFC4B5FD), fontSize: 12, fontWeight: FontWeight.bold)),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(k['garson'].toString(), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
-                    Text('${k['kalem']} ürün · ${k['misafir']} kişi · ${k['sure_dk']} dk', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
-                  ]),
-                ),
-                Text(_tam(_n(k['tutar'])), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
-              ]),
-            ),
+            _adisyonRow(k as Map, _mavi.withValues(alpha: 0.2), const Color(0xFFC4B5FD),
+                '${k['kalem']} ürün · ${k['misafir']} kişi · ${k['sure_dk']} dk'),
       ]),
     ];
   }
@@ -284,11 +275,16 @@ class _DetayScreenState extends State<DetayScreen> {
         Expanded(child: _statKart('Brüt Kâr', _tam(_n(d!['brutKar'])))),
       ]),
       const SizedBox(height: 14),
-      _kutu('🧾 Ürün Bazında Maliyet (yüksekten)', [
+      _kutu('🧾 Ürün Bazında Maliyet (dokunun → reçete)', [
         if (urunler.isEmpty)
           const Text('Bu dönemde satış yok.', style: TextStyle(color: Color(0xFF64748B), fontSize: 12))
         else
-          for (final u in urunler) _maliyetSatir(u as Map),
+          for (final u in urunler)
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _push(tip: 'urun', id: _n((u as Map)['urun_id']).toInt(), baslik: u['ad'].toString()),
+              child: _maliyetSatir(u),
+            ),
       ]),
     ];
   }
@@ -348,31 +344,187 @@ class _DetayScreenState extends State<DetayScreen> {
           const Text('Bu dönemde kapanan adisyon yok.', style: TextStyle(color: Color(0xFF64748B), fontSize: 12))
         else
           for (final k in kayitlar)
-            Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(color: const Color(0xFF1E263B), borderRadius: BorderRadius.circular(12)),
-              child: Row(children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(color: _yesil.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(8)),
-                  child: Text((k as Map)['masa'].toString(), style: const TextStyle(color: Color(0xFF6EE7B7), fontSize: 12, fontWeight: FontWeight.bold)),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(k['garson'].toString(), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
-                    Text('${k['misafir']} kişi · ${k['zaman']}', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
-                  ]),
-                ),
-                Text(_tam(_n(k['tutar'])), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
-              ]),
-            ),
+            _adisyonRow(k as Map, _yesil.withValues(alpha: 0.18), const Color(0xFF6EE7B7),
+                '${k['misafir']} kişi · ${k['zaman']}'),
       ]),
     ];
   }
 
+  // ---------------- TEK ADISYON DETAY ----------------
+  List<Widget> _adisyon() {
+    final ozet = (d!['ozet'] as Map?) ?? {};
+    final kalemler = (d!['kalemler'] as List?) ?? [];
+    final odemeler = (d!['odemeler'] as List?) ?? [];
+    final musteri = d!['musteri'] as Map?;
+    final deg = d!['degerlendirme'] as Map?;
+    final indirim = _n(d!['indirim']);
+    final ikram = _n(d!['ikram']);
+    return [
+      _ozetSerit(_tam(_n(d!['toplam'])), '${d!['kanal']} · ${d!['acilis']}${d!['kapanis'] != null ? ' → ${d!['kapanis']}' : ' (açık)'}', _mavi),
+      const SizedBox(height: 12),
+      GridView.count(
+        crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+        childAspectRatio: 2.6, mainAxisSpacing: 10, crossAxisSpacing: 10,
+        children: ozet.entries.map((e) => _statKart(e.key, e.value.toString())).toList(),
+      ),
+      const SizedBox(height: 14),
+      // Musteri degerlendirmesi (patron ONCE bunu gorsun)
+      if (deg != null) _degerlendirmeKart(deg) else _kutu('💬 Müşteri Değerlendirmesi', [
+        const Text('Bu adisyon için müşteri anketi doldurulmamış.', style: TextStyle(color: Color(0xFF64748B), fontSize: 12)),
+      ]),
+      const SizedBox(height: 14),
+      // Siparis icerigi
+      _kutu('🍽️ Sipariş İçeriği', [
+        if (kalemler.isEmpty)
+          const Text('Ürün yok', style: TextStyle(color: Color(0xFF64748B), fontSize: 12))
+        else
+          for (final k in kalemler) _kalemSatir(k as Map),
+      ]),
+      const SizedBox(height: 14),
+      // Hesap dokumu
+      _kutu('🧮 Hesap', [
+        _hesapSatir('Ara Toplam', _tam(_n(d!['araToplam'])), false),
+        if (indirim > 0) _hesapSatir('İskonto', '- ${_tam(indirim)}', true),
+        if (ikram > 0) _hesapSatir('İkram', '- ${_tam(ikram)}', true),
+        const Divider(color: Color(0xFF243049), height: 18),
+        _hesapSatir('TOPLAM', _tam(_n(d!['toplam'])), false, kalin: true),
+      ]),
+      if (odemeler.isNotEmpty) ...[
+        const SizedBox(height: 14),
+        _kutu('💳 Ödeme', [
+          for (final o in odemeler)
+            _hesapSatir((o as Map)['tip'].toString().toUpperCase(), _tam(_n(o['tutar'])), false),
+        ]),
+      ],
+      if (musteri != null) ...[
+        const SizedBox(height: 14),
+        _kutu('👤 Müşteri', [
+          Row(children: [
+            const Icon(Icons.person, size: 16, color: Color(0xFF94A3B8)),
+            const SizedBox(width: 8),
+            Text(musteri['ad'].toString(), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+            const Spacer(),
+            Text(musteri['telefon']?.toString() ?? '', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+          ]),
+        ]),
+      ],
+    ];
+  }
+
+  Widget _degerlendirmeKart(Map deg) {
+    final mutlu = deg['mutlu'] == true;
+    final renk = mutlu ? _yesil : _kirmizi;
+    final puan = _n(deg['puan']).toInt();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _card,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: renk.withValues(alpha: 0.5)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Text(mutlu ? '😊' : '😞', style: const TextStyle(fontSize: 22)),
+          const SizedBox(width: 8),
+          Text(mutlu ? 'Müşteri Memnun' : 'Memnuniyetsiz',
+              style: TextStyle(color: renk, fontSize: 15, fontWeight: FontWeight.bold)),
+          const Spacer(),
+          _yildizlar(puan),
+        ]),
+        const SizedBox(height: 12),
+        Row(children: [
+          Expanded(child: _altPuan('Lezzet', _n(deg['lezzet']).toInt())),
+          Expanded(child: _altPuan('Servis', _n(deg['servis']).toInt())),
+          Expanded(child: _altPuan('Hız', _n(deg['hiz']).toInt())),
+        ]),
+        if ((deg['yorum']?.toString() ?? '').isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: const Color(0xFF1E263B), borderRadius: BorderRadius.circular(12)),
+            child: Text('“${deg['yorum']}”', style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 13, fontStyle: FontStyle.italic)),
+          ),
+        ],
+        const SizedBox(height: 6),
+        Text(deg['zaman']?.toString() ?? '', style: const TextStyle(color: Color(0xFF64748B), fontSize: 10)),
+      ]),
+    );
+  }
+
+  Widget _yildizlar(int p) => Row(mainAxisSize: MainAxisSize.min,
+      children: List.generate(5, (i) => Icon(i < p ? Icons.star : Icons.star_border, size: 18, color: const Color(0xFFF59E0B))));
+
+  Widget _altPuan(String ad, int p) => Column(children: [
+        Text(ad, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
+        const SizedBox(height: 3),
+        Row(mainAxisSize: MainAxisSize.min,
+            children: List.generate(5, (i) => Icon(i < p ? Icons.star : Icons.star_border, size: 11, color: const Color(0xFFF59E0B)))),
+      ]);
+
+  Widget _kalemSatir(Map k) {
+    final iptal = k['durum'] == 'iptal';
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(children: [
+        Text('${_n(k['adet']).toInt()}×', style: TextStyle(color: iptal ? _kirmizi : const Color(0xFF94A3B8), fontSize: 13, fontWeight: FontWeight.bold)),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(k['ad'].toString(),
+                style: TextStyle(
+                    color: iptal ? const Color(0xFF64748B) : const Color(0xFFE2E8F0), fontSize: 13,
+                    decoration: iptal ? TextDecoration.lineThrough : null)),
+            if ((k['not']?.toString() ?? '').isNotEmpty)
+              Text('not: ${k['not']}', style: const TextStyle(color: Color(0xFF64748B), fontSize: 10)),
+            if (iptal) const Text('İPTAL / SİLİNDİ', style: TextStyle(color: _kirmizi, fontSize: 9, fontWeight: FontWeight.bold)),
+          ]),
+        ),
+        Text(_tam(_n(k['tutar'])),
+            style: TextStyle(
+                color: iptal ? const Color(0xFF64748B) : Colors.white, fontSize: 13, fontWeight: FontWeight.bold,
+                decoration: iptal ? TextDecoration.lineThrough : null)),
+      ]),
+    );
+  }
+
+  Widget _hesapSatir(String sol, String sag, bool eksi, {bool kalin = false}) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Text(sol, style: TextStyle(color: kalin ? Colors.white : const Color(0xFF94A3B8), fontSize: kalin ? 14 : 13, fontWeight: kalin ? FontWeight.bold : FontWeight.normal)),
+          Text(sag, style: TextStyle(color: eksi ? _kirmizi : (kalin ? Colors.white : const Color(0xFFE2E8F0)), fontSize: kalin ? 15 : 13, fontWeight: FontWeight.bold)),
+        ]),
+      );
+
   // ---------------- ORTAK ----------------
+  // Tiklanabilir adisyon satiri (acik/kapali listelerde) -> tek adisyon detayina gider
+  Widget _adisyonRow(Map k, Color badgeRenk, Color badgeText, String altSatir) => GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => _push(tip: 'adisyon', id: _n(k['id']).toInt(), baslik: k['masa'].toString()),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(color: const Color(0xFF1E263B), borderRadius: BorderRadius.circular(12)),
+          child: Row(children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(color: badgeRenk, borderRadius: BorderRadius.circular(8)),
+              child: Text(k['masa'].toString(), style: TextStyle(color: badgeText, fontSize: 12, fontWeight: FontWeight.bold)),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(k['garson'].toString(), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                Text(altSatir, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
+              ]),
+            ),
+            Text(_tam(_n(k['tutar'])), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+            const Icon(Icons.chevron_right, size: 18, color: Color(0xFF475569)),
+          ]),
+        ),
+      );
+
   Widget _statKart(String baslik, String deger) => Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(14)),
