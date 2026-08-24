@@ -35,10 +35,16 @@ class _DetayScreenState extends State<DetayScreen> {
   num _n(dynamic v) => v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0);
   String _tam(num v) => '₺${_f.format(v.round())}';
 
-  // Detaydan detaya gecis (adisyon satiri -> adisyon detay, urun satiri -> urun recete)
+  // Detaydan detaya gecis (koyu FADE -> beyaz parlama olmaz)
   void _push({required String tip, int? id, String baslik = 'Detay'}) {
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => DetayScreen(tip: tip, id: id, period: widget.period, baslikFallback: baslik),
+    Navigator.of(context).push(PageRouteBuilder(
+      transitionDuration: const Duration(milliseconds: 220),
+      reverseTransitionDuration: const Duration(milliseconds: 170),
+      opaque: true,
+      barrierColor: _bg,
+      pageBuilder: (_, _, _) => DetayScreen(tip: tip, id: id, period: widget.period, baslikFallback: baslik),
+      transitionsBuilder: (_, anim, _, child) =>
+          FadeTransition(opacity: CurvedAnimation(parent: anim, curve: Curves.easeOut), child: child),
     ));
   }
   String _k(num v) {
@@ -117,6 +123,8 @@ class _DetayScreenState extends State<DetayScreen> {
         return _kapali();
       case 'adisyon':
         return _adisyon();
+      case 'musteri':
+        return _musteri();
       default:
         return [const Text('—', style: TextStyle(color: Colors.white))];
     }
@@ -256,7 +264,7 @@ class _DetayScreenState extends State<DetayScreen> {
         else
           for (final k in kayitlar)
             _adisyonRow(k as Map, _mavi.withValues(alpha: 0.2), const Color(0xFFC4B5FD),
-                '${k['kalem']} ürün · ${k['misafir']} kişi · ${k['sure_dk']} dk'),
+                '${k['musteri'] != null ? '👤 ${k['musteri']} · ' : ''}${k['kalem']} ürün · ${k['misafir']} kişi · ${k['sure_dk']} dk'),
       ]),
     ];
   }
@@ -345,7 +353,7 @@ class _DetayScreenState extends State<DetayScreen> {
         else
           for (final k in kayitlar)
             _adisyonRow(k as Map, _yesil.withValues(alpha: 0.18), const Color(0xFF6EE7B7),
-                '${k['misafir']} kişi · ${k['zaman']}'),
+                '${k['musteri'] != null ? '👤 ${k['musteri']} · ' : ''}${k['misafir']} kişi · ${k['zaman']}'),
       ]),
     ];
   }
@@ -398,14 +406,25 @@ class _DetayScreenState extends State<DetayScreen> {
       ],
       if (musteri != null) ...[
         const SizedBox(height: 14),
-        _kutu('👤 Müşteri', [
-          Row(children: [
-            const Icon(Icons.person, size: 16, color: Color(0xFF94A3B8)),
-            const SizedBox(width: 8),
-            Text(musteri['ad'].toString(), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
-            const Spacer(),
-            Text(musteri['telefon']?.toString() ?? '', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
-          ]),
+        _kutu('👤 Müşteri (dokunun → kart)', [
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => _push(tip: 'musteri', id: _n(musteri['id']).toInt(), baslik: musteri['ad'].toString()),
+            child: Row(children: [
+              CircleAvatar(
+                radius: 16, backgroundColor: _mor1.withValues(alpha: 0.25),
+                child: Text(musteri['ad'].toString().substring(0, 1).toUpperCase(), style: const TextStyle(color: Color(0xFFC4B5FD), fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(musteri['ad'].toString(), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+                  Text(musteri['telefon']?.toString() ?? '', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                ]),
+              ),
+              const Icon(Icons.chevron_right, size: 20, color: Color(0xFF6366F1)),
+            ]),
+          ),
         ]),
       ],
     ];
@@ -496,6 +515,127 @@ class _DetayScreenState extends State<DetayScreen> {
           Text(sag, style: TextStyle(color: eksi ? _kirmizi : (kalin ? Colors.white : const Color(0xFFE2E8F0)), fontSize: kalin ? 15 : 13, fontWeight: FontWeight.bold)),
         ]),
       );
+
+  // ---------------- MUSTERI DETAY ----------------
+  List<Widget> _musteri() {
+    final profil = (d!['profil'] as Map?) ?? {};
+    final ozet = (d!['ozet'] as Map?) ?? {};
+    final siparisler = (d!['siparisler'] as List?) ?? [];
+    final odeme = (d!['odeme'] as List?) ?? [];
+    final favori = (d!['favori'] as List?) ?? [];
+    final yorumlar = (d!['yorumlar'] as List?) ?? [];
+    final ad = profil['ad']?.toString() ?? 'Müşteri';
+    return [
+      // Profil header
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(colors: [_mor1, _mavi], begin: Alignment.topLeft, end: Alignment.bottomRight),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(children: [
+          CircleAvatar(
+            radius: 26, backgroundColor: Colors.white24,
+            child: Text(ad.substring(0, 1).toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(ad, style: const TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.bold)),
+              if ((profil['telefon']?.toString() ?? '').isNotEmpty)
+                Text('📞 ${profil['telefon']}', style: const TextStyle(color: Colors.white70, fontSize: 13)),
+              if ((profil['adres']?.toString() ?? '').isNotEmpty)
+                Text('📍 ${profil['adres']}', style: const TextStyle(color: Colors.white60, fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis),
+            ]),
+          ),
+        ]),
+      ),
+      const SizedBox(height: 12),
+      // Ozet chips
+      GridView.count(
+        crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+        childAspectRatio: 2.6, mainAxisSpacing: 10, crossAxisSpacing: 10,
+        children: ozet.entries.map((e) => _statKart(e.key, e.value.toString())).toList(),
+      ),
+      const SizedBox(height: 14),
+      // Favori urunler
+      if (favori.isNotEmpty) ...[
+        _kutu('❤️ Favori Ürünler', [
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            for (final u in favori)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(color: const Color(0xFF1E263B), borderRadius: BorderRadius.circular(20)),
+                child: Text('${(u as Map)['urun_adi']} · ${_n(u['adet']).toInt()}×', style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 12)),
+              ),
+          ]),
+        ]),
+        const SizedBox(height: 14),
+      ],
+      // Odeme aliskanligi
+      if (odeme.isNotEmpty) ...[
+        _kutu('💳 Ödeme Alışkanlığı', [
+          for (final o in odeme)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 5),
+              child: Row(children: [
+                Expanded(child: Text((o as Map)['tip'].toString().toUpperCase(), style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 13))),
+                Text('${_n(o['adet']).toInt()} işlem', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                const SizedBox(width: 12),
+                Text(_k(_n(o['tutar'])), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+              ]),
+            ),
+        ]),
+        const SizedBox(height: 14),
+      ],
+      // Gecmis siparisler
+      _kutu('🧾 Geçmiş Siparişler', [
+        if (siparisler.isEmpty)
+          const Text('Kayıtlı sipariş yok.', style: TextStyle(color: Color(0xFF64748B), fontSize: 12))
+        else
+          for (final s in siparisler)
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _push(tip: 'adisyon', id: _n(s['id']).toInt(), baslik: s['masa'].toString()),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 7),
+                child: Row(children: [
+                  Text(s['zaman'].toString(), style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                  const SizedBox(width: 12),
+                  Expanded(child: Text('${s['masa']} · ${s['kanal']}', style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 13), overflow: TextOverflow.ellipsis)),
+                  Text(_tam(_n(s['tutar'])), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                  const Icon(Icons.chevron_right, size: 16, color: Color(0xFF475569)),
+                ]),
+              ),
+            ),
+      ]),
+      const SizedBox(height: 14),
+      // Yorumlar
+      _kutu('💬 Müşteri Yorumları', [
+        if (yorumlar.isEmpty)
+          const Text('Henüz yorum yok.', style: TextStyle(color: Color(0xFF64748B), fontSize: 12))
+        else
+          for (final y in yorumlar)
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: const Color(0xFF1E263B), borderRadius: BorderRadius.circular(12)),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  _yildizlar(_n((y as Map)['puan']).toInt()),
+                  const Spacer(),
+                  Text(y['zaman'].toString(), style: const TextStyle(color: Color(0xFF64748B), fontSize: 10)),
+                ]),
+                if ((y['yorum']?.toString() ?? '').isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text('“${y['yorum']}”', style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 12, fontStyle: FontStyle.italic)),
+                ],
+              ]),
+            ),
+      ]),
+    ];
+  }
 
   // ---------------- ORTAK ----------------
   // Tiklanabilir adisyon satiri (acik/kapali listelerde) -> tek adisyon detayina gider

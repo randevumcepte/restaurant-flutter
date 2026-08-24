@@ -97,10 +97,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _yukle();
   }
 
-  // Drill-down: kart tiklaninca detay ekranini ac
+  // Drill-down: kart tiklaninca detay ekranini ac.
+  // Koyu zeminli FADE gecis -> zoom gecisindeki beyaz parlama olmaz.
   void _detayAc({required String tip, int? id, String? alt, String baslik = 'Detay'}) {
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => DetayScreen(tip: tip, id: id, alt: alt, period: period, baslikFallback: baslik),
+    Navigator.of(context).push(PageRouteBuilder(
+      transitionDuration: const Duration(milliseconds: 220),
+      reverseTransitionDuration: const Duration(milliseconds: 170),
+      opaque: true,
+      barrierColor: _bg,
+      pageBuilder: (_, _, _) => DetayScreen(tip: tip, id: id, alt: alt, period: period, baslikFallback: baslik),
+      transitionsBuilder: (_, anim, _, child) =>
+          FadeTransition(opacity: CurvedAnimation(parent: anim, curve: Curves.easeOut), child: child),
     ));
   }
 
