@@ -113,8 +113,12 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
     } catch (_) {}
   }
 
-  /// Acilista AI once sesli karsilar, ardindan otomatik dinlemeye gecer.
+  /// Acilista AI once sesli karsilar (Ses 1 = erkek), ardindan otomatik dinlemeye gecer.
   Future<void> _karsila() async {
+    if (!mounted) return;
+    // Selam da dahil her sey Ses 1 (erkek) ile: ses ayarini oturt, sonra konus.
+    await _sesUygula(0, onizleme: false);
+    await Future.delayed(const Duration(milliseconds: 300));
     if (!mounted) return;
     final ad = context.read<AuthProvider>().ad?.split(' ').first ?? '';
     setState(() => _selam = 'Merhaba${ad.isNotEmpty ? ' $ad' : ''}. Ben restoranınızın asistanıyım, sorunuzu sorabilirsiniz.');
@@ -300,12 +304,7 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
           Text('(dokunup dinle)', style: TextStyle(color: _gri, fontSize: 12)),
         ]),
         const SizedBox(height: 12),
-        if (_sesSecenek.length <= 1)
-          const Text('Cihazınızda tek Türkçe ses var; erkek tonda kullanılıyor.', style: TextStyle(color: _gri, fontSize: 12))
-        else
-          Wrap(spacing: 10, runSpacing: 10, children: [
-            for (int i = 0; i < _sesSecenek.length; i++) _sesButon(i, 'Ses ${i + 1}'),
-          ]),
+        Row(children: [_sesButon(0, 'Ses 1')]),
       ]),
     );
   }
