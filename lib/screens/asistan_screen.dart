@@ -37,14 +37,61 @@ class _AsistanScreenState extends State<AsistanScreen> {
   static const _mor1 = Color(0xFF7C3AED);
   static const _mavi = Color(0xFF4F46E5);
 
-  final _oneriler = ['Bugün ciro ne kadar', 'En çok kim sattı', 'En çok satan ürün', 'Kaç masa dolu', 'Food-cost ne durumda', 'Kayıp radarı'];
+  final _oneriler = ['🔍 Derin analiz', 'Bu hafta ciro', 'En çok kim sattı', 'En çok satan ürün', 'Kaç masa dolu', 'Food-cost ne durumda', 'Kayıp radarı'];
 
   @override
   void initState() {
     super.initState();
     _sttBaslat();
     _ttsBaslat();
-    _mesajlar.add(_Mesaj('Merhaba, restoranınızın asistanıyım. Ciro, satış, personel, masa, food-cost veya kayıp için sesli ya da yazılı sorabilirsiniz.', false));
+    _mesajlar.add(_Mesaj('Merhaba, restoranınızın asistanıyım. Ciro, satış, personel, masa, food-cost, kayıp ya da genel analiz için sesli veya yazılı sorabilirsiniz.', false));
+    WidgetsBinding.instance.addPostFrameCallback((_) => _proaktif());
+  }
+
+  /// Acilista sessiz proaktif ozet (kural motoru, bedava, seslendirmeden).
+  Future<void> _proaktif() async {
+    try {
+      final auth = context.read<AuthProvider>();
+      final res = await Api.asistanSor(auth.token!, 'bu hafta nasıl gidiyor');
+      if (!mounted) return;
+      final c = res['cevap']?.toString();
+      if (c != null && c.isNotEmpty) {
+        setState(() => _mesajlar.add(_Mesaj(c, false)));
+        _kaydir();
+      }
+    } catch (_) {}
+  }
+
+  /// Derin analiz (LLM/kural) -> sonucu sohbete asistan balonu olarak basar.
+  Future<void> _derinAnaliz() async {
+    if (_bekliyor) return;
+    setState(() {
+      _mesajlar.add(_Mesaj('İşletmeyi derinlemesine analiz et', true));
+      _mesajlar.add(_Mesaj('', false, yaziliyor: true));
+      _bekliyor = true;
+    });
+    _kaydir();
+    try {
+      final auth = context.read<AuthProvider>();
+      final res = await Api.aiAnaliz(auth.token!, kapsam: 'ozet', period: 'haftalik');
+      final yorumlar = (res['yorumlar'] as List?) ?? [];
+      final metin = yorumlar.isEmpty ? 'Şu an ek analiz üretemedim.' : yorumlar.map((y) => '• $y').join('\n\n');
+      if (!mounted) return;
+      setState(() {
+        _mesajlar.removeWhere((m) => m.yaziliyor);
+        _mesajlar.add(_Mesaj(metin, false));
+        _bekliyor = false;
+      });
+      _kaydir();
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _mesajlar.removeWhere((m) => m.yaziliyor);
+          _mesajlar.add(_Mesaj('Analiz alınamadı, tekrar deneyin.', false));
+          _bekliyor = false;
+        });
+      }
+    }
   }
 
   Future<void> _sttBaslat() async {
@@ -65,18 +112,24 @@ class _AsistanScreenState extends State<AsistanScreen> {
   Future<void> _ttsBaslat() async {
     try {
       await _tts.setLanguage('tr-TR');
-      await _tts.setSpeechRate(0.5);
-      await _tts.setPitch(0.95); // hafif kalin (erkek tini)
-      // Mumkunse erkek Turkce ses sec
+      await _tts.setSpeechRate(0.46);
+      await _tts.setPitch(0.72); // belirgin kalin ton -> erkek tinisi (cihazda erkek ses yoksa da)
       final sesler = await _tts.getVoices;
       if (sesler is List) {
-        for (final v in sesler) {
+        final tr = sesler.where((v) => (v['locale'] ?? '').toString().toLowerCase().startsWith('tr')).toList();
+        // 1) Gercek erkek ses adayi
+        Map? sec;
+        for (final v in tr) {
           final ad = (v['name'] ?? '').toString().toLowerCase();
-          final loc = (v['locale'] ?? '').toString().toLowerCase();
-          if (loc.startsWith('tr') && (ad.contains('male') || ad.contains('erkek') || ad.contains('#male') || ad.endsWith('-x-mr-local') || ad.contains('mr'))) {
-            await _tts.setVoice({'name': v['name'].toString(), 'locale': v['locale'].toString()});
-            break;
-          }
+          if (ad.contains('male') || ad.contains('erkek') || ad.contains('-tra-') || ad.contains('-mr-')) { sec = v as Map; break; }
+        }
+        // 2) Yoksa kadin-belirtili olmayan ilk ses
+        sec ??= tr.cast<Map?>().firstWhere((v) {
+          final ad = (v?['name'] ?? '').toString().toLowerCase();
+          return !(ad.contains('fmk') || ad.contains('fem') || ad.contains('female') || ad.contains('woman'));
+        }, orElse: () => null);
+        if (sec != null) {
+          await _tts.setVoice({'name': sec['name'].toString(), 'locale': sec['locale'].toString()});
         }
       }
     } catch (_) {}
@@ -213,7 +266,7 @@ class _AsistanScreenState extends State<AsistanScreen> {
                     backgroundColor: _card,
                     side: const BorderSide(color: Color(0xFF2D3752)),
                     label: Text(o, style: const TextStyle(color: Color(0xFFC4B5FD), fontSize: 12)),
-                    onPressed: _bekliyor ? null : () => _gonder(o),
+                    onPressed: _bekliyor ? null : () => o.contains('Derin analiz') ? _derinAnaliz() : _gonder(o),
                   ),
                 ),
             ],

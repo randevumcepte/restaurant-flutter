@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
 import '../services/api.dart';
 import 'detay_screen.dart';
-import 'ai_analiz_sheet.dart';
 import 'asistan_screen.dart';
 
 /// Patron ana paneli — Kerzz BOSS yogunlugunda: tek ekranda her sey.
@@ -142,7 +141,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Text(auth.sube ?? '', style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
             const SizedBox(width: 6),
             GestureDetector(
-              onTap: () => AiAnalizSheet.goster(context, kapsam: 'ozet', period: period, baslik: 'İşletme AI Analizi'),
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AsistanScreen())),
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                 decoration: BoxDecoration(color: _mor1.withValues(alpha: 0.25), borderRadius: BorderRadius.circular(20)),
@@ -220,8 +219,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
         // ANA CIRO karti (Total Amount + comparison)
         _ciroHero(ciro, ciroYuzde, info, comp),
-        const SizedBox(height: 10),
-        _aiButon(),
         const SizedBox(height: 10),
 
         // Acik / Kapali folio + Maliyet
@@ -320,26 +317,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
-
-  Widget _aiButon() => GestureDetector(
-        onTap: () => AiAnalizSheet.goster(context, kapsam: 'ozet', period: period, baslik: 'İşletme AI Analizi'),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 13),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(colors: [Color(0xFF241B4D), Color(0xFF3B2E7E)]),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: _mor1.withValues(alpha: 0.5)),
-          ),
-          child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Text('✨', style: TextStyle(fontSize: 16)),
-            SizedBox(width: 8),
-            Text('Derin AI Analizi', style: TextStyle(color: Color(0xFFC4B5FD), fontSize: 14, fontWeight: FontWeight.bold)),
-            SizedBox(width: 6),
-            Icon(Icons.auto_awesome, size: 15, color: Color(0xFFC4B5FD)),
-          ]),
-        ),
-      );
 
   Widget _uyariSatir(String u) => Container(
         margin: const EdgeInsets.only(bottom: 8),
