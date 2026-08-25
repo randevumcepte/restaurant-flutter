@@ -27,8 +27,8 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
   bool _konusuyor = false;
   bool _bekliyor = false;
 
-  int _sesIndex = 0; // 0 = Ses 1 (erkek), 1 = Ses 2 (kadin)
-  List<Map> _trSesler = [];
+  int _sesIndex = 0;
+  List<Map> _sesSecenek = []; // cihazdaki benzersiz TR sesler (hepsi erkek tonunda)
 
   bool _karsilamaSesli = false; // acilistaki selam bitince otomatik dinlemeye gec
   String _selam = 'Merhaba. Size nasıl yardımcı olabilirim?';
@@ -89,9 +89,9 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
       _tts.setCancelHandler(() { if (mounted) setState(() => _konusuyor = false); });
       final sesler = await _tts.getVoices;
       if (sesler is List) {
-        _trSesler = sesler.where((v) => (v['locale'] ?? '').toString().toLowerCase().startsWith('tr')).map((v) => v as Map).toList();
-        // Erkek adayini basa al (Ses 1 = erkek)
-        _trSesler.sort((a, b) {
+        final tr = sesler.where((v) => (v['locale'] ?? '').toString().toLowerCase().startsWith('tr')).map((v) => v as Map).toList();
+        // Erkek adaylarini basa al
+        tr.sort((a, b) {
           int skor(Map v) {
             final ad = (v['name'] ?? '').toString().toLowerCase();
             if (ad.contains('male') || ad.contains('erkek') || ad.contains('-tra-') || ad.contains('-mr-')) return 0;
@@ -100,6 +100,13 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
           }
           return skor(a).compareTo(skor(b));
         });
+        // Benzersiz konusmaci (local/network birlestir) -> Ses 1, Ses 2, ...
+        final gorulen = <String>{};
+        _sesSecenek = [];
+        for (final v in tr) {
+          final taban = (v['name'] ?? '').toString().replaceAll('-network', '').replaceAll('-local', '');
+          if (gorulen.add(taban)) _sesSecenek.add(v);
+        }
       }
       await _sesUygula(_sesIndex, onizleme: false);
       _karsila(); // acilista AI sesli karsilar, sonra dinlemeye gecer
@@ -117,13 +124,12 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
 
   Future<void> _sesUygula(int i, {bool onizleme = true}) async {
     try {
-      // Ses 1 = kalin (erkek), Ses 2 = ince (kadin)
-      await _tts.setPitch(i == 0 ? 0.72 : 1.12);
-      if (_trSesler.isNotEmpty) {
-        final ses = _trSesler[i == 0 ? 0 : (_trSesler.length > 1 ? 1 : 0)];
+      await _tts.setPitch(0.72); // her zaman kalin (erkek tonu)
+      if (_sesSecenek.isNotEmpty && i < _sesSecenek.length) {
+        final ses = _sesSecenek[i];
         await _tts.setVoice({'name': ses['name'].toString(), 'locale': ses['locale'].toString()});
       }
-      if (onizleme) await _seslendir('Merhaba, ben restoranınızın asistanıyım.');
+      if (onizleme) await _seslendir('Merhaba, ben restoranınızın asistanıyım. Sizi dinliyorum.');
     } catch (_) {}
   }
 
@@ -294,11 +300,12 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
           Text('(dokunup dinle)', style: TextStyle(color: _gri, fontSize: 12)),
         ]),
         const SizedBox(height: 12),
-        Row(children: [
-          Expanded(child: _sesButon(0, 'Ses 1')),
-          const SizedBox(width: 12),
-          Expanded(child: _sesButon(1, 'Ses 2')),
-        ]),
+        if (_sesSecenek.length <= 1)
+          const Text('Cihazınızda tek Türkçe ses var; erkek tonda kullanılıyor.', style: TextStyle(color: _gri, fontSize: 12))
+        else
+          Wrap(spacing: 10, runSpacing: 10, children: [
+            for (int i = 0; i < _sesSecenek.length; i++) _sesButon(i, 'Ses ${i + 1}'),
+          ]),
       ]),
     );
   }
@@ -309,15 +316,15 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
       onTap: () { setState(() => _sesIndex = i); _sesUygula(i, onizleme: true); },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
         decoration: BoxDecoration(
           gradient: secili ? const LinearGradient(colors: [_mor1, _mavi]) : null,
           color: secili ? null : const Color(0xFFF1F5F9),
           borderRadius: BorderRadius.circular(14),
         ),
-        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          if (secili) const Icon(Icons.check, color: Colors.white, size: 17),
-          if (secili) const SizedBox(width: 6),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(secili ? Icons.check : Icons.play_arrow_rounded, color: secili ? Colors.white : _gri, size: 17),
+          const SizedBox(width: 6),
           Text(etiket, style: TextStyle(color: secili ? Colors.white : _gri, fontSize: 15, fontWeight: FontWeight.bold)),
         ]),
       ),
