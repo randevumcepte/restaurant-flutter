@@ -35,6 +35,16 @@ class Api {
           {required String kapsam, int? id, String period = 'haftalik'}) =>
       _get('/api/patron/ai-analiz?kapsam=$kapsam&period=$period${id != null ? '&id=$id' : ''}', token);
 
+  static Future<Map<String, dynamic>> asistanSor(String token, String soru) async {
+    final r = await http.post(
+      Uri.parse('$base/api/patron/asistan-sor'),
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+      body: {'soru': soru},
+    );
+    if (r.statusCode == 401) throw ApiYetkiHatasi();
+    return jsonDecode(r.body) as Map<String, dynamic>;
+  }
+
   static Future<Map<String, dynamic>> masalar(String token) => _get('/api/masalar', token);
   static Future<Map<String, dynamic>> paket(String token) => _get('/api/paket', token);
   static Future<Map<String, dynamic>> raporlar(String token) => _get('/api/raporlar', token);

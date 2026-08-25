@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import '../services/api.dart';
 import 'detay_screen.dart';
 import 'ai_analiz_sheet.dart';
+import 'asistan_screen.dart';
 
 /// Patron ana paneli — Kerzz BOSS yogunlugunda: tek ekranda her sey.
 /// Donem secici + karsilastirma + kayip radari + food-cost + odeme/servis dagilimi + 10 gunluk grafik.
@@ -156,6 +157,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
             icon: const Icon(Icons.logout, color: Color(0xFF64748B), size: 20),
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AsistanScreen())),
+        backgroundColor: _mor1,
+        icon: const Text('✨', style: TextStyle(fontSize: 16)),
+        label: const Text('AI Asistan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
       body: data == null
           ? (hata != null ? _hataGorunum() : const Center(child: CircularProgressIndicator(color: _mor2)))

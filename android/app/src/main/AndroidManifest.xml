@@ -2,6 +2,8 @@
     <!-- RELEASE build icin ZORUNLU: Flutter INTERNET iznini yalnizca debug/profile manifest'ine ekler;
          release yalnizca bu ana manifest'i kullanir -> izin burada olmazsa release internete cikamaz. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Sesli asistan (STT) icin mikrofon -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <application
         android:label="restoos_patron"
         android:name="${applicationName}"
@@ -43,6 +45,10 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- Sesli asistan: cihaz konusma tanima servisi -->
+        <intent>
+            <action android:name="android.speech.RecognitionService"/>
         </intent>
     </queries>
 </manifest>
