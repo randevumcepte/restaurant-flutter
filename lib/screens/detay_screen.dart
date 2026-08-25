@@ -187,6 +187,8 @@ class _DetayScreenState extends State<DetayScreen> {
         childAspectRatio: 2.6, mainAxisSpacing: 10, crossAxisSpacing: 10,
         children: ozet.entries.map((e) => _statKart(e.key, e.value.toString())).toList(),
       ),
+      const SizedBox(height: 12),
+      _aiDetayButon('urun', widget.id, 'Ürün AI Analizi'),
       const SizedBox(height: 14),
       // Recete maliyet
       _kutu('🧾 Reçete & Maliyet', [
@@ -757,6 +759,25 @@ class _DetayScreenState extends State<DetayScreen> {
             ),
             Text(_tam(_n(k['tutar'])), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
             const Icon(Icons.chevron_right, size: 18, color: Color(0xFF475569)),
+          ]),
+        ),
+      );
+
+  // "Detayli AI Yorumu" butonu -> ai-analiz alt sayfasi (kural motoru/Haiku)
+  Widget _aiDetayButon(String kapsam, int? id, String baslik) => GestureDetector(
+        onTap: () => AiAnalizSheet.goster(context, kapsam: kapsam, id: id, period: widget.period, baslik: baslik),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [Color(0xFF241B4D), Color(0xFF3B2E7E)]),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: _mor1.withValues(alpha: 0.5)),
+          ),
+          child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Text('✨', style: TextStyle(fontSize: 15)),
+            SizedBox(width: 8),
+            Text('Detaylı AI Yorumu', style: TextStyle(color: Color(0xFFC4B5FD), fontSize: 13, fontWeight: FontWeight.bold)),
           ]),
         ),
       );
