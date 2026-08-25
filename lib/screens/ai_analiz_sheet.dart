@@ -67,21 +67,6 @@ class _AiAnalizBodyState extends State<_AiAnalizBody> {
     }
   }
 
-  String get _kaynakEtiket {
-    switch (kaynak) {
-      case 'haiku':
-        return 'Claude Haiku';
-      case 'onbellek':
-        return 'Önbellek';
-      case 'yapilandirilmamis':
-        return 'Kurulum gerekli';
-      case 'hata':
-        return 'Servis hatası';
-      default:
-        return kaynak;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -105,17 +90,8 @@ class _AiAnalizBodyState extends State<_AiAnalizBody> {
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(widget.baslik, style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
-                  const Text('Kural motoru + LLM', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
-                ]),
+                child: Text(widget.baslik, style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
               ),
-              if (!loading && kaynak.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(color: const Color(0xFF243049), borderRadius: BorderRadius.circular(20)),
-                  child: Text(_kaynakEtiket, style: const TextStyle(color: Color(0xFFC4B5FD), fontSize: 10, fontWeight: FontWeight.bold)),
-                ),
             ]),
             const SizedBox(height: 16),
             if (loading)
