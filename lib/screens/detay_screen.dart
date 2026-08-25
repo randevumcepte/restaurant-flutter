@@ -375,6 +375,45 @@ class _DetayScreenState extends State<DetayScreen> {
         childAspectRatio: 2.6, mainAxisSpacing: 10, crossAxisSpacing: 10,
         children: ozet.entries.map((e) => _statKart(e.key, e.value.toString())).toList(),
       ),
+      // Musteri (kayitliysa) - ozetin hemen altinda, dokunulunca kart
+      if (musteri != null) ...[
+        const SizedBox(height: 12),
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => _push(tip: 'musteri', id: _n(musteri['id']).toInt(), baslik: musteri['ad'].toString()),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: _card,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: _mor1.withValues(alpha: 0.35)),
+            ),
+            child: Row(children: [
+              CircleAvatar(
+                radius: 18, backgroundColor: _mor1.withValues(alpha: 0.25),
+                child: Text(musteri['ad'].toString().substring(0, 1).toUpperCase(), style: const TextStyle(color: Color(0xFFC4B5FD), fontWeight: FontWeight.bold, fontSize: 16)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    Flexible(child: Text(musteri['ad'].toString(), style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis)),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(color: _mor1.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(6)),
+                      child: const Text('Kayıtlı', style: TextStyle(color: Color(0xFFC4B5FD), fontSize: 9, fontWeight: FontWeight.bold)),
+                    ),
+                  ]),
+                  Text(musteri['telefon']?.toString() ?? '', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                ]),
+              ),
+              const Text('Kart', style: TextStyle(color: Color(0xFF6366F1), fontSize: 12, fontWeight: FontWeight.w600)),
+              const Icon(Icons.chevron_right, size: 20, color: Color(0xFF6366F1)),
+            ]),
+          ),
+        ),
+      ],
       const SizedBox(height: 14),
       // Musteri degerlendirmesi (patron ONCE bunu gorsun)
       if (deg != null) _degerlendirmeKart(deg) else _kutu('💬 Müşteri Değerlendirmesi', [
@@ -402,29 +441,6 @@ class _DetayScreenState extends State<DetayScreen> {
         _kutu('💳 Ödeme', [
           for (final o in odemeler)
             _hesapSatir((o as Map)['tip'].toString().toUpperCase(), _tam(_n(o['tutar'])), false),
-        ]),
-      ],
-      if (musteri != null) ...[
-        const SizedBox(height: 14),
-        _kutu('👤 Müşteri (dokunun → kart)', [
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () => _push(tip: 'musteri', id: _n(musteri['id']).toInt(), baslik: musteri['ad'].toString()),
-            child: Row(children: [
-              CircleAvatar(
-                radius: 16, backgroundColor: _mor1.withValues(alpha: 0.25),
-                child: Text(musteri['ad'].toString().substring(0, 1).toUpperCase(), style: const TextStyle(color: Color(0xFFC4B5FD), fontWeight: FontWeight.bold)),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(musteri['ad'].toString(), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
-                  Text(musteri['telefon']?.toString() ?? '', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
-                ]),
-              ),
-              const Icon(Icons.chevron_right, size: 20, color: Color(0xFF6366F1)),
-            ]),
-          ),
         ]),
       ],
     ];
@@ -551,6 +567,20 @@ class _DetayScreenState extends State<DetayScreen> {
           ),
         ]),
       ),
+      if (d!['kvkk'] == true) ...[
+        const SizedBox(height: 10),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+          decoration: BoxDecoration(color: const Color(0xFF3B2F14), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFF854D0E))),
+          child: const Row(children: [
+            Icon(Icons.lock_outline, size: 15, color: Color(0xFFFCD34D)),
+            SizedBox(width: 8),
+            Expanded(child: Text('KVKK: İsim/telefon maskeli. Tam bilgiyi yalnızca patron (sahip) görebilir.',
+                style: TextStyle(color: Color(0xFFFCD34D), fontSize: 11))),
+          ]),
+        ),
+      ],
       const SizedBox(height: 12),
       // Ozet chips
       GridView.count(
