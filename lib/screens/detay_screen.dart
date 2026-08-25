@@ -431,6 +431,11 @@ class _DetayScreenState extends State<DetayScreen> {
         childAspectRatio: 2.6, mainAxisSpacing: 10, crossAxisSpacing: 10,
         children: ozet.entries.map((e) => _statKart(e.key, e.value.toString())).toList(),
       ),
+      // Acik adisyon -> islem butonlari (yetki kontrolu backend'de)
+      if (d!['durum'] == 'acik') ...[
+        const SizedBox(height: 12),
+        _islemBar(),
+      ],
       // Musteri (kayitliysa) - ozetin hemen altinda, VURGULU mor kart
       if (musteri != null) ...[
         const SizedBox(height: 12),
@@ -727,6 +732,191 @@ class _DetayScreenState extends State<DetayScreen> {
             ),
       ]),
     ];
+  }
+
+  // ---------------- ADISYON ISLEMLERI (yetki kontrollu) ----------------
+  Widget _islemBar() => Column(children: [
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: _kapatDialog,
+            icon: const Icon(Icons.check_circle_outline, size: 20),
+            label: const Text('Öde & Masayı Kapat', style: TextStyle(fontWeight: FontWeight.bold)),
+            style: FilledButton.styleFrom(backgroundColor: _yesil, padding: const EdgeInsets.symmetric(vertical: 13), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(children: [
+          Expanded(child: _ikincilBtn(Icons.local_offer_outlined, 'İskonto', _iskontoDialog)),
+          const SizedBox(width: 8),
+          Expanded(child: _ikincilBtn(Icons.card_giftcard, 'İkram', _ikramDialog)),
+          const SizedBox(width: 8),
+          Expanded(child: _ikincilBtn(Icons.cancel_outlined, 'İptal', _iptalDialog)),
+        ]),
+      ]);
+
+  Widget _ikincilBtn(IconData ikon, String metin, VoidCallback onTap) => GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 11),
+          decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFF2D3752))),
+          child: Column(children: [
+            Icon(ikon, size: 18, color: const Color(0xFFC4B5FD)),
+            const SizedBox(height: 3),
+            Text(metin, style: const TextStyle(color: Color(0xFFC4B5FD), fontSize: 11, fontWeight: FontWeight.w600)),
+          ]),
+        ),
+      );
+
+  InputDecoration _dlgInput(String hint) => InputDecoration(
+        hintText: hint, hintStyle: const TextStyle(color: Color(0xFF64748B)),
+        filled: true, fillColor: const Color(0xFF0F1526),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+      );
+
+  Future<void> _islemCagir(String islem, {String? odemeTip, double? oran, double? tutar, String? sebep, String? onayPin}) async {
+    final auth = context.read<AuthProvider>();
+    try {
+      final res = await Api.adisyonIslem(auth.token!, islem: islem, adisyonId: widget.id ?? 0,
+          odemeTip: odemeTip, oran: oran, tutar: tutar, sebep: sebep, onayPin: onayPin);
+      if (!mounted) return;
+      if (res['ok'] == 1) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['mesaj']?.toString() ?? 'İşlem tamamlandı'), backgroundColor: _yesil));
+        Navigator.of(context).pop(true); // geri don -> liste yenilensin
+      } else if (res['onay_gerek'] == true) {
+        final pin = await _pinSor(res['hata']?.toString() ?? 'Yetkili PIN onayı gerekli');
+        if (pin != null && pin.trim().isNotEmpty) {
+          await _islemCagir(islem, odemeTip: odemeTip, oran: oran, tutar: tutar, sebep: sebep, onayPin: pin.trim());
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['hata']?.toString() ?? 'İşlem başarısız'), backgroundColor: _kirmizi));
+      }
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bağlantı hatası')));
+    }
+  }
+
+  Future<String?> _pinSor(String mesaj) {
+    final c = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: _card,
+        title: const Text('🔒 Yetkili Onayı', style: TextStyle(color: Colors.white, fontSize: 16)),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          Text(mesaj, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
+          const SizedBox(height: 12),
+          TextField(controller: c, keyboardType: TextInputType.number, obscureText: true, autofocus: true,
+              style: const TextStyle(color: Colors.white, letterSpacing: 6), textAlign: TextAlign.center, decoration: _dlgInput('Müdür/Sahip PIN')),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Vazgeç', style: TextStyle(color: Color(0xFF94A3B8)))),
+          FilledButton(onPressed: () => Navigator.pop(ctx, c.text), style: FilledButton.styleFrom(backgroundColor: _mor1), child: const Text('Onayla')),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _kapatDialog() async {
+    final secim = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: _card,
+        title: const Text('Ödeme Al & Kapat', style: TextStyle(color: Colors.white, fontSize: 16)),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          _odemeSecenek(ctx, 'nakit', '💵 Nakit'),
+          _odemeSecenek(ctx, 'kredi', '💳 Kredi Kartı'),
+          _odemeSecenek(ctx, 'yemek_karti', '🍽️ Yemek Kartı'),
+        ]),
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Vazgeç', style: TextStyle(color: Color(0xFF94A3B8))))],
+      ),
+    );
+    if (secim != null) _islemCagir('kapat', odemeTip: secim);
+  }
+
+  Widget _odemeSecenek(BuildContext ctx, String tip, String metin) => Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: SizedBox(
+          width: double.infinity,
+          child: FilledButton(
+            onPressed: () => Navigator.pop(ctx, tip),
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF1E263B), padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+            child: Text(metin, style: const TextStyle(color: Colors.white, fontSize: 14)),
+          ),
+        ),
+      );
+
+  Future<void> _iskontoDialog() async {
+    final oranC = TextEditingController();
+    final sebepC = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: _card,
+        title: const Text('İskonto Uygula', style: TextStyle(color: Colors.white, fontSize: 16)),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(controller: oranC, keyboardType: TextInputType.number, autofocus: true, style: const TextStyle(color: Colors.white), decoration: _dlgInput('Oran %  (örn. 10)')),
+          const SizedBox(height: 10),
+          TextField(controller: sebepC, style: const TextStyle(color: Colors.white), decoration: _dlgInput('Sebep (opsiyonel)')),
+          const SizedBox(height: 6),
+          const Text('Limitinizi aşarsa yetkili PIN onayı istenir.', style: TextStyle(color: Color(0xFF64748B), fontSize: 11)),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Vazgeç', style: TextStyle(color: Color(0xFF94A3B8)))),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), style: FilledButton.styleFrom(backgroundColor: _mor1), child: const Text('Uygula')),
+        ],
+      ),
+    );
+    if (ok == true) {
+      final oran = double.tryParse(oranC.text.replaceAll(',', '.')) ?? 0;
+      if (oran > 0) _islemCagir('iskonto', oran: oran, sebep: sebepC.text);
+    }
+  }
+
+  Future<void> _ikramDialog() async {
+    final tutarC = TextEditingController();
+    final sebepC = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: _card,
+        title: const Text('İkram', style: TextStyle(color: Colors.white, fontSize: 16)),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(controller: tutarC, keyboardType: TextInputType.number, autofocus: true, style: const TextStyle(color: Colors.white), decoration: _dlgInput('Tutar ₺')),
+          const SizedBox(height: 10),
+          TextField(controller: sebepC, style: const TextStyle(color: Colors.white), decoration: _dlgInput('Sebep (opsiyonel)')),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Vazgeç', style: TextStyle(color: Color(0xFF94A3B8)))),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), style: FilledButton.styleFrom(backgroundColor: _mor1), child: const Text('Uygula')),
+        ],
+      ),
+    );
+    if (ok == true) {
+      final tutar = double.tryParse(tutarC.text.replaceAll(',', '.')) ?? 0;
+      if (tutar > 0) _islemCagir('ikram', tutar: tutar, sebep: sebepC.text);
+    }
+  }
+
+  Future<void> _iptalDialog() async {
+    final sebepC = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: _card,
+        title: const Text('Adisyon İptal', style: TextStyle(color: _kirmizi, fontSize: 16)),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Text('Bu adisyon iptal edilecek ve masa boşaltılacak.', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
+          const SizedBox(height: 10),
+          TextField(controller: sebepC, autofocus: true, style: const TextStyle(color: Colors.white), decoration: _dlgInput('İptal sebebi (opsiyonel)')),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Vazgeç', style: TextStyle(color: Color(0xFF94A3B8)))),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), style: FilledButton.styleFrom(backgroundColor: _kirmizi), child: const Text('İptal Et')),
+        ],
+      ),
+    );
+    if (ok == true) _islemCagir('iptal', sebep: sebepC.text);
   }
 
   // ---------------- ORTAK ----------------

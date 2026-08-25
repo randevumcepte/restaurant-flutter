@@ -109,9 +109,12 @@ class _MasalarScreenState extends State<MasalarScreen> {
                           GestureDetector(
                             behavior: HitTestBehavior.opaque,
                             onTap: m['adisyon_id'] != null
-                                ? () => Navigator.of(context).push(MaterialPageRoute(
-                                    builder: (_) => DetayScreen(
-                                        tip: 'adisyon', id: _n(m['adisyon_id']).toInt(), baslikFallback: m['ad'].toString())))
+                                ? () async {
+                                    await Navigator.of(context).push(MaterialPageRoute(
+                                        builder: (_) => DetayScreen(
+                                            tip: 'adisyon', id: _n(m['adisyon_id']).toInt(), baslikFallback: m['ad'].toString())));
+                                    _yukle();
+                                  }
                                 : null,
                             child: Container(
                               decoration: BoxDecoration(
