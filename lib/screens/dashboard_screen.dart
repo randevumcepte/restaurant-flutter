@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import '../services/api.dart';
 import 'detay_screen.dart';
 import 'asistan_screen.dart';
+import 'personel_yetkileri_screen.dart';
 
 /// Patron ana paneli — Kerzz BOSS yogunlugunda: tek ekranda her sey.
 /// Donem secici + karsilastirma + kayip radari + food-cost + odeme/servis dagilimi + 10 gunluk grafik.
@@ -153,6 +154,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            tooltip: 'Personel Yetkileri',
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PersonelYetkileriScreen())),
+            icon: const Icon(Icons.manage_accounts, color: Color(0xFF64748B), size: 22),
+          ),
           IconButton(
             onPressed: () => context.read<AuthProvider>().cikis(),
             icon: const Icon(Icons.logout, color: Color(0xFF64748B), size: 20),
