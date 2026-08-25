@@ -268,7 +268,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             _kayipTap('silinen', _kayipKart('Silinen Ürün', kayip['silinen'], Icons.remove_circle_outline)),
             _kayipTap('iptal', _kayipKart('İptal Adisyon', kayip['iptal'], Icons.delete_outline)),
             _kayipTap('fire', _kayipKart('Fire / Zayi', kayip['fire'], Icons.delete_sweep_outlined)),
-            _kayipTap('odenmez', _kayipKart('Ödenmez', kayip['odenmez'], Icons.money_off)),
+            _kayipTap('odenmez', _kayipKart('Tahsil Edilemeyen', kayip['odenmez'], Icons.money_off)),
           ],
         ),
         const SizedBox(height: 14),
