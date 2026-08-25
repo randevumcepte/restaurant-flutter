@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
 import '../services/api.dart';
+import 'detay_screen.dart';
 
 class MasalarScreen extends StatefulWidget {
   const MasalarScreen({super.key});
@@ -105,32 +106,40 @@ class _MasalarScreenState extends State<MasalarScreen> {
                       crossAxisSpacing: 10,
                       children: [
                         for (final m in entry.value)
-                          Container(
-                            decoration: BoxDecoration(
-                              color: _renk(m['durum'].toString()),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: _kenar(m['durum'].toString()), width: 1.5),
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(m['ad'].toString(),
-                                    style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-                                Text('${m['kapasite']} kişi',
-                                    style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8))),
-                                if (_n(m['tutar']) > 0)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 4),
-                                    child: Text('${_f.format(_n(m['tutar']).round())} ₺',
-                                        style: const TextStyle(
-                                            fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5))),
-                                  )
-                                else
-                                  const Padding(
-                                    padding: EdgeInsets.only(top: 4),
-                                    child: Text('boş', style: TextStyle(fontSize: 10, color: Color(0xFFCBD5E1))),
-                                  ),
-                              ],
+                          GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: m['adisyon_id'] != null
+                                ? () => Navigator.of(context).push(MaterialPageRoute(
+                                    builder: (_) => DetayScreen(
+                                        tip: 'adisyon', id: _n(m['adisyon_id']).toInt(), baslikFallback: m['ad'].toString())))
+                                : null,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: _renk(m['durum'].toString()),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: _kenar(m['durum'].toString()), width: 1.5),
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(m['ad'].toString(),
+                                      style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                                  Text('${m['kapasite']} kişi',
+                                      style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8))),
+                                  if (_n(m['tutar']) > 0)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 4),
+                                      child: Text('${_f.format(_n(m['tutar']).round())} ₺',
+                                          style: const TextStyle(
+                                              fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5))),
+                                    )
+                                  else
+                                    const Padding(
+                                      padding: EdgeInsets.only(top: 4),
+                                      child: Text('boş', style: TextStyle(fontSize: 10, color: Color(0xFFCBD5E1))),
+                                    ),
+                                ],
+                              ),
                             ),
                           ),
                       ],
