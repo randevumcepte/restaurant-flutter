@@ -774,11 +774,11 @@ class _DetayScreenState extends State<DetayScreen> {
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
       );
 
-  Future<void> _islemCagir(String islem, {String? odemeTip, double? oran, double? tutar, String? sebep, String? onayPin}) async {
+  Future<void> _islemCagir(String islem, {String? odemeTip, double? oran, double? tutar, String? sebep, String? onayPin, String? kalemIdler}) async {
     final auth = context.read<AuthProvider>();
     try {
       final res = await Api.adisyonIslem(auth.token!, islem: islem, adisyonId: widget.id ?? 0,
-          odemeTip: odemeTip, oran: oran, tutar: tutar, sebep: sebep, onayPin: onayPin);
+          odemeTip: odemeTip, oran: oran, tutar: tutar, sebep: sebep, onayPin: onayPin, kalemIdler: kalemIdler);
       if (!mounted) return;
       if (res['ok'] == 1) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['mesaj']?.toString() ?? 'İşlem tamamlandı'), backgroundColor: _yesil));
@@ -786,7 +786,7 @@ class _DetayScreenState extends State<DetayScreen> {
       } else if (res['onay_gerek'] == true) {
         final pin = await _pinSor(res['hata']?.toString() ?? 'Yetkili PIN onayı gerekli');
         if (pin != null && pin.trim().isNotEmpty) {
-          await _islemCagir(islem, odemeTip: odemeTip, oran: oran, tutar: tutar, sebep: sebep, onayPin: pin.trim());
+          await _islemCagir(islem, odemeTip: odemeTip, oran: oran, tutar: tutar, sebep: sebep, onayPin: pin.trim(), kalemIdler: kalemIdler);
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['hata']?.toString() ?? 'İşlem başarısız'), backgroundColor: _kirmizi));
@@ -873,29 +873,57 @@ class _DetayScreenState extends State<DetayScreen> {
     }
   }
 
+  // Ikram URUN bazlidir: adisyondaki urunlerden secilir
   Future<void> _ikramDialog() async {
-    final tutarC = TextEditingController();
-    final sebepC = TextEditingController();
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: _card,
-        title: const Text('İkram', style: TextStyle(color: Colors.white, fontSize: 16)),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          TextField(controller: tutarC, keyboardType: TextInputType.number, autofocus: true, style: const TextStyle(color: Colors.white), decoration: _dlgInput('Tutar ₺')),
-          const SizedBox(height: 10),
-          TextField(controller: sebepC, style: const TextStyle(color: Colors.white), decoration: _dlgInput('Sebep (opsiyonel)')),
-        ]),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Vazgeç', style: TextStyle(color: Color(0xFF94A3B8)))),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), style: FilledButton.styleFrom(backgroundColor: _mor1), child: const Text('Uygula')),
-        ],
-      ),
-    );
-    if (ok == true) {
-      final tutar = double.tryParse(tutarC.text.replaceAll(',', '.')) ?? 0;
-      if (tutar > 0) _islemCagir('ikram', tutar: tutar, sebep: sebepC.text);
+    final kalemler = ((d!['kalemler'] as List?) ?? []).where((k) => (k as Map)['durum'] != 'iptal').toList();
+    if (kalemler.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('İkram edilecek ürün yok.'), backgroundColor: _card));
+      return;
     }
+    final secili = <int>{};
+    final onay = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(builder: (ctx, setD) {
+        final toplam = kalemler.where((k) => secili.contains(_n((k as Map)['id']).toInt())).fold<num>(0, (a, k) => a + _n((k as Map)['tutar']));
+        return AlertDialog(
+          backgroundColor: _card,
+          title: const Text('İkram Edilecek Ürünler', style: TextStyle(color: Colors.white, fontSize: 16)),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Flexible(
+                child: ListView(shrinkWrap: true, children: [
+                  for (final k in kalemler)
+                    CheckboxListTile(
+                      value: secili.contains(_n((k as Map)['id']).toInt()),
+                      onChanged: (v) => setD(() {
+                        final id = _n(k['id']).toInt();
+                        if (v == true) { secili.add(id); } else { secili.remove(id); }
+                      }),
+                      activeColor: _mor1,
+                      checkColor: Colors.white,
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      title: Text('${_n(k['adet']).toInt()}× ${k['ad']}', style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 14)),
+                      secondary: Text(_tam(_n(k['tutar'])), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    ),
+                ]),
+              ),
+              const Divider(color: Color(0xFF243049)),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                const Text('İkram toplamı', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
+                Text(_tam(toplam), style: const TextStyle(color: _yesil, fontWeight: FontWeight.bold, fontSize: 15)),
+              ]),
+            ]),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Vazgeç', style: TextStyle(color: Color(0xFF94A3B8)))),
+            FilledButton(onPressed: secili.isEmpty ? null : () => Navigator.pop(ctx, true), style: FilledButton.styleFrom(backgroundColor: _mor1), child: const Text('İkram Et')),
+          ],
+        );
+      }),
+    );
+    if (onay == true && secili.isNotEmpty) _islemCagir('ikram', kalemIdler: secili.join(','));
   }
 
   Future<void> _iptalDialog() async {

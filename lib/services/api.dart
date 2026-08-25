@@ -46,13 +46,14 @@ class Api {
   }
 
   static Future<Map<String, dynamic>> adisyonIslem(String token,
-      {required String islem, required int adisyonId, String? odemeTip, double? oran, double? tutar, String? sebep, String? onayPin}) async {
+      {required String islem, required int adisyonId, String? odemeTip, double? oran, double? tutar, String? sebep, String? onayPin, String? kalemIdler}) async {
     final body = <String, String>{'islem': islem, 'adisyon_id': '$adisyonId'};
     if (odemeTip != null) body['odeme_tip'] = odemeTip;
     if (oran != null) body['oran'] = '$oran';
     if (tutar != null) body['tutar'] = '$tutar';
     if (sebep != null && sebep.isNotEmpty) body['sebep'] = sebep;
     if (onayPin != null && onayPin.isNotEmpty) body['onay_pin'] = onayPin;
+    if (kalemIdler != null && kalemIdler.isNotEmpty) body['kalem_idler'] = kalemIdler;
     final r = await http.post(
       Uri.parse('$base/api/patron/adisyon-islem'),
       headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
