@@ -620,34 +620,57 @@ class _DetayScreenState extends State<DetayScreen> {
     );
   }
 
+  // Silme sebepleri (Kerzz "Ürün Silme Sebepleri"). Sebep seçilince silinir.
+  static const _silmeSebepleri = [
+    'Müşteri beğenmedi', 'Yanlış/fazla girildi', 'Müşteri vazgeçti',
+    'Ürün tükendi', 'Fire / zayi', 'Sipariş geç gitti', 'Ürün döküldü', 'Diğer',
+  ];
+
   Future<void> _kalemVoid(Map k) async {
-    final onay = await showDialog<bool>(
+    final secilen = await showModalBottomSheet<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: _card,
-        title: Text('${k['ad']} silinsin mi?', style: const TextStyle(color: Colors.white, fontSize: 16)),
-        content: const Text('Ürün adisyondan çıkarılacak.', style: TextStyle(color: Color(0xFF94A3B8))),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Vazgeç')),
-          FilledButton(style: FilledButton.styleFrom(backgroundColor: _kirmizi), onPressed: () => Navigator.pop(ctx, true), child: const Text('Sil')),
-        ],
+      backgroundColor: _card,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const SizedBox(height: 12),
+          Container(width: 40, height: 4, decoration: BoxDecoration(color: const Color(0xFF334155), borderRadius: BorderRadius.circular(4))),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            child: Row(children: [
+              const Icon(Icons.remove_circle_outline, color: _kirmizi, size: 18),
+              const SizedBox(width: 8),
+              Expanded(child: Text('${k['ad']} — silme sebebi', style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold))),
+            ]),
+          ),
+          const SizedBox(height: 6),
+          for (final s in _silmeSebepleri)
+            ListTile(
+              dense: true,
+              leading: const Icon(Icons.chevron_right, color: Color(0xFF64748B), size: 20),
+              title: Text(s, style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 14)),
+              onTap: () => Navigator.pop(ctx, s),
+            ),
+          const SizedBox(height: 10),
+        ]),
       ),
     );
-    if (onay == true) await _kalemVoidGonder(k, null);
+    if (secilen != null) await _kalemVoidGonder(k, null, secilen);
   }
 
-  Future<void> _kalemVoidGonder(Map k, String? onayPin) async {
+  Future<void> _kalemVoidGonder(Map k, String? onayPin, String sebep) async {
     if (widget.id == null) return;
     final auth = context.read<AuthProvider>();
     try {
-      final res = await Api.kalemVoid(auth.token!, widget.id!, _n(k['id']).toInt(), sebep: 'Ürün silindi', onayPin: onayPin);
+      final res = await Api.kalemVoid(auth.token!, widget.id!, _n(k['id']).toInt(), sebep: sebep, onayPin: onayPin);
       if (!mounted) return;
       if (res['ok'] == 1) {
         _yukle();
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['mesaj']?.toString() ?? 'Silindi'), backgroundColor: _yesil));
       } else if (res['onay_gerek'] == true) {
         final pin = await _pinSor(res['hata']?.toString() ?? 'Yetkili PIN onayı gerekli');
-        if (pin != null && pin.trim().isNotEmpty) await _kalemVoidGonder(k, pin.trim());
+        if (pin != null && pin.trim().isNotEmpty) await _kalemVoidGonder(k, pin.trim(), sebep);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['hata']?.toString() ?? 'Silinemedi'), backgroundColor: _kirmizi));
       }
