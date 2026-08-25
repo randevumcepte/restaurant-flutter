@@ -498,7 +498,7 @@ class _DetayScreenState extends State<DetayScreen> {
       // Hesap dokumu
       _kutu('🧮 Hesap', [
         _hesapSatir('Ara Toplam', _tam(_n(d!['araToplam'])), false),
-        if (indirim > 0) _hesapSatir('İskonto', '- ${_tam(indirim)}', true),
+        if (indirim > 0) _hesapSatir('İskonto${_n(d!['araToplam']) > 0 ? ' (%${(indirim / _n(d!['araToplam']) * 100).round()})' : ''}', '- ${_tam(indirim)}', true),
         if (ikram > 0) _hesapSatir('İkram', '- ${_tam(ikram)}', true),
         const Divider(color: Color(0xFF243049), height: 18),
         _hesapSatir('TOPLAM', _tam(_n(d!['toplam'])), false, kalin: true),
