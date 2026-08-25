@@ -106,8 +106,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       opaque: true,
       barrierColor: _bg,
       pageBuilder: (_, _, _) => DetayScreen(tip: tip, id: id, alt: alt, period: period, baslikFallback: baslik),
-      transitionsBuilder: (_, anim, _, child) =>
-          FadeTransition(opacity: CurvedAnimation(parent: anim, curve: Curves.easeOut), child: child),
+      transitionsBuilder: (_, anim, _, child) => SlideTransition(
+        position: Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
+        child: child,
+      ),
     ));
   }
 

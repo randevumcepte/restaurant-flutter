@@ -43,8 +43,10 @@ class _DetayScreenState extends State<DetayScreen> {
       opaque: true,
       barrierColor: _bg,
       pageBuilder: (_, _, _) => DetayScreen(tip: tip, id: id, period: widget.period, baslikFallback: baslik),
-      transitionsBuilder: (_, anim, _, child) =>
-          FadeTransition(opacity: CurvedAnimation(parent: anim, curve: Curves.easeOut), child: child),
+      transitionsBuilder: (_, anim, _, child) => SlideTransition(
+        position: Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
+        child: child,
+      ),
     ));
   }
   String _k(num v) {
@@ -104,8 +106,46 @@ class _DetayScreenState extends State<DetayScreen> {
               ? Center(child: Text(hata!, style: const TextStyle(color: _kirmizi)))
               : RefreshIndicator(
                   onRefresh: _yukle, color: _mor2, backgroundColor: _card,
-                  child: ListView(padding: const EdgeInsets.all(14), children: _icerik()),
+                  child: ListView(padding: const EdgeInsets.all(14), children: [..._aiOnek(), ..._icerik()]),
                 ),
+    );
+  }
+
+  // ✨ AI Yorumu (kural motoru) - detayin en ustunde
+  List<Widget> _aiOnek() {
+    final ai = (d?['ai'] as List?) ?? [];
+    if (ai.isEmpty) return [];
+    return [_aiKart(ai), const SizedBox(height: 12)];
+  }
+
+  Widget _aiKart(List ai) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(colors: [Color(0xFF241B4D), Color(0xFF1E2647)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: _mor2.withValues(alpha: 0.45)),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: const [
+            Text('✨', style: TextStyle(fontSize: 15)),
+            SizedBox(width: 6),
+            Text('AI Yorumu', style: TextStyle(color: Color(0xFFC4B5FD), fontSize: 13, fontWeight: FontWeight.bold)),
+          ]),
+          const SizedBox(height: 10),
+          for (final a in ai) _aiSatir(a as Map),
+        ]),
+      );
+
+  Widget _aiSatir(Map a) {
+    final s = a['seviye']?.toString() ?? 'bilgi';
+    final renk = s == 'riskli' ? _kirmizi : (s == 'iyi' ? _yesil : _mavi);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Container(margin: const EdgeInsets.only(top: 5, right: 8), width: 7, height: 7, decoration: BoxDecoration(color: renk, shape: BoxShape.circle)),
+        Expanded(child: Text(a['mesaj'].toString(), style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 13, height: 1.35))),
+      ]),
     );
   }
 
