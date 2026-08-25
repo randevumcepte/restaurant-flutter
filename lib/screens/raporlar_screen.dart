@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
 import '../services/api.dart';
+import 'z_raporu_screen.dart';
+import 'hareketler_screen.dart';
 
 class RaporlarScreen extends StatefulWidget {
   const RaporlarScreen({super.key});
@@ -41,6 +43,23 @@ class _RaporlarScreenState extends State<RaporlarScreen> {
       if (mounted) setState(() => loading = false);
     }
   }
+
+  Widget _girisBtn(String emoji, String metin, Color renk, VoidCallback onTap) => GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFE2E8F0))),
+          child: Column(children: [
+            Container(
+              width: 44, height: 44, alignment: Alignment.center,
+              decoration: BoxDecoration(color: renk.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
+              child: Text(emoji, style: const TextStyle(fontSize: 20)),
+            ),
+            const SizedBox(height: 8),
+            Text(metin, textAlign: TextAlign.center, style: TextStyle(color: renk, fontWeight: FontWeight.bold, fontSize: 12, height: 1.2)),
+          ]),
+        ),
+      );
 
   Widget _kutu(String baslik, List<Widget> cocuklar) => Container(
         margin: const EdgeInsets.only(bottom: 14),
@@ -81,6 +100,12 @@ class _RaporlarScreenState extends State<RaporlarScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
+                  Row(children: [
+                    Expanded(child: _girisBtn('🧾', 'Gün Sonu\nZ Raporu', const Color(0xFF4F46E5), () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ZRaporuScreen())))),
+                    const SizedBox(width: 12),
+                    Expanded(child: _girisBtn('📋', 'Hareketler\nAktivite Log', const Color(0xFF7C3AED), () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const HareketlerScreen())))),
+                  ]),
+                  const SizedBox(height: 14),
                   _kutu('🔥 En Çok Satan Ürünler', [
                     for (int i = 0; i < top.length; i++)
                       _satir('${i + 1}. ${(top[i] as Map)['urun_adi']}',

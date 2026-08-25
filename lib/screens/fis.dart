@@ -55,3 +55,60 @@ Future<void> fisYazdir(Map d) async {
 
   await Printing.layoutPdf(onLayout: (format) => doc.save());
 }
+
+/// Gün Sonu (Z Raporu) -> A4 PDF -> yazdır/paylaş.
+Future<void> zRaporuYazdir(Map d) async {
+  final f = NumberFormat.decimalPattern('tr');
+  String tl(dynamic v) => '${f.format((v is num ? v : 0).round())} TL';
+  num n(dynamic v) => v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0);
+  final font = await PdfGoogleFonts.notoSansRegular();
+  final fontB = await PdfGoogleFonts.notoSansBold();
+  final doc = pw.Document();
+
+  pw.Widget satir(String s, String v, {bool bold = false}) => pw.Padding(
+        padding: const pw.EdgeInsets.symmetric(vertical: 2),
+        child: pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
+          pw.Text(s, style: pw.TextStyle(fontSize: 11, fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal)),
+          pw.Text(v, style: pw.TextStyle(fontSize: 11, fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal)),
+        ]),
+      );
+  pw.Widget baslik(String t) => pw.Padding(padding: const pw.EdgeInsets.only(top: 10, bottom: 4), child: pw.Text(t, style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)));
+
+  final odeme = (d['odeme'] as List?) ?? [];
+  final servis = (d['servis'] as List?) ?? [];
+  final top = (d['top'] as List?) ?? [];
+
+  doc.addPage(pw.Page(
+    pageFormat: PdfPageFormat.a4,
+    theme: pw.ThemeData.withFont(base: font, bold: fontB),
+    build: (ctx) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.stretch, children: [
+      pw.Center(child: pw.Text(d['isletme']?.toString() ?? 'RestoOS', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold))),
+      pw.Center(child: pw.Text('GÜN SONU / Z RAPORU · ${d['tarih']}', style: const pw.TextStyle(fontSize: 12))),
+      pw.Divider(thickness: 1.5),
+      satir('Toplam Ciro', tl(d['ciro']), bold: true),
+      satir('Kapanan Adisyon', '${n(d['kapanan']).toInt()}'),
+      satir('Misafir', '${n(d['misafir']).toInt()}'),
+      satir('Adisyon Ortalaması', tl(d['ortalama'])),
+      satir('Kişi Başı', tl(d['kisi_basi'])),
+      satir('Açık Kalan Adisyon', '${n(d['acik_kalan']).toInt()}'),
+      baslik('Ödeme Dağılımı'),
+      for (final o in odeme) satir((o as Map)['tip'].toString().toUpperCase(), '${n(o['adet']).toInt()} · ${tl(o['tutar'])}'),
+      baslik('Servis Tipi'),
+      for (final s in servis) satir((s as Map)['ad'].toString(), '${n(s['adet']).toInt()} · ${tl(s['tutar'])}'),
+      baslik('Kayıp / Sızıntı'),
+      satir('İskonto', tl(d['iskonto'])),
+      satir('İkram', tl(d['ikram'])),
+      satir('Silinen Ürün (void)', tl(d['void'])),
+      satir('İptal Adisyon', '${n(d['iptal_adet']).toInt()} · ${tl(d['iptal_tutar'])}'),
+      satir('Fire', tl(d['fire'])),
+      baslik('Maliyet / Kâr'),
+      satir('Food-Cost', '${tl(d['maliyet'])} (%${n(d['maliyet_yuzde']).toInt()})'),
+      satir('Brüt Kâr', tl(d['brut_kar']), bold: true),
+      baslik('En Çok Satan'),
+      for (final t in top) satir((t as Map)['urun_adi'].toString(), '${n(t['adet']).toInt()} adet'),
+      pw.SizedBox(height: 16),
+      pw.Center(child: pw.Text('RestoOS · ${d['tarih']}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey))),
+    ]),
+  ));
+  await Printing.layoutPdf(onLayout: (format) => doc.save());
+}
