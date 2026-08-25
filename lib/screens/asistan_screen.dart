@@ -1,13 +1,17 @@
-import 'dart:math' as math;
+import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/auth_provider.dart';
 import '../services/api.dart';
 
-/// RESTORAN PATRON ASISTANI — Randevumcepte patron_asistan.dart'tan birebir taşındı.
-/// Sohbet + dokun-konuş mikrofon + dinlerken Siri küresi + erkek TTS (tr-tr-x-tmc).
+/// SESLI ASISTAN — Randevumcepte sesli_randevu.dart tasariminin birebir portu.
+/// Buyuk Siri kuresi + surekli konusma dongusu (_basla): karsilar -> dinler ->
+/// cevap -> tekrar dinler -> ses yoksa/tesekkurde nazikce kapatir. Restoran Q&A.
 class AsistanScreen extends StatefulWidget {
   const AsistanScreen({super.key});
 
@@ -15,41 +19,43 @@ class AsistanScreen extends StatefulWidget {
   State<AsistanScreen> createState() => _AsistanScreenState();
 }
 
-class _Mesaj {
-  final bool soru; // true = kullanici sorusu, false = asistan cevabi
-  final String metin;
-  final Map<String, dynamic>? kart;
-  _Mesaj(this.soru, this.metin, {this.kart});
-}
-
 class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProviderStateMixin {
-  static const Color _mor = Color(0xFF7C3AED);
-  static const Color _mor2 = Color(0xFF9D5DC8);
+  static const Color _mor = Color(0xFF8B5CF6);
+  static const List<String> _aylar = ['', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
 
   final stt.SpeechToText _speech = stt.SpeechToText();
   final FlutterTts _tts = FlutterTts();
-  final TextEditingController _metinC = TextEditingController();
-  final ScrollController _scrollC = ScrollController();
 
-  final List<_Mesaj> _mesajlar = [];
   bool _hazir = false;
   bool _dinliyor = false;
   bool _mesgul = false;
-  bool _sesli = true;
-  bool _sttGonderildi = false;
-  String _sonTaninan = '';
-  String? _sonSoru;
-  DateTime? _sonSoruZamani;
-  late final AnimationController _donC;
+  bool _iptal = false;
+
+  late final AnimationController _pulse;
   double _sesN = 0;
+
+  String? _isCevap;
+  Map<String, dynamic>? _isKart;
+  String _sistemMesaji = 'Başlamak için dokun';
+
+  Completer<String>? _dinleC;
+  String _dinleSon = '';
+  bool _konusmaBasladi = false;
+  bool _dinlemeBekle = false;
+
+  // TTS ses secimi
+  List<Map<String, String>> _sesler = [];
+  List<Map<String, String>> _sunulan = [];
+  String? _seciliSes;
+  static const String _ses1Name = 'tr-tr-x-tmc-network'; // erkek, akici (varsayilan)
+  static const String _ses2Name = 'tr-tr-x-tmb-network'; // alternatif erkek
+
+  num _n(dynamic v) => v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0);
 
   @override
   void initState() {
     super.initState();
-    _donC = AnimationController(vsync: this, duration: const Duration(seconds: 7))..repeat();
-    final ad = context.read<AuthProvider>().ad?.split(' ').first ?? '';
-    _mesajlar.add(_Mesaj(false,
-        'Merhaba${ad.isNotEmpty ? ' $ad' : ''}! Restoranınız hakkında ne öğrenmek istersiniz? Mikrofona dokunup konuşun, bitince otomatik algılarım.'));
+    _pulse = AnimationController(vsync: this, duration: const Duration(seconds: 7))..repeat();
     _hazirla();
   }
 
@@ -57,26 +63,16 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
     final ok = await _speech.initialize(
       onStatus: (s) {
         if (s == 'done' || s == 'notListening') {
-          if (mounted) setState(() => _dinliyor = false);
-          // OTO-GONDERIM: bazi STT motorlari finalResult ATMAZ. Dinleme bitince
-          // taninan metin varsa ve henuz gonderilmediyse KENDILIGINDEN sor.
-          if (!_sttGonderildi && _sonTaninan.trim().isNotEmpty) {
-            _sttGonderildi = true;
-            final t = _sonTaninan.trim();
-            _sonTaninan = '';
-            _sor(t);
-          }
+          if (_dinlemeBekle && !_konusmaBasladi) return;
+          _dinlemeTamamla();
         }
       },
-      onError: (e) {
-        if (mounted) setState(() => _dinliyor = false);
-      },
+      onError: (e) => _dinlemeTamamla(),
     );
     await _sesAyarla();
-    if (mounted) setState(() => _hazir = ok);
+    if (mounted) _ss(() => _hazir = ok);
   }
 
-  /// TTS dogal/akici + ERKEK ses: Google motoru + Turkce erkek sesi (tr-tr-x-tmc).
   Future<void> _sesAyarla() async {
     try {
       final engines = await _tts.getEngines;
@@ -84,171 +80,169 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
         await _tts.setEngine('com.google.android.tts');
       }
     } catch (_) {}
-    try {
-      await _tts.setLanguage('tr-TR');
-      await _erkekSesSec();
-      await _tts.setSpeechRate(0.46);
-      await _tts.setPitch(1.0);
-      await _tts.awaitSpeakCompletion(true);
-    } catch (_) {}
-  }
-
-  /// Erkek Turkce sesi sec: tr-tr-x-tmc (erkek/akici). Yoksa herhangi tr sesine dus.
-  Future<void> _erkekSesSec() async {
+    await _tts.setLanguage('tr-TR');
     try {
       final voices = await _tts.getVoices;
-      if (voices is! List) return;
-      final tr = voices
-          .map((v) => Map<String, dynamic>.from(v as Map))
-          .where((v) => (v['locale'] ?? '').toString().toLowerCase().startsWith('tr'))
-          .toList();
-      if (tr.isEmpty) return;
-      Map<String, dynamic>? hedef;
-      for (final v in tr) {
-        if (v['name'].toString() == 'tr-tr-x-tmc-network') { hedef = v; break; }
-      }
-      if (hedef == null) {
-        for (final v in tr) {
-          if (v['name'].toString().contains('tmc')) { hedef = v; break; }
+      if (voices is List) {
+        final trAll = voices.map((v) => Map<String, dynamic>.from(v as Map))
+            .where((v) => (v['locale'] ?? '').toString().toLowerCase().startsWith('tr')).toList();
+        // Erkek adaylarini (tmc/tmb/-erkek) one al
+        int skor(Map v) {
+          final ad = (v['name'] ?? '').toString().toLowerCase();
+          if (ad.contains('tmc') || ad.contains('tmb') || ad.contains('male') || ad.contains('erkek')) return 0;
+          if (ad.contains('fmk') || ad.contains('fem') || ad.contains('efu')) return 2;
+          return 1;
         }
+        trAll.sort((a, b) => skor(a).compareTo(skor(b)));
+        _sesler = trAll.map((v) => {'name': v['name'].toString(), 'locale': v['locale'].toString()}).toList();
       }
-      hedef ??= tr.first;
-      await _tts.setVoice({'name': hedef['name'].toString(), 'locale': hedef['locale'].toString()});
     } catch (_) {}
+    await _tts.setSpeechRate(0.46);
+    await _tts.setPitch(1.06);
+    await _tts.awaitSpeakCompletion(true);
+
+    // Sunulacak sesler: isimle sabit 2 erkek secenek; yoksa siraya gore
+    _sunulan = [];
+    final s1 = _sesBul(_ses1Name) ?? (_sesler.isNotEmpty ? _sesler[0] : null);
+    final s2 = _sesBul(_ses2Name) ?? (_sesler.length > 1 ? _sesler[1] : null);
+    if (s1 != null) _sunulan.add({'etiket': 'Ses 1', 'name': s1['name']!, 'locale': s1['locale']!});
+    if (s2 != null && (s1 == null || s2['name'] != s1['name'])) _sunulan.add({'etiket': 'Ses 2', 'name': s2['name']!, 'locale': s2['locale']!});
+
+    final prefs = await SharedPreferences.getInstance();
+    final kayitli = prefs.getString('asistan_ses');
+    String? hedef;
+    if (kayitli != null && _sunulan.any((s) => s['name'] == kayitli)) {
+      hedef = kayitli;
+    } else if (_sunulan.isNotEmpty) {
+      hedef = _sunulan.first['name'];
+    }
+    if (hedef != null) await _sesUygula(hedef, kaydet: false);
+    if (mounted) _ss(() {});
+  }
+
+  Map<String, String>? _sesBul(String name) {
+    for (final s in _sesler) {
+      if (s['name'] == name) return s;
+    }
+    return null;
+  }
+
+  Future<void> _sesUygula(String name, {bool kaydet = true}) async {
+    final ses = _sesler.firstWhere((s) => s['name'] == name, orElse: () => {'name': name, 'locale': 'tr-TR'});
+    try { await _tts.setVoice({'name': ses['name']!, 'locale': ses['locale']!}); } catch (_) {}
+    _seciliSes = name;
+    if (kaydet) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('asistan_ses', name);
+    }
+    if (mounted) _ss(() {});
+  }
+
+  Future<void> _sesDene(String name) async {
+    await _sesUygula(name);
+    await _konus('Merhaba, ben restoranınızın asistanıyım. Sesim böyle.');
   }
 
   @override
   void dispose() {
     _speech.stop();
     _tts.stop();
-    _donC.dispose();
-    _metinC.dispose();
-    _scrollC.dispose();
+    _pulse.dispose();
     super.dispose();
   }
 
-  void _kaydir() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollC.hasClients) {
-        _scrollC.animateTo(_scrollC.position.maxScrollExtent, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
-      }
-    });
-  }
+  void _ss(VoidCallback fn) { if (mounted) setState(fn); }
 
+  // ---------------- SES: konus / dinle ----------------
+  int _konusToken = 0;
   Future<void> _konus(String metin) async {
-    if (!_sesli) return;
-    try { await _tts.stop(); await _tts.speak(metin); } catch (_) {}
+    final int tok = ++_konusToken;
+    _ss(() => _sistemMesaji = metin);
+    try { HapticFeedback.lightImpact(); } catch (_) {}
+    try {
+      await _tts.stop();
+      if (tok != _konusToken) return;
+      await _tts.speak(_seslendirmeMetni(metin));
+    } catch (_) {}
   }
 
-  /// Mikrofon: tek cumle dinle -> metne cevir -> otomatik sor.
-  Future<void> _mic() async {
-    if (!_hazir) return;
-    if (_dinliyor) {
-      await _speech.stop();
-      if (mounted) setState(() => _dinliyor = false);
-      return;
-    }
-    await _tts.stop();
-    _sttGonderildi = false;
-    _sonTaninan = '';
+  String _trKucuk(String s) => s.replaceAll('I', 'ı').replaceAll('İ', 'i').toLowerCase();
+  String _seslendirmeMetni(String s) => s.replaceAllMapped(RegExp(r'[A-ZÇĞİÖŞÜ]{2,}'), (m) {
+        final w = m.group(0)!;
+        return w.substring(0, 1) + _trKucuk(w.substring(1));
+      });
+
+  /// Tek cumle dinler; oturum kapaninca duyulan metni doner.
+  Future<String> _dinle({int pause = 2, int listen = 15}) async {
+    if (!_hazir) return '';
+    _dinleC = Completer<String>();
+    _dinleSon = '';
+    _konusmaBasladi = false;
+    _dinlemeBekle = true;
     _sesN = 0;
-    setState(() => _dinliyor = true);
+    _ss(() => _dinliyor = true);
+    try { HapticFeedback.mediumImpact(); } catch (_) {}
+
+    Timer? sessizlikT;
+    Timer? watchdogT;
+    final int sessizlikMs = pause.clamp(1, 5) * 1000 + 400;
+
+    void kapat() {
+      sessizlikT?.cancel();
+      watchdogT?.cancel();
+      _dinlemeBekle = false;
+      try { _speech.stop(); } catch (_) {}
+      _dinlemeTamamla();
+    }
+
+    void sessizligiZamanla() {
+      sessizlikT?.cancel();
+      sessizlikT = Timer(Duration(milliseconds: sessizlikMs), () { if (_konusmaBasladi) kapat(); });
+    }
+
+    watchdogT = Timer(Duration(seconds: listen + 3), kapat);
+
     try {
       await _speech.listen(
-        onSoundLevelChange: (level) {
-          final hedef = (level.clamp(0.0, 10.0)) / 10.0;
-          _sesN = _sesN + (hedef - _sesN) * 0.35;
-          if (mounted && _dinliyor) setState(() {});
-        },
         onResult: (r) {
           final t = r.recognizedWords.trim();
           if (t.isNotEmpty) {
-            _metinC.text = t;
-            _sonTaninan = t;
-          }
-          if (r.finalResult && !_sttGonderildi) {
-            _sttGonderildi = true;
-            _sonTaninan = '';
-            _speech.stop();
-            if (mounted) setState(() => _dinliyor = false);
-            if (t.isNotEmpty) _sor(t);
+            _dinleSon = t;
+            _konusmaBasladi = true;
+            _ss(() {});
+            if (r.finalResult) { kapat(); return; }
+            sessizligiZamanla();
           }
         },
         // ignore: deprecated_member_use
-        listenFor: const Duration(seconds: 60),
-        listenOptions: stt.SpeechListenOptions(
-          localeId: 'tr_TR',
-          partialResults: true,
-          cancelOnError: true,
-          autoPunctuation: false,
-        ),
+        listenFor: Duration(seconds: listen + 3),
+        // ignore: deprecated_member_use
+        pauseFor: Duration(seconds: listen + 3),
+        onSoundLevelChange: (level) {
+          final hedef = (level.clamp(0.0, 10.0)) / 10.0;
+          _sesN = _sesN + (hedef - _sesN) * 0.4;
+        },
+        listenOptions: stt.SpeechListenOptions(localeId: 'tr_TR', partialResults: true, cancelOnError: true, autoPunctuation: false),
       );
     } catch (_) {
-      if (mounted) setState(() => _dinliyor = false);
+      kapat();
     }
+    final sonuc = await _dinleC!.future;
+    sessizlikT?.cancel();
+    watchdogT.cancel();
+    _dinlemeBekle = false;
+    if (_iptalKomutu(sonuc)) {
+      _ss(() => _iptal = true);
+      await _konus('Tamam, kapatıyorum.');
+      return '';
+    }
+    return sonuc;
   }
 
-  Future<void> _gonder() async {
-    final t = _metinC.text.trim();
-    if (t.isEmpty) return;
-    _sttGonderildi = true;
-    _speech.stop();
-    if (_dinliyor && mounted) setState(() => _dinliyor = false);
-    _sor(t);
-  }
-
-  Future<void> _sor(String metin) async {
-    if (_mesgul) return;
-    final simdi = DateTime.now();
-    if (_sonSoru == metin && _sonSoruZamani != null && simdi.difference(_sonSoruZamani!).inSeconds < 6) return;
-    _sonSoru = metin;
-    _sonSoruZamani = simdi;
-    _metinC.clear();
-
-    // ONCE SAAT / TARIH -> yerel/ucretsiz cevap.
-    final bilgi = _bilgiCevap(metin);
-    if (bilgi != null) {
-      setState(() {
-        _mesajlar.add(_Mesaj(true, metin));
-        _mesajlar.add(_Mesaj(false, bilgi));
-      });
-      _kaydir();
-      _konus(bilgi);
-      return;
-    }
-
-    setState(() {
-      _mesajlar.add(_Mesaj(true, metin));
-      _mesajlar.add(_Mesaj(false, '…'));
-      _mesgul = true;
-    });
-    _kaydir();
-
-    try {
-      final auth = context.read<AuthProvider>();
-      final yanit = await Api.asistanSor(auth.token!, metin);
-      final cevap = (yanit['cevap'] ?? 'Bir sorun oldu.').toString();
-      final kart = yanit['kart'] is Map ? Map<String, dynamic>.from(yanit['kart']) : null;
-      final seslendir = yanit['seslendir'] == true;
-      if (!mounted) return;
-      setState(() {
-        _mesajlar.removeLast();
-        _mesajlar.add(_Mesaj(false, cevap, kart: kart));
-        _mesgul = false;
-      });
-      _kaydir();
-      if (seslendir) _konus(cevap);
-    } on ApiYetkiHatasi {
-      if (mounted) context.read<AuthProvider>().cikis();
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          _mesajlar.removeLast();
-          _mesajlar.add(_Mesaj(false, 'Bağlantı hatası, tekrar dener misiniz?'));
-          _mesgul = false;
-        });
-      }
-    }
+  void _dinlemeTamamla() {
+    if (_dinleC != null && !_dinleC!.isCompleted) _dinleC!.complete(_dinleSon.trim());
+    _sesN = 0;
+    if (mounted) _ss(() => _dinliyor = false);
   }
 
   String _fold(String s) => s
@@ -256,270 +250,318 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
       .replaceAll('ı', 'i').replaceAll('ş', 's').replaceAll('ğ', 'g')
       .replaceAll('ü', 'u').replaceAll('ö', 'o').replaceAll('ç', 'c').trim();
 
-  /// Saat / tarih gibi bilgi sorulari (bedava). Cevap ya da null.
+  bool _iptalKomutu(String s) {
+    final c = _fold(s);
+    return c == 'iptal' || c == 'kapat' || c == 'dur' || c == 'vazgec' || c.contains('konusmayi kapat') || c.contains('gorusmeyi kapat');
+  }
+
+  bool _kufurMu(String metin) {
+    final norm = ' ${_fold(metin)} ';
+    const k = ['amk', 'aq', 'orospu', 'pic', 'siktir', 'yarrak', 'ibne', 'serefsiz', 'gerizekali', 'salak', 'aptal', 'geber', 'defol', 'oc'];
+    for (final w in k) { if (norm.contains(' $w ')) return true; }
+    return false;
+  }
+
+  String _kufurCevabi() => 'Sizi saygıya davet ediyorum. Böyle devam ederseniz görüşmeyi kapatmak zorunda kalacağım.';
+
+  bool _tesekkurMu(String metin) {
+    final c = _fold(metin);
+    if (RegExp(r'\d').hasMatch(c)) return false;
+    const ks = ['tesekkur', 'tesekurler', 'sagol', 'sag ol', 'eyvallah', 'yeter bu kadar', 'gorusuruz', 'hosca kal', 'iyi gunler', 'kendine iyi bak', 'var ol'];
+    return ks.any((k) => c.contains(k));
+  }
+
+  /// Saat / tarih (bedava, offline).
   String? _bilgiCevap(String metin) {
     final c = _fold(metin);
     if (c.contains('saat kac') || (c.contains('saat') && c.contains('kac'))) {
       final n = DateTime.now();
       return 'Şu an saat ${n.hour.toString().padLeft(2, '0')} ${n.minute.toString().padLeft(2, '0')}';
     }
-    if (c.contains('gunlerden ne') || c.contains('hangi gun') || c.contains('bugun gun') ||
-        c.contains('tarih ne') || c.contains('ayin kaci') || c.contains('bugun ayin')) {
+    if (c.contains('gunlerden ne') || c.contains('bugun gun') || c.contains('tarih ne') || c.contains('hangi gun') || c.contains('ayin kaci') || c.contains('bugun ayin')) {
       final n = DateTime.now();
       const g = ['', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
-      const a = ['', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
-      return 'Bugün ${g[n.weekday]}, ${n.day} ${a[n.month]} ${n.year}';
+      return 'Bugün ${g[n.weekday]}, ${n.day} ${_aylar[n.month]} ${n.year}';
     }
     return null;
   }
 
-  // ─────────────────────────────────────────────────────────────
+  // ---------------- ANA AKIS (surekli dongu) ----------------
+  Future<void> _basla() async {
+    if (_mesgul) {
+      // Calisirken dokunulursa: durdur.
+      _iptal = true;
+      await _speech.stop();
+      await _tts.stop();
+      _dinlemeTamamla();
+      _ss(() => _mesgul = false);
+      return;
+    }
+    _ss(() { _mesgul = true; _iptal = false; });
+    final auth = context.read<AuthProvider>();
+    try {
+      final ad = auth.ad?.split(' ').first ?? '';
+      final selam = ad.isNotEmpty ? 'Merhaba $ad.' : 'Merhaba.';
+      bool ilk = true;
+      int bosSay = 0;
+      int kufurSay = 0;
+      while (!_iptal && mounted) {
+        if (ilk) {
+          await _konus('$selam Restoranınız hakkında ne öğrenmek istersiniz?');
+        }
+        ilk = false;
+        final c = await _dinle(pause: 2, listen: 15);
+        if (_iptal) return;
+        if (c.trim().isEmpty) {
+          if (++bosSay >= 2) { await _konus('Başka sorunuz yoksa konuşmayı kapatıyorum. İstediğinizde tekrar dokunun.'); return; }
+          await _konus('Sizi duyamadım, tekrar söyler misiniz?');
+          continue;
+        }
+        bosSay = 0;
+        if (_kufurMu(c)) {
+          kufurSay++;
+          if (kufurSay >= 2) { await _konus('Bu şekilde devam edemeyeceğim. Görüşmeyi kapatıyorum.'); return; }
+          await _konus(_kufurCevabi());
+          continue;
+        }
+        if (_tesekkurMu(c)) { await _konus('Ben teşekkür ederim. Başka isteğiniz yoksa konuşmayı kapatıyorum.'); return; }
+        final bilgi = _bilgiCevap(c);
+        if (bilgi != null) { _ss(() { _isCevap = bilgi; _isKart = null; }); await _konus(bilgi); continue; }
+        // Restoran sorusu -> backend
+        _ss(() => _sistemMesaji = 'Bakıyorum…');
+        try {
+          final yanit = await Api.asistanSor(auth.token!, c);
+          final cevap = (yanit['cevap'] ?? 'Bir sorun oldu.').toString();
+          final kart = yanit['kart'] is Map ? Map<String, dynamic>.from(yanit['kart']) : null;
+          _ss(() { _isCevap = cevap; _isKart = kart; });
+          if (yanit['seslendir'] == true) await _konus(cevap);
+        } on ApiYetkiHatasi {
+          auth.cikis();
+          return;
+        } catch (_) {
+          await _konus('Bağlantı hatası oldu, tekrar dener misiniz?');
+        }
+        continue; // LOOP -> tekrar dinle (2. soru)
+      }
+    } finally {
+      if (mounted) _ss(() => _mesgul = false);
+    }
+  }
 
+  /// Chip/yazili soru (mikrofonsuz).
+  Future<void> _yaziliSor(String c) async {
+    if (_mesgul) return;
+    _ss(() => _mesgul = true);
+    try {
+      final bilgi = _bilgiCevap(c);
+      if (bilgi != null) { _ss(() { _isCevap = bilgi; _isKart = null; }); await _konus(bilgi); return; }
+      _ss(() => _sistemMesaji = 'Bakıyorum…');
+      final auth = context.read<AuthProvider>();
+      final yanit = await Api.asistanSor(auth.token!, c);
+      final cevap = (yanit['cevap'] ?? 'Bir sorun oldu.').toString();
+      final kart = yanit['kart'] is Map ? Map<String, dynamic>.from(yanit['kart']) : null;
+      _ss(() { _isCevap = cevap; _isKart = kart; });
+      if (yanit['seslendir'] == true) await _konus(cevap);
+    } catch (_) {
+      _ss(() => _isCevap = 'Bağlantı hatası, tekrar deneyin.');
+    } finally {
+      if (mounted) _ss(() => _mesgul = false);
+    }
+  }
+
+  // ---------------- UI ----------------
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F6FB),
+      backgroundColor: const Color(0xFFF6F5FB),
       appBar: AppBar(
-        backgroundColor: _mor,
-        foregroundColor: Colors.white,
+        backgroundColor: const Color(0xFFF6F5FB),
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
-        title: const Text('Patron Asistanı', style: TextStyle(fontWeight: FontWeight.w600)),
+        foregroundColor: const Color(0xFF221F35),
+        title: const Text('Sesli Asistan', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
         actions: [
-          IconButton(
-            tooltip: _sesli ? 'Sesli okuma açık' : 'Sesli okuma kapalı',
-            icon: Icon(_sesli ? Icons.volume_up : Icons.volume_off),
-            onPressed: () {
-              setState(() => _sesli = !_sesli);
-              if (!_sesli) _tts.stop();
-            },
-          ),
+          if (_sunulan.length >= 2)
+            IconButton(
+              tooltip: 'Asistan sesi',
+              icon: const Icon(Icons.record_voice_over_rounded),
+              color: _mor,
+              onPressed: _sesSecPaneliAc,
+            ),
         ],
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollC,
-              padding: const EdgeInsets.fromLTRB(12, 14, 12, 8),
-              itemCount: _mesajlar.length,
-              itemBuilder: (c, i) => _baloncuk(_mesajlar[i]),
-            ),
-          ),
-          _dinliyor ? _dinlemePaneli() : _oneriler(),
-          _altBar(),
-        ],
-      ),
-    );
-  }
-
-  Widget _oneriler() {
-    final oneri = <String>['Bugün kasa ne durumda?', 'Bu ay ciro ne kadar?', 'Bu hafta en çok kim sattı?', 'Kaç masa dolu?', 'Food-cost ne durumda?'];
-    return Container(
-      height: 46,
-      margin: const EdgeInsets.only(bottom: 2),
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        itemCount: oneri.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 8),
-        itemBuilder: (c, i) {
-          final o = oneri[i];
-          return Center(
-            child: InkWell(
-              borderRadius: BorderRadius.circular(22),
-              onTap: _mesgul ? null : () => _sor(o),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(22),
-                  border: Border.all(color: const Color(0xFFE6DDF4)),
-                  boxShadow: const [BoxShadow(color: Color(0x0F5C008E), blurRadius: 8, offset: Offset(0, 3))],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.auto_awesome, size: 13, color: _mor2),
-                    const SizedBox(width: 6),
-                    Text(o, style: const TextStyle(fontSize: 12.5, color: Color(0xFF4A3B6B), fontWeight: FontWeight.w500)),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _altBar() {
-    return SafeArea(
-      top: false,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          boxShadow: [BoxShadow(color: Color(0x12000000), blurRadius: 14, offset: Offset(0, -3))],
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
+      body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _micDugme(),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Container(
-                constraints: const BoxConstraints(minHeight: 50),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF5F3FB),
-                  borderRadius: BorderRadius.circular(26),
-                  border: Border.all(
-                    color: _dinliyor ? _mor2.withValues(alpha: .55) : const Color(0xFFEAE4F5),
-                    width: _dinliyor ? 1.4 : 1,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    const SizedBox(width: 18),
-                    Expanded(
-                      child: TextField(
-                        controller: _metinC,
-                        minLines: 1,
-                        maxLines: 4,
-                        textInputAction: TextInputAction.send,
-                        onSubmitted: (_) => _gonder(),
-                        style: const TextStyle(fontSize: 14.5, color: Color(0xFF2a2340)),
-                        decoration: InputDecoration(
-                          isCollapsed: true,
-                          hintText: _dinliyor ? 'Dinliyorum, sizi duyuyorum…' : 'Sorunu yaz ya da mikrofona bas',
-                          hintStyle: TextStyle(color: _dinliyor ? _mor2 : const Color(0xFF9B90B3), fontSize: 13.5),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 15),
-                        ),
-                      ),
-                    ),
-                    ValueListenableBuilder<TextEditingValue>(
-                      valueListenable: _metinC,
-                      builder: (c, val, _) {
-                        if (val.text.trim().isEmpty) return const SizedBox(width: 8);
-                        return Padding(
-                          padding: const EdgeInsets.all(5),
-                          child: GestureDetector(
-                            onTap: _gonder,
-                            child: Container(
-                              width: 40,
-                              height: 40,
-                              decoration: const BoxDecoration(shape: BoxShape.circle, gradient: LinearGradient(colors: [_mor, _mor2])),
-                              child: const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 20),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            const SizedBox(height: 22),
+            _mikrofon(),
+            const SizedBox(height: 30),
+            _isCevap != null ? _isCevapKart() : _baslangicKart(),
           ],
         ),
       ),
     );
   }
 
-  Widget _micDugme() {
-    return GestureDetector(
-      onTap: _mic,
-      child: Container(
-        width: 54,
-        height: 54,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: _dinliyor ? const [Color(0xFF7B2FB8), Color(0xFF9D5DC8)] : const [_mor, _mor2],
+  Widget _mikrofon() {
+    final aktif = _dinliyor;
+    return Center(
+      child: Column(
+        children: [
+          GestureDetector(
+            onTap: _basla,
+            behavior: HitTestBehavior.opaque,
+            child: SizedBox(width: 200, height: 200, child: Center(child: _orb(size: 168, aktif: aktif))),
           ),
-          boxShadow: [BoxShadow(color: _mor.withValues(alpha: 0.38), blurRadius: 14, offset: const Offset(0, 5))],
-        ),
-        child: Icon(_dinliyor ? Icons.stop_rounded : Icons.mic_rounded, color: Colors.white, size: 26),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Text(
+              aktif ? (_dinleSon.isNotEmpty ? _dinleSon : 'Dinliyorum…') : (_mesgul ? _sistemMesaji : 'Başlamak için dokun'),
+              textAlign: TextAlign.center,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Color(0xFF6B6880), fontSize: 15, height: 1.35, fontWeight: FontWeight.w500),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _orb({required double size, required bool aktif}) {
     return AnimatedBuilder(
-      animation: _donC,
+      animation: _pulse,
       builder: (c, _) {
-        final olcek = aktif ? (1.0 + _sesN * 0.14) : 1.0;
-        return Transform.scale(
-          scale: olcek,
-          child: SizedBox(
-            width: size,
-            height: size,
-            child: CustomPaint(painter: _SiriOrbPainter(_donC.value, aktif ? _sesN : 0.0, aktif)),
+        final olcek = aktif ? (1.0 + _sesN * 0.16) : 1.0;
+        final ph = _pulse.value * 2 * pi;
+        final genlik = aktif ? _sesN * 3.0 : 0.0;
+        final dx = sin(ph * 57) * genlik;
+        final dy = cos(ph * 63) * genlik;
+        return Transform.translate(
+          offset: Offset(dx, dy),
+          child: Transform.scale(
+            scale: olcek,
+            child: SizedBox(width: size, height: size, child: CustomPaint(painter: _SiriOrbPainter(_pulse.value, aktif ? _sesN : 0.0, aktif))),
           ),
         );
       },
     );
   }
 
-  Widget _dinlemePaneli() {
-    return GestureDetector(
-      onTap: _mic,
-      behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.only(top: 4, bottom: 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _orb(size: 92, aktif: true),
-            const SizedBox(height: 6),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Text(
-                _sonTaninan.isNotEmpty ? _sonTaninan : 'Sizi dinliyorum, konuşabilirsiniz…',
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 13, color: Color(0xFF6A5A8C), fontWeight: FontWeight.w500),
-              ),
-            ),
-          ],
+  void _sesSecPaneliAc() {
+    if (_sunulan.length < 2) return;
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) => Padding(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: const Color(0xFFE0DCEC), borderRadius: BorderRadius.circular(2)))),
+              const SizedBox(height: 16),
+              Row(children: const [
+                Icon(Icons.record_voice_over_rounded, size: 20, color: _mor),
+                SizedBox(width: 8),
+                Text('Asistan sesi', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Color(0xFF221F35))),
+              ]),
+              const SizedBox(height: 4),
+              const Text('Dokunup dinleyin, beğendiğinizi seçin.', style: TextStyle(fontSize: 13, color: Color(0xFF8A8699))),
+              const SizedBox(height: 14),
+              ..._sunulan.map((s) {
+                final name = s['name']!;
+                final secili = name == _seciliSes;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: GestureDetector(
+                    onTap: () { _sesDene(name); setSheet(() {}); },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        gradient: secili ? const LinearGradient(colors: [Color(0xFF8B5CF6), Color(0xFF6366F1)]) : null,
+                        color: secili ? null : const Color(0xFFF3F1FA),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Row(children: [
+                        Icon(secili ? Icons.check_circle_rounded : Icons.volume_up_rounded, size: 20, color: secili ? Colors.white : _mor),
+                        const SizedBox(width: 10),
+                        Text(s['etiket']!, style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w600, color: secili ? Colors.white : const Color(0xFF4A4660))),
+                      ]),
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _baloncuk(_Mesaj m) {
-    if (m.soru) {
-      return Align(
-        alignment: Alignment.centerRight,
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 10, left: 40),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: const BoxDecoration(
-            color: Color(0xFFECE7F6),
-            borderRadius: BorderRadius.only(topLeft: Radius.circular(14), topRight: Radius.circular(14), bottomLeft: Radius.circular(14), bottomRight: Radius.circular(2)),
-          ),
-          child: Text(m.metin, style: const TextStyle(fontSize: 14, color: Color(0xFF3a2a5c))),
-        ),
-      );
-    }
-    return Align(
-      alignment: Alignment.centerLeft,
+  Widget _isCevapKart() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFEEEBF7)),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 16, offset: const Offset(0, 6))],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            margin: const EdgeInsets.only(bottom: 6, right: 30),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: const Color(0xFFE7E2F0)),
-              borderRadius: const BorderRadius.only(topLeft: Radius.circular(14), topRight: Radius.circular(14), bottomLeft: Radius.circular(2), bottomRight: Radius.circular(14)),
-            ),
-            child: Text(m.metin, style: const TextStyle(fontSize: 14.5, color: Color(0xFF2a2340))),
-          ),
-          if (m.kart != null) _kart(m.kart!),
+          Row(children: const [
+            Icon(Icons.auto_awesome_rounded, size: 19, color: _mor),
+            SizedBox(width: 8),
+            Text('Asistan', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF221F35))),
+          ]),
+          const SizedBox(height: 8),
+          Text(_isCevap ?? '', style: const TextStyle(fontSize: 15, height: 1.4, color: Color(0xFF2B2740))),
+          if (_isKart != null) _kart(_isKart!),
+        ],
+      ),
+    );
+  }
+
+  Widget _baslangicKart() {
+    const oneri = ['Bugün kasa ne durumda?', 'Bu ay ciro ne kadar?', 'En çok kim sattı?', 'Kaç masa dolu?', 'Food-cost ne durumda?', 'Kayıp radarı'];
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFEEEBF7)),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 16, offset: const Offset(0, 6))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: const [
+            Icon(Icons.auto_awesome_rounded, size: 19, color: _mor),
+            SizedBox(width: 8),
+            Text('Ne öğrenmek istersiniz?', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF221F35))),
+          ]),
+          const SizedBox(height: 4),
+          const Text('Küreye dokunup konuşun ya da bir örnek seçin.', style: TextStyle(fontSize: 13, color: Color(0xFF8A8699))),
+          const SizedBox(height: 12),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            for (final o in oneri)
+              GestureDetector(
+                onTap: _mesgul ? null : () => _yaziliSor(o),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(color: const Color(0xFFF3F1FA), borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFFE6DDF4))),
+                  child: Text(o, style: const TextStyle(fontSize: 12.5, color: Color(0xFF6D4AA8), fontWeight: FontWeight.w600)),
+                ),
+              ),
+          ]),
         ],
       ),
     );
@@ -536,91 +578,77 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
     return '${buf.toString()} ₺';
   }
 
-  Widget _satir(String etiket, String deger) {
+  Widget _satirKV(String etiket, String deger) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Flexible(child: Text(etiket, style: const TextStyle(fontSize: 13, color: Color(0xFF555555)))),
-          const SizedBox(width: 10),
-          Text(deger, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _mor)),
-        ],
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Flexible(child: Text(etiket, style: const TextStyle(fontSize: 13.5, color: Color(0xFF6B6880)))),
+        const SizedBox(width: 10),
+        Text(deger, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: Color(0xFF221F35))),
+      ]),
     );
   }
 
-  /// Cevap karti — restoran backend'inin kart tipleri.
   Widget _kart(Map<String, dynamic> k) {
     final tip = (k['tip'] ?? '').toString();
     final List<Widget> satirlar = [];
-
     if (tip == 'ciro') {
-      satirlar.add(_satir('Ciro', _tl(k['ciro'] ?? 0)));
-      satirlar.add(_satir('Adisyon', '${k['adet'] ?? 0}'));
+      satirlar.add(_satirKV('Ciro', _tl(k['ciro'] ?? 0)));
+      satirlar.add(_satirKV('Adisyon', '${k['adet'] ?? 0}'));
     } else if (tip == 'garson') {
       for (final r in ((k['satirlar'] as List?) ?? []).take(6)) {
         final m = Map<String, dynamic>.from(r as Map);
-        satirlar.add(_satir(m['ad'].toString(), _tl(m['ciro'] ?? 0)));
+        satirlar.add(_satirKV(m['ad'].toString(), _tl(m['ciro'] ?? 0)));
       }
     } else if (tip == 'urun') {
       for (final r in ((k['satirlar'] as List?) ?? []).take(6)) {
         final m = Map<String, dynamic>.from(r as Map);
-        satirlar.add(_satir(m['urun_adi'].toString(), '${(m['adet'] as num?)?.round() ?? 0} adet'));
+        satirlar.add(_satirKV(m['urun_adi'].toString(), '${_n(m['adet']).toInt()} adet'));
       }
     } else if (tip == 'masa') {
-      satirlar.add(_satir('Dolu masa', '${k['acik'] ?? 0} / ${k['toplam'] ?? 0}'));
-      satirlar.add(_satir('Bekleyen', _tl(k['tutar'] ?? 0)));
+      satirlar.add(_satirKV('Dolu masa', '${k['acik'] ?? 0} / ${k['toplam'] ?? 0}'));
+      satirlar.add(_satirKV('Bekleyen', _tl(k['tutar'] ?? 0)));
     } else if (tip == 'paket') {
-      satirlar.add(_satir('Aktif paket', '${k['acik'] ?? 0}'));
+      satirlar.add(_satirKV('Aktif paket', '${k['acik'] ?? 0}'));
     } else if (tip == 'maliyet') {
-      satirlar.add(_satir('Food-Cost', '%${k['yuzde'] ?? 0}'));
-      satirlar.add(_satir('Maliyet', _tl(k['maliyet'] ?? 0)));
-      satirlar.add(_satir('Ciro', _tl(k['ciro'] ?? 0)));
+      satirlar.add(_satirKV('Food-Cost', '%${k['yuzde'] ?? 0}'));
+      satirlar.add(_satirKV('Maliyet', _tl(k['maliyet'] ?? 0)));
+      satirlar.add(_satirKV('Ciro', _tl(k['ciro'] ?? 0)));
     } else if (tip == 'kayip') {
-      satirlar.add(_satir('İskonto', _tl(k['iskonto'] ?? 0)));
-      satirlar.add(_satir('İkram', _tl(k['ikram'] ?? 0)));
-      satirlar.add(_satir('Silinen ürün', _tl(k['silinen'] ?? 0)));
-      satirlar.add(_satir('İptal adisyon', _tl(k['iptal'] ?? 0)));
-      satirlar.add(_satir('Fire', _tl(k['fire'] ?? 0)));
-      satirlar.add(_satir('Toplam sızıntı', _tl(k['toplam'] ?? 0)));
+      satirlar.add(_satirKV('İskonto', _tl(k['iskonto'] ?? 0)));
+      satirlar.add(_satirKV('İkram', _tl(k['ikram'] ?? 0)));
+      satirlar.add(_satirKV('Silinen ürün', _tl(k['silinen'] ?? 0)));
+      satirlar.add(_satirKV('İptal adisyon', _tl(k['iptal'] ?? 0)));
+      satirlar.add(_satirKV('Fire', _tl(k['fire'] ?? 0)));
+      satirlar.add(_satirKV('Toplam sızıntı', _tl(k['toplam'] ?? 0)));
     } else if (tip == 'iptal') {
-      satirlar.add(_satir('İptal', '${k['adet'] ?? 0}'));
-      satirlar.add(_satir('Tutar', _tl(k['tutar'] ?? 0)));
+      satirlar.add(_satirKV('İptal', '${k['adet'] ?? 0}'));
+      satirlar.add(_satirKV('Tutar', _tl(k['tutar'] ?? 0)));
     } else if (tip == 'musteri') {
-      satirlar.add(_satir('Misafir', '${k['misafir'] ?? 0}'));
-      satirlar.add(_satir('Adisyon', '${k['folyo'] ?? 0}'));
+      satirlar.add(_satirKV('Misafir', '${k['misafir'] ?? 0}'));
+      satirlar.add(_satirKV('Adisyon', '${k['folyo'] ?? 0}'));
     } else if (tip == 'ozet') {
-      satirlar.add(_satir('Ciro', _tl(k['ciro'] ?? 0)));
-      satirlar.add(_satir('Adisyon', '${k['folyo'] ?? 0}'));
-      satirlar.add(_satir('Açık masa', '${k['acik'] ?? 0}'));
+      satirlar.add(_satirKV('Ciro', _tl(k['ciro'] ?? 0)));
+      satirlar.add(_satirKV('Adisyon', '${k['folyo'] ?? 0}'));
+      satirlar.add(_satirKV('Açık masa', '${k['acik'] ?? 0}'));
     }
-
     if (satirlar.isEmpty) return const SizedBox.shrink();
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12, right: 20),
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: const Color(0xFFECE7F6)),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: const [BoxShadow(color: Color(0x0A000000), blurRadius: 6, offset: Offset(0, 2))],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text((k['baslik'] ?? '').toString().toUpperCase(),
-              style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: _mor2, letterSpacing: .3)),
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+        decoration: BoxDecoration(color: const Color(0xFFF8F7FC), borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFECE7F6))),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Text((k['baslik'] ?? '').toString().toUpperCase(), style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: _mor, letterSpacing: .3)),
           const SizedBox(height: 6),
           ...satirlar,
-        ],
+        ]),
       ),
     );
   }
 }
 
-/// Siri tarzi iridescent kure cizeri (Randevumcepte'den birebir).
+/// Siri tarzi iridescent kure (Randevumcepte sesli_randevu.dart'tan birebir).
 class _SiriOrbPainter extends CustomPainter {
   final double t;
   final double level;
@@ -631,23 +659,21 @@ class _SiriOrbPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final c = Offset(size.width / 2, size.height / 2);
     final r = size.width / 2;
-    final ang = t * 2 * math.pi;
+    final ang = t * 2 * pi;
 
     if (aktif) {
       for (int i = 0; i < 3; i++) {
         final f = 1 - i * 0.28;
-        final rr = r * (0.86 + i * 0.16) + level * r * 0.22;
+        final rr = r * (0.86 + i * 0.16) + level * r * 0.40;
         final op = ((0.22 * f) * (0.4 + level)).clamp(0.0, 0.5);
-        canvas.drawCircle(c, rr,
-            Paint()..color = const Color(0xFF3AD8FF).withValues(alpha: op)..style = PaintingStyle.stroke..strokeWidth = 1.6);
+        canvas.drawCircle(c, rr, Paint()..color = const Color(0xFF3AD8FF).withValues(alpha: op)..style = PaintingStyle.stroke..strokeWidth = 1.6);
       }
     }
 
     canvas.save();
     canvas.clipPath(Path()..addOval(Rect.fromCircle(center: c, radius: r)));
 
-    canvas.drawCircle(c, r,
-        Paint()..shader = const RadialGradient(colors: [Color(0xFF2A0B4A), Color(0xFF0E0022)]).createShader(Rect.fromCircle(center: c, radius: r)));
+    canvas.drawCircle(c, r, Paint()..shader = const RadialGradient(colors: [Color(0xFF2A0B4A), Color(0xFF0E0022)]).createShader(Rect.fromCircle(center: c, radius: r)));
 
     final blobs = <List<dynamic>>[
       [const Color(0xFF00D2FF), 0.0],
@@ -659,19 +685,15 @@ class _SiriOrbPainter extends CustomPainter {
     for (final b in blobs) {
       final col = b[0] as Color;
       final ph = b[1] as double;
-      final bc = Offset(c.dx + math.cos(ang + ph) * kayma, c.dy + math.sin(ang * 1.3 + ph) * kayma);
-      canvas.drawCircle(bc, r * 0.85,
-          Paint()..blendMode = BlendMode.plus..shader = RadialGradient(colors: [col.withValues(alpha: 0.85), col.withValues(alpha: 0.0)]).createShader(Rect.fromCircle(center: bc, radius: r * 0.85)));
+      final bc = Offset(c.dx + cos(ang + ph) * kayma, c.dy + sin(ang * 1.3 + ph) * kayma);
+      canvas.drawCircle(bc, r * 0.85, Paint()..blendMode = BlendMode.plus..shader = RadialGradient(colors: [col.withValues(alpha: 0.85), col.withValues(alpha: 0.0)]).createShader(Rect.fromCircle(center: bc, radius: r * 0.85)));
     }
 
     final cr = r * (0.42 + level * 0.18);
-    canvas.drawCircle(c, cr,
-        Paint()..blendMode = BlendMode.plus..shader = RadialGradient(colors: [Colors.white.withValues(alpha: 0.9), Colors.white.withValues(alpha: 0.0)]).createShader(Rect.fromCircle(center: c, radius: cr)));
+    canvas.drawCircle(c, cr, Paint()..blendMode = BlendMode.plus..shader = RadialGradient(colors: [Colors.white.withValues(alpha: 0.9), Colors.white.withValues(alpha: 0.0)]).createShader(Rect.fromCircle(center: c, radius: cr)));
 
     canvas.restore();
-
-    canvas.drawCircle(c, r - 0.6,
-        Paint()..color = Colors.white.withValues(alpha: 0.16)..style = PaintingStyle.stroke..strokeWidth = 1.1);
+    canvas.drawCircle(c, r - 0.6, Paint()..color = Colors.white.withValues(alpha: 0.16)..style = PaintingStyle.stroke..strokeWidth = 1.1);
   }
 
   @override
