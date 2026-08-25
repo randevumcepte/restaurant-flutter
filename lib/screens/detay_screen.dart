@@ -375,41 +375,47 @@ class _DetayScreenState extends State<DetayScreen> {
         childAspectRatio: 2.6, mainAxisSpacing: 10, crossAxisSpacing: 10,
         children: ozet.entries.map((e) => _statKart(e.key, e.value.toString())).toList(),
       ),
-      // Musteri (kayitliysa) - ozetin hemen altinda, dokunulunca kart
+      // Musteri (kayitliysa) - ozetin hemen altinda, VURGULU mor kart
       if (musteri != null) ...[
         const SizedBox(height: 12),
         GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () => _push(tip: 'musteri', id: _n(musteri['id']).toInt(), baslik: musteri['ad'].toString()),
           child: Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: _card,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: _mor1.withValues(alpha: 0.35)),
+              gradient: const LinearGradient(colors: [_mor1, _mavi], begin: Alignment.topLeft, end: Alignment.bottomRight),
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [BoxShadow(color: _mor1.withValues(alpha: 0.45), blurRadius: 14, offset: const Offset(0, 5))],
             ),
             child: Row(children: [
               CircleAvatar(
-                radius: 18, backgroundColor: _mor1.withValues(alpha: 0.25),
-                child: Text(musteri['ad'].toString().substring(0, 1).toUpperCase(), style: const TextStyle(color: Color(0xFFC4B5FD), fontWeight: FontWeight.bold, fontSize: 16)),
+                radius: 24, backgroundColor: Colors.white24,
+                child: Text(musteri['ad'].toString().substring(0, 1).toUpperCase(),
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Row(children: [
-                    Flexible(child: Text(musteri['ad'].toString(), style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis)),
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(color: _mor1.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(6)),
-                      child: const Text('Kayıtlı', style: TextStyle(color: Color(0xFFC4B5FD), fontSize: 9, fontWeight: FontWeight.bold)),
-                    ),
+                    const Icon(Icons.verified_user, size: 13, color: Colors.white70),
+                    const SizedBox(width: 4),
+                    const Text('KAYITLI MÜŞTERİ', style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
                   ]),
-                  Text(musteri['telefon']?.toString() ?? '', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                  const SizedBox(height: 2),
+                  Text(musteri['ad'].toString(), style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
+                  Text('📞 ${musteri['telefon']?.toString() ?? '-'}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
                 ]),
               ),
-              const Text('Kart', style: TextStyle(color: Color(0xFF6366F1), fontSize: 12, fontWeight: FontWeight.w600)),
-              const Icon(Icons.chevron_right, size: 20, color: Color(0xFF6366F1)),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+                child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                  Text('Kartı Aç', style: TextStyle(color: _mor1, fontSize: 12, fontWeight: FontWeight.bold)),
+                  Icon(Icons.arrow_forward, size: 14, color: _mor1),
+                ]),
+              ),
             ]),
           ),
         ),
