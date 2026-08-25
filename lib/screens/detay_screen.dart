@@ -201,7 +201,7 @@ class _DetayScreenState extends State<DetayScreen> {
       // Ozet chip grid
       GridView.count(
         crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
-        childAspectRatio: 2.6, mainAxisSpacing: 10, crossAxisSpacing: 10,
+        childAspectRatio: 2.4, mainAxisSpacing: 10, crossAxisSpacing: 10,
         children: ozet.entries.map((e) => _statKart(e.key, e.value.toString())).toList(),
       ),
       const SizedBox(height: 14),
@@ -450,7 +450,7 @@ class _DetayScreenState extends State<DetayScreen> {
       const SizedBox(height: 12),
       GridView.count(
         crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
-        childAspectRatio: 2.6, mainAxisSpacing: 10, crossAxisSpacing: 10,
+        childAspectRatio: 2.4, mainAxisSpacing: 10, crossAxisSpacing: 10,
         children: ozet.entries.map((e) => _statKart(e.key, e.value.toString())).toList(),
       ),
       // Acik adisyon -> once URUN EKLE, sonra islem butonlari (yetki kontrolu backend'de)
@@ -717,7 +717,7 @@ class _DetayScreenState extends State<DetayScreen> {
       // Ozet chips
       GridView.count(
         crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
-        childAspectRatio: 2.6, mainAxisSpacing: 10, crossAxisSpacing: 10,
+        childAspectRatio: 2.4, mainAxisSpacing: 10, crossAxisSpacing: 10,
         children: ozet.entries.map((e) => _statKart(e.key, e.value.toString())).toList(),
       ),
       const SizedBox(height: 14),
@@ -1048,12 +1048,12 @@ class _DetayScreenState extends State<DetayScreen> {
       );
 
   Widget _statKart(String baslik, String deger) => Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(14)),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-          Text(baslik, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
-          const SizedBox(height: 3),
-          FittedBox(child: Text(deger, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
+          Text(baslik, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
+          const SizedBox(height: 2),
+          FittedBox(fit: BoxFit.scaleDown, child: Text(deger, maxLines: 1, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold))),
         ]),
       );
 
