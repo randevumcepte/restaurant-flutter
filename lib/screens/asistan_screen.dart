@@ -286,6 +286,13 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
     return null;
   }
 
+  /// Backend soruyu COZEMEDI mi? (yardim fallback / bilinmiyor -> anlamsiz soru)
+  bool _anlasilmadi(Map yanit) {
+    final kaynak = (yanit['kaynak'] ?? '').toString();
+    final intent = (yanit['intent'] ?? '').toString();
+    return kaynak == 'yardim' || kaynak == 'yardim_anahtarsiz' || intent == 'yardim' || intent == 'bilinmiyor';
+  }
+
   // ---------------- ANA AKIS (surekli dongu) ----------------
   Future<void> _basla() async {
     if (_mesgul) {
@@ -314,7 +321,7 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
         if (_iptal) return;
         if (c.trim().isEmpty) {
           if (++bosSay >= 2) { await _konus('Başka sorunuz yoksa konuşmayı kapatıyorum. İstediğinizde tekrar dokunun.'); return; }
-          await _konus('Sizi duyamadım, tekrar söyler misiniz?');
+          await _konus('Sizi tam anlayamadım. Sorunuzu tekrarlar mısınız?');
           continue;
         }
         bosSay = 0;
@@ -331,10 +338,16 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
         _ss(() => _sistemMesaji = 'Bakıyorum…');
         try {
           final yanit = await Api.asistanSor(auth.token!, c);
-          final cevap = (yanit['cevap'] ?? 'Bir sorun oldu.').toString();
-          final kart = yanit['kart'] is Map ? Map<String, dynamic>.from(yanit['kart']) : null;
-          _ss(() { _isCevap = cevap; _isKart = kart; });
-          if (yanit['seslendir'] == true) await _konus(cevap);
+          if (_anlasilmadi(yanit)) {
+            const m = 'Sizi tam anlayamadım. Sorunuzu tekrarlar mısınız?';
+            _ss(() { _isCevap = m; _isKart = null; });
+            await _konus(m);
+          } else {
+            final cevap = (yanit['cevap'] ?? 'Bir sorun oldu.').toString();
+            final kart = yanit['kart'] is Map ? Map<String, dynamic>.from(yanit['kart']) : null;
+            _ss(() { _isCevap = cevap; _isKart = kart; });
+            if (yanit['seslendir'] == true) await _konus(cevap);
+          }
         } on ApiYetkiHatasi {
           auth.cikis();
           return;
@@ -358,10 +371,16 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
       _ss(() => _sistemMesaji = 'Bakıyorum…');
       final auth = context.read<AuthProvider>();
       final yanit = await Api.asistanSor(auth.token!, c);
-      final cevap = (yanit['cevap'] ?? 'Bir sorun oldu.').toString();
-      final kart = yanit['kart'] is Map ? Map<String, dynamic>.from(yanit['kart']) : null;
-      _ss(() { _isCevap = cevap; _isKart = kart; });
-      if (yanit['seslendir'] == true) await _konus(cevap);
+      if (_anlasilmadi(yanit)) {
+        const m = 'Sizi tam anlayamadım. Sorunuzu tekrarlar mısınız?';
+        _ss(() { _isCevap = m; _isKart = null; });
+        await _konus(m);
+      } else {
+        final cevap = (yanit['cevap'] ?? 'Bir sorun oldu.').toString();
+        final kart = yanit['kart'] is Map ? Map<String, dynamic>.from(yanit['kart']) : null;
+        _ss(() { _isCevap = cevap; _isKart = kart; });
+        if (yanit['seslendir'] == true) await _konus(cevap);
+      }
     } catch (_) {
       _ss(() => _isCevap = 'Bağlantı hatası, tekrar deneyin.');
     } finally {
