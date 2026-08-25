@@ -46,7 +46,7 @@ class Api {
   }
 
   static Future<Map<String, dynamic>> adisyonIslem(String token,
-      {required String islem, required int adisyonId, String? odemeTip, double? oran, double? tutar, String? sebep, String? onayPin, String? kalemIdler}) async {
+      {required String islem, required int adisyonId, String? odemeTip, double? oran, double? tutar, String? sebep, String? onayPin, String? kalemIdler, int? cariId}) async {
     final body = <String, String>{'islem': islem, 'adisyon_id': '$adisyonId'};
     if (odemeTip != null) body['odeme_tip'] = odemeTip;
     if (oran != null) body['oran'] = '$oran';
@@ -54,6 +54,7 @@ class Api {
     if (sebep != null && sebep.isNotEmpty) body['sebep'] = sebep;
     if (onayPin != null && onayPin.isNotEmpty) body['onay_pin'] = onayPin;
     if (kalemIdler != null && kalemIdler.isNotEmpty) body['kalem_idler'] = kalemIdler;
+    if (cariId != null) body['cari_id'] = '$cariId';
     final r = await http.post(
       Uri.parse('$base/api/patron/adisyon-islem'),
       headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
@@ -80,6 +81,37 @@ class Api {
       Uri.parse('$base/api/patron/masa-ac'),
       headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
       body: {'masa_id': '$masaId', 'misafir': '$misafir'},
+    );
+    if (r.statusCode == 401) throw ApiYetkiHatasi();
+    return jsonDecode(r.body) as Map<String, dynamic>;
+  }
+
+  static Future<Map<String, dynamic>> cariler(String token) => _get('/api/patron/cariler', token);
+  static Future<Map<String, dynamic>> cariDetay(String token, int id) => _get('/api/patron/cari-detay?id=$id', token);
+
+  static Future<Map<String, dynamic>> cariTahsilat(String token, int cariId, double tutar, String odemeSekli) async {
+    final r = await http.post(Uri.parse('$base/api/patron/cari-tahsilat'),
+        headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+        body: {'cari_id': '$cariId', 'tutar': '$tutar', 'odeme_sekli': odemeSekli});
+    if (r.statusCode == 401) throw ApiYetkiHatasi();
+    return jsonDecode(r.body) as Map<String, dynamic>;
+  }
+
+  static Future<Map<String, dynamic>> cariEkle(String token, String ad, String tip, String telefon) async {
+    final r = await http.post(Uri.parse('$base/api/patron/cari-ekle'),
+        headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+        body: {'ad': ad, 'tip': tip, 'telefon': telefon});
+    if (r.statusCode == 401) throw ApiYetkiHatasi();
+    return jsonDecode(r.body) as Map<String, dynamic>;
+  }
+
+  static Future<Map<String, dynamic>> menu(String token) => _get('/api/menu', token);
+
+  static Future<Map<String, dynamic>> adisyonUrunEkle(String token, int adisyonId, List<Map<String, int>> kalemler) async {
+    final r = await http.post(
+      Uri.parse('$base/api/patron/adisyon-urun-ekle'),
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+      body: {'adisyon_id': '$adisyonId', 'kalemler': jsonEncode(kalemler)},
     );
     if (r.statusCode == 401) throw ApiYetkiHatasi();
     return jsonDecode(r.body) as Map<String, dynamic>;

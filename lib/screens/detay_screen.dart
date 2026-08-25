@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
 import '../services/api.dart';
 import 'ai_analiz_sheet.dart';
+import 'cari_hesaplar_screen.dart';
 
 /// Kart tiklama -> drill-down detay (Kerzz BOSS tarzi).
 /// tip: urun | kayip | acik
@@ -774,11 +775,11 @@ class _DetayScreenState extends State<DetayScreen> {
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
       );
 
-  Future<void> _islemCagir(String islem, {String? odemeTip, double? oran, double? tutar, String? sebep, String? onayPin, String? kalemIdler}) async {
+  Future<void> _islemCagir(String islem, {String? odemeTip, double? oran, double? tutar, String? sebep, String? onayPin, String? kalemIdler, int? cariId}) async {
     final auth = context.read<AuthProvider>();
     try {
       final res = await Api.adisyonIslem(auth.token!, islem: islem, adisyonId: widget.id ?? 0,
-          odemeTip: odemeTip, oran: oran, tutar: tutar, sebep: sebep, onayPin: onayPin, kalemIdler: kalemIdler);
+          odemeTip: odemeTip, oran: oran, tutar: tutar, sebep: sebep, onayPin: onayPin, kalemIdler: kalemIdler, cariId: cariId);
       if (!mounted) return;
       if (res['ok'] == 1) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['mesaj']?.toString() ?? 'İşlem tamamlandı'), backgroundColor: _yesil));
@@ -786,7 +787,7 @@ class _DetayScreenState extends State<DetayScreen> {
       } else if (res['onay_gerek'] == true) {
         final pin = await _pinSor(res['hata']?.toString() ?? 'Yetkili PIN onayı gerekli');
         if (pin != null && pin.trim().isNotEmpty) {
-          await _islemCagir(islem, odemeTip: odemeTip, oran: oran, tutar: tutar, sebep: sebep, onayPin: pin.trim(), kalemIdler: kalemIdler);
+          await _islemCagir(islem, odemeTip: odemeTip, oran: oran, tutar: tutar, sebep: sebep, onayPin: pin.trim(), kalemIdler: kalemIdler, cariId: cariId);
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['hata']?.toString() ?? 'İşlem başarısız'), backgroundColor: _kirmizi));
@@ -827,11 +828,18 @@ class _DetayScreenState extends State<DetayScreen> {
           _odemeSecenek(ctx, 'nakit', '💵 Nakit'),
           _odemeSecenek(ctx, 'kredi', '💳 Kredi Kartı'),
           _odemeSecenek(ctx, 'yemek_karti', '🍽️ Yemek Kartı'),
+          _odemeSecenek(ctx, 'acik_hesap', '🧾 Açık Hesap (Bana Yaz)'),
         ]),
         actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Vazgeç', style: TextStyle(color: Color(0xFF94A3B8))))],
       ),
     );
-    if (secim != null) _islemCagir('kapat', odemeTip: secim);
+    if (secim == 'acik_hesap') {
+      if (!mounted) return;
+      final cari = await Navigator.of(context).push<Map>(MaterialPageRoute(builder: (_) => const CariHesaplarScreen(secmeMod: true)));
+      if (cari != null) _islemCagir('kapat', odemeTip: 'acik_hesap', cariId: _n(cari['id']).toInt());
+    } else if (secim != null) {
+      _islemCagir('kapat', odemeTip: secim);
+    }
   }
 
   Widget _odemeSecenek(BuildContext ctx, String tip, String metin) => Padding(

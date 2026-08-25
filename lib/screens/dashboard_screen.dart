@@ -6,6 +6,7 @@ import '../services/api.dart';
 import 'detay_screen.dart';
 import 'asistan_screen.dart';
 import 'personel_yetkileri_screen.dart';
+import 'cari_hesaplar_screen.dart';
 
 /// Patron ana paneli — Kerzz BOSS yogunlugunda: tek ekranda her sey.
 /// Donem secici + karsilastirma + kayip radari + food-cost + odeme/servis dagilimi + 10 gunluk grafik.
@@ -154,6 +155,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            tooltip: 'Cari / Açık Hesaplar',
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CariHesaplarScreen())),
+            icon: const Icon(Icons.account_balance_wallet_outlined, color: Color(0xFF64748B), size: 21),
+          ),
           IconButton(
             tooltip: 'Personel Yetkileri',
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PersonelYetkileriScreen())),
