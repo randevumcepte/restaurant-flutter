@@ -139,6 +139,30 @@ class Api {
     return jsonDecode(r.body) as Map<String, dynamic>;
   }
 
+  static Future<Map<String, dynamic>> sebepler(String token, {String? tur}) =>
+      _get('/api/patron/sebepler${tur != null ? '?tur=$tur' : ''}', token);
+
+  static Future<Map<String, dynamic>> _post(String path, String token, Map<String, String> body) async {
+    final r = await http.post(Uri.parse('$base$path'),
+        headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'}, body: body);
+    if (r.statusCode == 401) throw ApiYetkiHatasi();
+    return jsonDecode(r.body) as Map<String, dynamic>;
+  }
+
+  static Future<Map<String, dynamic>> sebepEkle(String token, String tur, String metin) =>
+      _post('/api/patron/sebep-ekle', token, {'tur': tur, 'metin': metin});
+  static Future<Map<String, dynamic>> sebepSil(String token, int id) =>
+      _post('/api/patron/sebep-sil', token, {'id': '$id'});
+
+  static Future<Map<String, dynamic>> masaTasi(String token, int adisyonId, int yeniMasaId) =>
+      _post('/api/patron/masa-tasi', token, {'adisyon_id': '$adisyonId', 'yeni_masa_id': '$yeniMasaId'});
+  static Future<Map<String, dynamic>> masaBirlestir(String token, int adisyonId, int kaynakAdisyonId) =>
+      _post('/api/patron/masa-birlestir', token, {'adisyon_id': '$adisyonId', 'kaynak_adisyon_id': '$kaynakAdisyonId'});
+  static Future<Map<String, dynamic>> adisyonBol(String token, int adisyonId, String kalemIdler) =>
+      _post('/api/patron/adisyon-bol', token, {'adisyon_id': '$adisyonId', 'kalem_idler': kalemIdler});
+
+  static Future<Map<String, dynamic>> fis(String token, int adisyonId) => _get('/api/patron/fis?adisyon_id=$adisyonId', token);
+
   static Future<Map<String, dynamic>> masalar(String token) => _get('/api/masalar', token);
   static Future<Map<String, dynamic>> paket(String token) => _get('/api/paket', token);
   static Future<Map<String, dynamic>> paketDetay(String token, int id) => _get('/api/paket/$id', token);

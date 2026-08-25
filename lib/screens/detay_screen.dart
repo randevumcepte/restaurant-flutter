@@ -6,6 +6,8 @@ import '../services/api.dart';
 import 'ai_analiz_sheet.dart';
 import 'cari_hesaplar_screen.dart';
 import 'urun_ekle_screen.dart';
+import 'sebep_yonetimi_screen.dart';
+import 'fis.dart';
 
 /// Kart tiklama -> drill-down detay (Kerzz BOSS tarzi).
 /// tip: urun | kayip | acik
@@ -436,6 +438,183 @@ class _DetayScreenState extends State<DetayScreen> {
         ),
       );
 
+  void _snack(String m) {
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m), backgroundColor: _card));
+  }
+
+  Widget _masaIslemBar() => Row(children: [
+        Expanded(child: _kucukBtn(Icons.swap_horiz, 'Taşı', _masaTasi)),
+        const SizedBox(width: 8),
+        Expanded(child: _kucukBtn(Icons.merge_type, 'Birleştir', _masaBirlestir)),
+        const SizedBox(width: 8),
+        Expanded(child: _kucukBtn(Icons.call_split, 'Böl', _adisyonBol)),
+      ]);
+
+  Widget _kucukBtn(IconData ikon, String etiket, VoidCallback onTap) => GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 11),
+          decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFF243049))),
+          child: Column(children: [
+            Icon(ikon, color: const Color(0xFFC4B5FD), size: 20),
+            const SizedBox(height: 3),
+            Text(etiket, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
+          ]),
+        ),
+      );
+
+  Widget _fisBtn() => GestureDetector(
+        onTap: _fisYazdir,
+        child: Container(
+          width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFF243049))),
+          child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Icon(Icons.receipt_long, color: Color(0xFFC4B5FD), size: 18),
+            SizedBox(width: 8),
+            Text('Fiş Yazdır', style: TextStyle(color: Color(0xFFC4B5FD), fontWeight: FontWeight.bold, fontSize: 13)),
+          ]),
+        ),
+      );
+
+  Future<void> _fisYazdir() async {
+    if (widget.id == null) return;
+    final auth = context.read<AuthProvider>();
+    try {
+      final res = await Api.fis(auth.token!, widget.id!);
+      if (!mounted) return;
+      if (res['ok'] == 1) {
+        await fisYazdir(res);
+      } else {
+        _snack(res['hata']?.toString() ?? 'Fiş alınamadı');
+      }
+    } catch (_) {
+      if (mounted) _snack('Fiş oluşturulamadı');
+    }
+  }
+
+  Future<int?> _masaSecici(String baslik, List masalar, {required bool adisyonDon}) {
+    return showModalBottomSheet<int>(
+      context: context, backgroundColor: _card,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const SizedBox(height: 12),
+          Container(width: 40, height: 4, decoration: BoxDecoration(color: const Color(0xFF334155), borderRadius: BorderRadius.circular(4))),
+          const SizedBox(height: 12),
+          Padding(padding: const EdgeInsets.symmetric(horizontal: 18), child: Align(alignment: Alignment.centerLeft, child: Text(baslik, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)))),
+          const SizedBox(height: 6),
+          Flexible(
+            child: ListView(shrinkWrap: true, children: [
+              for (final m in masalar)
+                ListTile(
+                  dense: true,
+                  leading: const Icon(Icons.table_bar, color: Color(0xFFC4B5FD), size: 18),
+                  title: Text(m['ad'].toString(), style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 14)),
+                  trailing: adisyonDon ? Text(_tam(_n(m['tutar'])), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)) : Text('${m['bolge'] ?? ''}', style: const TextStyle(color: Color(0xFF64748B), fontSize: 11)),
+                  onTap: () => Navigator.pop(ctx, adisyonDon ? _n(m['adisyon_id']).toInt() : _n(m['id']).toInt()),
+                ),
+            ]),
+          ),
+          const SizedBox(height: 10),
+        ]),
+      ),
+    );
+  }
+
+  Future<void> _masaTasi() async {
+    if (widget.id == null) return;
+    final auth = context.read<AuthProvider>();
+    List bos = [];
+    try {
+      final res = await Api.masalar(auth.token!);
+      bos = ((res['masalar'] as List?) ?? []).where((m) => m['adisyon_id'] == null).toList();
+    } catch (_) {}
+    if (!mounted) return;
+    if (bos.isEmpty) { _snack('Boş masa yok.'); return; }
+    final masaId = await _masaSecici('Taşınacak boş masa', bos, adisyonDon: false);
+    if (masaId == null) return;
+    final res = await Api.masaTasi(auth.token!, widget.id!, masaId);
+    if (!mounted) return;
+    _snack(res['mesaj']?.toString() ?? res['hata']?.toString() ?? '');
+    if (res['ok'] == 1) _yukle();
+  }
+
+  Future<void> _masaBirlestir() async {
+    if (widget.id == null) return;
+    final auth = context.read<AuthProvider>();
+    List dolu = [];
+    try {
+      final res = await Api.masalar(auth.token!);
+      dolu = ((res['masalar'] as List?) ?? []).where((m) => m['adisyon_id'] != null && _n(m['adisyon_id']).toInt() != widget.id).toList();
+    } catch (_) {}
+    if (!mounted) return;
+    if (dolu.isEmpty) { _snack('Birleştirilecek başka dolu masa yok.'); return; }
+    final kaynakAdisyon = await _masaSecici('Bu masaya birleştirilecek masa', dolu, adisyonDon: true);
+    if (kaynakAdisyon == null) return;
+    final res = await Api.masaBirlestir(auth.token!, widget.id!, kaynakAdisyon);
+    if (!mounted) return;
+    _snack(res['mesaj']?.toString() ?? res['hata']?.toString() ?? '');
+    if (res['ok'] == 1) _yukle();
+  }
+
+  Future<void> _adisyonBol() async {
+    if (widget.id == null) return;
+    final kalemler = (d!['kalemler'] as List?) ?? [];
+    final aktif = kalemler.where((k) => (k as Map)['durum'] != 'iptal').toList();
+    if (aktif.length < 2) { _snack('Bölmek için en az 2 ürün gerekir.'); return; }
+    final secili = <int>{};
+    final onay = await showModalBottomSheet<bool>(
+      context: context, backgroundColor: _card, isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => SafeArea(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const SizedBox(height: 12),
+            Container(width: 40, height: 4, decoration: BoxDecoration(color: const Color(0xFF334155), borderRadius: BorderRadius.circular(4))),
+            const Padding(padding: EdgeInsets.all(14), child: Text('Yeni adisyona taşınacak ürünler', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold))),
+            Flexible(
+              child: ListView(shrinkWrap: true, children: [
+                for (final k in aktif)
+                  CheckboxListTile(
+                    dense: true,
+                    activeColor: _mor1,
+                    value: secili.contains(_n((k as Map)['id']).toInt()),
+                    onChanged: (v) => setS(() {
+                      final id = _n(k['id']).toInt();
+                      v == true ? secili.add(id) : secili.remove(id);
+                    }),
+                    title: Text('${_n(k['adet']).toInt()}× ${k['ad']}', style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 14)),
+                    secondary: Text(_tam(_n(k['tutar'])), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                  ),
+              ]),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  style: FilledButton.styleFrom(backgroundColor: _mor1, padding: const EdgeInsets.symmetric(vertical: 13)),
+                  onPressed: secili.isEmpty ? null : () => Navigator.pop(ctx, true),
+                  child: Text('Böl (${secili.length} ürün)', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ),
+          ]),
+        ),
+      ),
+    );
+    if (onay != true || secili.isEmpty || !mounted) return;
+    final auth = context.read<AuthProvider>();
+    final res = await Api.adisyonBol(auth.token!, widget.id!, secili.join(','));
+    if (!mounted) return;
+    _snack(res['mesaj']?.toString() ?? res['hata']?.toString() ?? '');
+    if (res['ok'] == 1) {
+      _yukle();
+      final yid = res['yeni_adisyon_id'];
+      if (yid != null) _push(tip: 'adisyon', id: _n(yid).toInt(), baslik: 'Bölünen Adisyon');
+    }
+  }
+
   // ---------------- TEK ADISYON DETAY ----------------
   List<Widget> _adisyon() {
     final ozet = (d!['ozet'] as Map?) ?? {};
@@ -459,7 +638,11 @@ class _DetayScreenState extends State<DetayScreen> {
         _urunEkleBtn(),
         const SizedBox(height: 10),
         _islemBar(),
+        const SizedBox(height: 10),
+        _masaIslemBar(),
       ],
+      const SizedBox(height: 10),
+      _fisBtn(),
       // Musteri (kayitliysa) - ozetin hemen altinda, VURGULU mor kart
       if (musteri != null) ...[
         const SizedBox(height: 12),
@@ -620,13 +803,16 @@ class _DetayScreenState extends State<DetayScreen> {
     );
   }
 
-  // Silme sebepleri (Kerzz "Ürün Silme Sebepleri"). Sebep seçilince silinir.
-  static const _silmeSebepleri = [
-    'Müşteri beğenmedi', 'Yanlış/fazla girildi', 'Müşteri vazgeçti',
-    'Ürün tükendi', 'Fire / zayi', 'Sipariş geç gitti', 'Ürün döküldü', 'Diğer',
-  ];
-
   Future<void> _kalemVoid(Map k) async {
+    final auth = context.read<AuthProvider>();
+    final rootNav = Navigator.of(context);
+    List metinler = [];
+    try {
+      final res = await Api.sebepler(auth.token!, tur: 'void');
+      metinler = ((res['sebepler'] as List?) ?? []).map((s) => (s as Map)['metin'].toString()).toList();
+    } catch (_) {}
+    if (metinler.isEmpty) metinler = ['Müşteri beğenmedi', 'Yanlış girildi', 'Müşteri vazgeçti', 'Ürün tükendi', 'Diğer'];
+    if (!mounted) return;
     final secilen = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: _card,
@@ -645,13 +831,27 @@ class _DetayScreenState extends State<DetayScreen> {
             ]),
           ),
           const SizedBox(height: 6),
-          for (final s in _silmeSebepleri)
-            ListTile(
-              dense: true,
-              leading: const Icon(Icons.chevron_right, color: Color(0xFF64748B), size: 20),
-              title: Text(s, style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 14)),
-              onTap: () => Navigator.pop(ctx, s),
-            ),
+          Flexible(
+            child: ListView(shrinkWrap: true, children: [
+              for (final s in metinler)
+                ListTile(
+                  dense: true,
+                  leading: const Icon(Icons.chevron_right, color: Color(0xFF64748B), size: 20),
+                  title: Text(s.toString(), style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 14)),
+                  onTap: () => Navigator.pop(ctx, s.toString()),
+                ),
+              const Divider(color: Color(0xFF243049), height: 1),
+              ListTile(
+                dense: true,
+                leading: const Icon(Icons.settings_outlined, color: Color(0xFF94A3B8), size: 18),
+                title: const Text('Sebepleri düzenle', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  rootNav.push(MaterialPageRoute(builder: (_) => const SebepYonetimiScreen()));
+                },
+              ),
+            ]),
+          ),
           const SizedBox(height: 10),
         ]),
       ),
