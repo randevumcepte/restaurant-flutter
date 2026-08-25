@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import '../services/api.dart';
 import 'ai_analiz_sheet.dart';
 import 'cari_hesaplar_screen.dart';
+import 'urun_ekle_screen.dart';
 
 /// Kart tiklama -> drill-down detay (Kerzz BOSS tarzi).
 /// tip: urun | kayip | acik
@@ -415,6 +416,26 @@ class _DetayScreenState extends State<DetayScreen> {
     ];
   }
 
+  // Acik adisyonda: menuden urun ekle (siparis al)
+  Widget _urunEkleBtn() => GestureDetector(
+        onTap: () async {
+          if (widget.id == null) return;
+          final eklendi = await Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => UrunEkleScreen(adisyonId: widget.id!, baslik: '${d?['baslik'] ?? 'Sipariş'} — Ürün Ekle')));
+          if (eklendi == true) _yukle();
+        },
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 13),
+          decoration: BoxDecoration(gradient: const LinearGradient(colors: [_mor1, _mavi]), borderRadius: BorderRadius.circular(14)),
+          child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Icon(Icons.add, color: Colors.white, size: 20),
+            SizedBox(width: 8),
+            Text('Ürün Ekle / Sipariş Al', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+          ]),
+        ),
+      );
+
   // ---------------- TEK ADISYON DETAY ----------------
   List<Widget> _adisyon() {
     final ozet = (d!['ozet'] as Map?) ?? {};
@@ -432,9 +453,11 @@ class _DetayScreenState extends State<DetayScreen> {
         childAspectRatio: 2.6, mainAxisSpacing: 10, crossAxisSpacing: 10,
         children: ozet.entries.map((e) => _statKart(e.key, e.value.toString())).toList(),
       ),
-      // Acik adisyon -> islem butonlari (yetki kontrolu backend'de)
+      // Acik adisyon -> once URUN EKLE, sonra islem butonlari (yetki kontrolu backend'de)
       if (d!['durum'] == 'acik') ...[
         const SizedBox(height: 12),
+        _urunEkleBtn(),
+        const SizedBox(height: 10),
         _islemBar(),
       ],
       // Musteri (kayitliysa) - ozetin hemen altinda, VURGULU mor kart
