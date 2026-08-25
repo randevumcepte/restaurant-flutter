@@ -70,6 +70,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final res = await Api.patronOzet(auth.token!, period: period);
       if (!mounted) return;
       if (res['ok'] == 1) {
+        // Patron adini sunucudan tazele (yeniden giris gerekmeden guncellensin)
+        if (res['patronAd'] != null) context.read<AuthProvider>().adGuncelle(res['patronAd'].toString());
         setState(() {
           data = res;
           loading = false;

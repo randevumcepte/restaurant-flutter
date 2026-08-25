@@ -52,6 +52,16 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  /// Patron adini sunucudan gelen guncel degerle tazele (yeniden giris gerekmeden).
+  Future<void> adGuncelle(String yeni) async {
+    yeni = yeni.trim();
+    if (yeni.isEmpty || yeni == ad) return;
+    ad = yeni;
+    final sp = await SharedPreferences.getInstance();
+    await sp.setString('ad', yeni);
+    notifyListeners();
+  }
+
   Future<void> cikis() async {
     final sp = await SharedPreferences.getInstance();
     await sp.clear();
