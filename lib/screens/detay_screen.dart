@@ -516,7 +516,7 @@ class _DetayScreenState extends State<DetayScreen> {
         if (kalemler.isEmpty)
           const Text('Ürün yok', style: TextStyle(color: Color(0xFF64748B), fontSize: 12))
         else
-          for (final k in kalemler) _kalemSatir(k as Map),
+          for (final k in kalemler) _kalemSatir(k as Map, d!['durum'] == 'acik'),
       ]),
       const SizedBox(height: 14),
       // Hesap dokumu
@@ -589,7 +589,7 @@ class _DetayScreenState extends State<DetayScreen> {
             children: List.generate(5, (i) => Icon(i < p ? Icons.star : Icons.star_border, size: 11, color: const Color(0xFFF59E0B)))),
       ]);
 
-  Widget _kalemSatir(Map k) {
+  Widget _kalemSatir(Map k, bool acik) {
     final iptal = k['durum'] == 'iptal';
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
@@ -611,8 +611,49 @@ class _DetayScreenState extends State<DetayScreen> {
             style: TextStyle(
                 color: iptal ? const Color(0xFF64748B) : Colors.white, fontSize: 13, fontWeight: FontWeight.bold,
                 decoration: iptal ? TextDecoration.lineThrough : null)),
+        if (acik && !iptal)
+          GestureDetector(
+            onTap: () => _kalemVoid(k),
+            child: const Padding(padding: EdgeInsets.only(left: 8), child: Icon(Icons.close, size: 18, color: _kirmizi)),
+          ),
       ]),
     );
+  }
+
+  Future<void> _kalemVoid(Map k) async {
+    final onay = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: _card,
+        title: Text('${k['ad']} silinsin mi?', style: const TextStyle(color: Colors.white, fontSize: 16)),
+        content: const Text('Ürün adisyondan çıkarılacak.', style: TextStyle(color: Color(0xFF94A3B8))),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Vazgeç')),
+          FilledButton(style: FilledButton.styleFrom(backgroundColor: _kirmizi), onPressed: () => Navigator.pop(ctx, true), child: const Text('Sil')),
+        ],
+      ),
+    );
+    if (onay == true) await _kalemVoidGonder(k, null);
+  }
+
+  Future<void> _kalemVoidGonder(Map k, String? onayPin) async {
+    if (widget.id == null) return;
+    final auth = context.read<AuthProvider>();
+    try {
+      final res = await Api.kalemVoid(auth.token!, widget.id!, _n(k['id']).toInt(), sebep: 'Ürün silindi', onayPin: onayPin);
+      if (!mounted) return;
+      if (res['ok'] == 1) {
+        _yukle();
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['mesaj']?.toString() ?? 'Silindi'), backgroundColor: _yesil));
+      } else if (res['onay_gerek'] == true) {
+        final pin = await _pinSor(res['hata']?.toString() ?? 'Yetkili PIN onayı gerekli');
+        if (pin != null && pin.trim().isNotEmpty) await _kalemVoidGonder(k, pin.trim());
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['hata']?.toString() ?? 'Silinemedi'), backgroundColor: _kirmizi));
+      }
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bağlantı hatası')));
+    }
   }
 
   Widget _hesapSatir(String sol, String sag, bool eksi, {bool kalin = false}) => Padding(

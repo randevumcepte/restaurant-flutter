@@ -117,6 +117,28 @@ class Api {
     return jsonDecode(r.body) as Map<String, dynamic>;
   }
 
+  static Future<Map<String, dynamic>> kalemVoid(String token, int adisyonId, int kalemId, {String? sebep, String? onayPin}) async {
+    final body = <String, String>{'adisyon_id': '$adisyonId', 'kalem_id': '$kalemId'};
+    if (sebep != null && sebep.isNotEmpty) body['sebep'] = sebep;
+    if (onayPin != null && onayPin.isNotEmpty) body['onay_pin'] = onayPin;
+    final r = await http.post(Uri.parse('$base/api/patron/kalem-void'),
+        headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'}, body: body);
+    if (r.statusCode == 401) throw ApiYetkiHatasi();
+    return jsonDecode(r.body) as Map<String, dynamic>;
+  }
+
+  static Future<Map<String, dynamic>> mutfak(String token) => _get('/api/mutfak', token);
+
+  static Future<Map<String, dynamic>> mutfakHazir(String token, {int? kalemId, int? adisyonId}) async {
+    final body = <String, String>{};
+    if (kalemId != null) body['kalem_id'] = '$kalemId';
+    if (adisyonId != null) body['adisyon_id'] = '$adisyonId';
+    final r = await http.post(Uri.parse('$base/api/mutfak/hazir'),
+        headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'}, body: body);
+    if (r.statusCode == 401) throw ApiYetkiHatasi();
+    return jsonDecode(r.body) as Map<String, dynamic>;
+  }
+
   static Future<Map<String, dynamic>> masalar(String token) => _get('/api/masalar', token);
   static Future<Map<String, dynamic>> paket(String token) => _get('/api/paket', token);
   static Future<Map<String, dynamic>> paketDetay(String token, int id) => _get('/api/paket/$id', token);
