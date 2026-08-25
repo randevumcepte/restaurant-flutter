@@ -190,6 +190,7 @@ class _YetkiDuzenle extends StatefulWidget {
 class _YetkiDuzenleState extends State<_YetkiDuzenle> {
   late Map<String, bool> yetkiler;
   late double iskontoLimit;
+  late double ikramLimit;
   bool kaydediyor = false;
 
   @override
@@ -198,13 +199,14 @@ class _YetkiDuzenleState extends State<_YetkiDuzenle> {
     final y = (widget.personel['yetkiler'] as Map?) ?? {};
     yetkiler = {for (final e in _etiketler.keys) e: y[e] == true};
     iskontoLimit = ((widget.personel['iskonto_limit'] ?? 0) as num).toDouble();
+    ikramLimit = ((widget.personel['ikram_limit'] ?? 0) as num).toDouble();
   }
 
   Future<void> _kaydet() async {
     setState(() => kaydediyor = true);
     try {
       final auth = context.read<AuthProvider>();
-      final res = await Api.yetkiKaydet(auth.token!, (widget.personel['id'] as num).toInt(), yetkiler, iskontoLimit);
+      final res = await Api.yetkiKaydet(auth.token!, (widget.personel['id'] as num).toInt(), yetkiler, iskontoLimit, ikramLimit);
       if (!mounted) return;
       if (res['ok'] == 1) {
         Navigator.of(context).pop(true);
@@ -278,6 +280,32 @@ class _YetkiDuzenleState extends State<_YetkiDuzenle> {
                           ),
                         ),
                         SizedBox(width: 44, child: Text('%${iskontoLimit.round()}', textAlign: TextAlign.right, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                      ]),
+                    ),
+                  // Ikram limiti (TL) — ikram acikken
+                  if (k == 'ikram' && (yetkiler['ikram'] ?? false))
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      child: Row(children: [
+                        const Text('Limit ₺', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextFormField(
+                            initialValue: ikramLimit.round().toString(),
+                            enabled: duzen,
+                            keyboardType: TextInputType.number,
+                            style: const TextStyle(color: Colors.white, fontSize: 14),
+                            decoration: InputDecoration(
+                              isDense: true, filled: true, fillColor: const Color(0xFF0F1526),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                              hintText: 'örn. 100', hintStyle: const TextStyle(color: Color(0xFF64748B)),
+                            ),
+                            onChanged: (v) => ikramLimit = double.tryParse(v) ?? 0,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Flexible(child: Text('üstü müdür onayı', style: TextStyle(color: Color(0xFF64748B), fontSize: 10))),
                       ]),
                     ),
                 ],

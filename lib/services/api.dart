@@ -65,11 +65,11 @@ class Api {
 
   static Future<Map<String, dynamic>> personeller(String token) => _get('/api/patron/personeller', token);
 
-  static Future<Map<String, dynamic>> yetkiKaydet(String token, int personelId, Map<String, bool> yetkiler, double iskontoLimit) async {
+  static Future<Map<String, dynamic>> yetkiKaydet(String token, int personelId, Map<String, bool> yetkiler, double iskontoLimit, double ikramLimit) async {
     final r = await http.post(
       Uri.parse('$base/api/patron/yetki-kaydet'),
       headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
-      body: {'personel_id': '$personelId', 'yetkiler': jsonEncode(yetkiler), 'iskonto_limit': '$iskontoLimit'},
+      body: {'personel_id': '$personelId', 'yetkiler': jsonEncode(yetkiler), 'iskonto_limit': '$iskontoLimit', 'ikram_limit': '$ikramLimit'},
     );
     if (r.statusCode == 401) throw ApiYetkiHatasi();
     return jsonDecode(r.body) as Map<String, dynamic>;
