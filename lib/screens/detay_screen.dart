@@ -320,7 +320,7 @@ class _DetayScreenState extends State<DetayScreen> {
         else
           for (final k in kayitlar)
             _adisyonRow(k as Map, _mavi.withValues(alpha: 0.2), const Color(0xFFC4B5FD),
-                '${k['musteri'] != null ? '👤 ${k['musteri']} · ' : ''}${k['kalem']} ürün · ${k['misafir']} kişi · ${k['sure_dk']} dk'),
+                '${k['musteri'] != null ? '👤 ${k['musteri']} · ' : ''}${k['kalem']} ürün · ${k['misafir']} kişi · ${k['sure'] ?? '${k['sure_dk']} dk'}'),
       ]),
     ];
   }
