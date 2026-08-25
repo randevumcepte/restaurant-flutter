@@ -47,6 +47,7 @@ class Api {
 
   static Future<Map<String, dynamic>> masalar(String token) => _get('/api/masalar', token);
   static Future<Map<String, dynamic>> paket(String token) => _get('/api/paket', token);
+  static Future<Map<String, dynamic>> paketDetay(String token, int id) => _get('/api/paket/$id', token);
   static Future<Map<String, dynamic>> raporlar(String token) => _get('/api/raporlar', token);
 }
 
