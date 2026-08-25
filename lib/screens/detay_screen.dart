@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
 import '../services/api.dart';
+import 'ai_analiz_sheet.dart';
 
 /// Kart tiklama -> drill-down detay (Kerzz BOSS tarzi).
 /// tip: urun | kayip | acik
@@ -633,6 +634,25 @@ class _DetayScreenState extends State<DetayScreen> {
         crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
         childAspectRatio: 2.6, mainAxisSpacing: 10, crossAxisSpacing: 10,
         children: ozet.entries.map((e) => _statKart(e.key, e.value.toString())).toList(),
+      ),
+      const SizedBox(height: 12),
+      // Bu musteri icin Derin AI Analizi
+      GestureDetector(
+        onTap: () => AiAnalizSheet.goster(context, kapsam: 'musteri', id: widget.id, period: widget.period, baslik: 'Müşteri AI Analizi'),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [Color(0xFF241B4D), Color(0xFF3B2E7E)]),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: _mor1.withValues(alpha: 0.5)),
+          ),
+          child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Text('✨', style: TextStyle(fontSize: 15)),
+            SizedBox(width: 8),
+            Text('Bu Müşteri İçin AI Analizi', style: TextStyle(color: Color(0xFFC4B5FD), fontSize: 13, fontWeight: FontWeight.bold)),
+          ]),
+        ),
       ),
       const SizedBox(height: 14),
       // Favori urunler
