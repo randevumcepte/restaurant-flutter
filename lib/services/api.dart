@@ -75,6 +75,16 @@ class Api {
     return jsonDecode(r.body) as Map<String, dynamic>;
   }
 
+  static Future<Map<String, dynamic>> masaAc(String token, int masaId, int misafir) async {
+    final r = await http.post(
+      Uri.parse('$base/api/patron/masa-ac'),
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+      body: {'masa_id': '$masaId', 'misafir': '$misafir'},
+    );
+    if (r.statusCode == 401) throw ApiYetkiHatasi();
+    return jsonDecode(r.body) as Map<String, dynamic>;
+  }
+
   static Future<Map<String, dynamic>> masalar(String token) => _get('/api/masalar', token);
   static Future<Map<String, dynamic>> paket(String token) => _get('/api/paket', token);
   static Future<Map<String, dynamic>> paketDetay(String token, int id) => _get('/api/paket/$id', token);

@@ -42,6 +42,57 @@ class _MasalarScreenState extends State<MasalarScreen> {
     }
   }
 
+  void _uyar(String m) {
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
+  }
+
+  // Bos masaya tiklaninca: kisi sor -> masa ac -> adisyon detayina git
+  Future<void> _masaAc(Map m) async {
+    final misafir = await _misafirSor(m['ad'].toString(), _n(m['kapasite']).toInt());
+    if (misafir == null || !mounted) return;
+    final auth = context.read<AuthProvider>();
+    try {
+      final res = await Api.masaAc(auth.token!, _n(m['id']).toInt(), misafir);
+      if (!mounted) return;
+      if (res['ok'] == 1 && res['adisyon_id'] != null) {
+        await Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => DetayScreen(tip: 'adisyon', id: _n(res['adisyon_id']).toInt(), baslikFallback: m['ad'].toString())));
+        _yukle();
+      } else {
+        _uyar(res['hata']?.toString() ?? 'Masa açılamadı');
+      }
+    } on ApiYetkiHatasi {
+      if (mounted) context.read<AuthProvider>().cikis();
+    } catch (_) {
+      _uyar('Bağlantı hatası');
+    }
+  }
+
+  Future<int?> _misafirSor(String masaAd, int kapasite) {
+    int sayi = kapasite >= 1 && kapasite <= 20 ? kapasite : 2;
+    return showDialog<int>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setD) => AlertDialog(
+          title: Text('$masaAd — Masa Aç', style: const TextStyle(fontSize: 17)),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Text('Kaç kişi?', style: TextStyle(color: Color(0xFF64748B))),
+            const SizedBox(height: 12),
+            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              IconButton(iconSize: 34, color: const Color(0xFF4F46E5), onPressed: () => setD(() { if (sayi > 1) sayi--; }), icon: const Icon(Icons.remove_circle_outline)),
+              SizedBox(width: 56, child: Text('$sayi', textAlign: TextAlign.center, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold))),
+              IconButton(iconSize: 34, color: const Color(0xFF4F46E5), onPressed: () => setD(() { if (sayi < 20) sayi++; }), icon: const Icon(Icons.add_circle_outline)),
+            ]),
+          ]),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Vazgeç')),
+            FilledButton(onPressed: () => Navigator.pop(ctx, sayi), child: const Text('Masayı Aç')),
+          ],
+        ),
+      ),
+    );
+  }
+
   Color _renk(String durum) {
     switch (durum) {
       case 'dolu':
@@ -108,14 +159,16 @@ class _MasalarScreenState extends State<MasalarScreen> {
                         for (final m in entry.value)
                           GestureDetector(
                             behavior: HitTestBehavior.opaque,
-                            onTap: m['adisyon_id'] != null
-                                ? () async {
-                                    await Navigator.of(context).push(MaterialPageRoute(
-                                        builder: (_) => DetayScreen(
-                                            tip: 'adisyon', id: _n(m['adisyon_id']).toInt(), baslikFallback: m['ad'].toString())));
-                                    _yukle();
-                                  }
-                                : null,
+                            onTap: () async {
+                              if (m['adisyon_id'] != null) {
+                                await Navigator.of(context).push(MaterialPageRoute(
+                                    builder: (_) => DetayScreen(
+                                        tip: 'adisyon', id: _n(m['adisyon_id']).toInt(), baslikFallback: m['ad'].toString())));
+                                _yukle();
+                              } else {
+                                await _masaAc(m);
+                              }
+                            },
                             child: Container(
                               decoration: BoxDecoration(
                                 color: _renk(m['durum'].toString()),
