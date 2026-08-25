@@ -30,6 +30,8 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
   int _sesIndex = 0; // 0 = Ses 1 (erkek), 1 = Ses 2 (kadin)
   List<Map> _trSesler = [];
 
+  bool _karsilamaSesli = false; // acilistaki selam bitince otomatik dinlemeye gec
+  String _selam = 'Merhaba. Size nasıl yardımcı olabilirim?';
   String? _sonSoru;
   String _sonCevap = '';
   Map? _sonKart;
@@ -75,7 +77,15 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
       await _tts.setLanguage('tr-TR');
       await _tts.setSpeechRate(0.46);
       _tts.setStartHandler(() { if (mounted) setState(() => _konusuyor = true); });
-      _tts.setCompletionHandler(() { if (mounted) setState(() => _konusuyor = false); });
+      _tts.setCompletionHandler(() {
+        if (!mounted) return;
+        setState(() => _konusuyor = false);
+        // Acilis selami bitince otomatik dinlemeye gec ("sorunuzu sorabilirsiniz")
+        if (_karsilamaSesli) {
+          _karsilamaSesli = false;
+          Future.delayed(const Duration(milliseconds: 350), () { if (mounted && !_dinliyor && !_bekliyor) _dinle(); });
+        }
+      });
       _tts.setCancelHandler(() { if (mounted) setState(() => _konusuyor = false); });
       final sesler = await _tts.getVoices;
       if (sesler is List) {
@@ -92,7 +102,17 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
         });
       }
       await _sesUygula(_sesIndex, onizleme: false);
+      _karsila(); // acilista AI sesli karsilar, sonra dinlemeye gecer
     } catch (_) {}
+  }
+
+  /// Acilista AI once sesli karsilar, ardindan otomatik dinlemeye gecer.
+  Future<void> _karsila() async {
+    if (!mounted) return;
+    final ad = context.read<AuthProvider>().ad?.split(' ').first ?? '';
+    setState(() => _selam = 'Merhaba${ad.isNotEmpty ? ' $ad' : ''}. Ben restoranınızın asistanıyım, sorunuzu sorabilirsiniz.');
+    _karsilamaSesli = true;
+    await _seslendir(_selam);
   }
 
   Future<void> _sesUygula(int i, {bool onizleme = true}) async {
@@ -179,9 +199,9 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
   String get _durum {
     if (_dinliyor) return 'Dinliyorum…';
     if (_bekliyor) return 'Düşünüyorum…';
+    if (_sonCevap.isEmpty) return _selam; // acilis selami (konusurken de gorunur)
     if (_konusuyor) return 'Yanıtlıyorum…';
-    final ad = context.read<AuthProvider>().ad?.split(' ').first ?? '';
-    return _sonCevap.isEmpty ? 'Merhaba${ad.isNotEmpty ? ' $ad' : ''}. Ne öğrenmek istersiniz?' : (_sonSoru ?? '');
+    return _sonSoru ?? '';
   }
 
   @override
