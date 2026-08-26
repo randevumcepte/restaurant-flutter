@@ -220,11 +220,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
         actions: [
-          IconButton(
-            tooltip: 'Cari / Açık Hesaplar',
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CariHesaplarScreen())),
-            icon: const Icon(Icons.account_balance_wallet_outlined, color: Color(0xFF64748B), size: 21),
-          ),
           Builder(
             builder: (ctx) => IconButton(
               tooltip: 'Menü',
