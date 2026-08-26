@@ -483,7 +483,7 @@ class _DetayScreenState extends State<DetayScreen> {
       final res = await Api.fis(auth.token!, widget.id!);
       if (!mounted) return;
       if (res['ok'] == 1) {
-        await fisYazdir(res);
+        await fisYazdir(context, res);
       } else {
         _snack(res['hata']?.toString() ?? 'Fiş alınamadı');
       }
@@ -616,6 +616,49 @@ class _DetayScreenState extends State<DetayScreen> {
   }
 
   // ---------------- TEK ADISYON DETAY ----------------
+  // Masayi BELIRGIN gosteren banner; birlesikse "Masa 1 + Masa 2" olarak.
+  Widget _masaBanner(String masa) {
+    final birlesik = (d!['birlesik_masalar'] as List?)?.map((e) => e.toString()).toList() ?? [];
+    final coklu = birlesik.length > 1;
+    final baslik = coklu ? birlesik.join(' + ') : masa;
+    return Container(
+      margin: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: _card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: coklu ? _mor2 : const Color(0xFF243049), width: coklu ? 1.5 : 1),
+      ),
+      child: Row(children: [
+        Container(
+          width: 46, height: 46,
+          decoration: BoxDecoration(color: _mavi.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(12)),
+          child: Icon(coklu ? Icons.merge_type : Icons.table_restaurant, color: const Color(0xFFC4B5FD), size: 24),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(coklu ? 'BİRLEŞİK MASA' : 'MASA',
+                style: const TextStyle(color: Color(0xFF64748B), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.6)),
+            const SizedBox(height: 2),
+            Text(baslik,
+                maxLines: 2, overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+          ]),
+        ),
+        if (coklu) ...[
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(color: _mor1.withValues(alpha: 0.25), borderRadius: BorderRadius.circular(20)),
+            child: Text('${birlesik.length} masa',
+                style: const TextStyle(color: Color(0xFFC4B5FD), fontSize: 12, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ]),
+    );
+  }
+
   List<Widget> _adisyon() {
     final ozet = (d!['ozet'] as Map?) ?? {};
     final kalemler = (d!['kalemler'] as List?) ?? [];
@@ -624,13 +667,18 @@ class _DetayScreenState extends State<DetayScreen> {
     final deg = d!['degerlendirme'] as Map?;
     final indirim = _n(d!['indirim']);
     final ikram = _n(d!['ikram']);
+    final masa = d!['masa']?.toString() ?? '';
+    final masaVar = masa.isNotEmpty;
+    // Masa bannerinda gosterilecekse ozet gridinden 'Masa' kartini cikar (tekrar olmasin)
+    final ozetGirdiler = ozet.entries.where((e) => !(masaVar && e.key == 'Masa')).toList();
     return [
       _ozetSerit(_tam(_n(d!['toplam'])), '${d!['kanal']} · ${d!['acilis']}${d!['kapanis'] != null ? ' → ${d!['kapanis']}' : ' (açık)'}', _mavi),
+      if (masaVar) _masaBanner(masa),
       const SizedBox(height: 12),
       GridView.count(
         crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
         childAspectRatio: 2.4, mainAxisSpacing: 10, crossAxisSpacing: 10,
-        children: ozet.entries.map((e) => _statKart(e.key, e.value.toString())).toList(),
+        children: ozetGirdiler.map((e) => _statKart(e.key, e.value.toString())).toList(),
       ),
       // Acik adisyon -> once URUN EKLE, sonra islem butonlari (yetki kontrolu backend'de)
       if (d!['durum'] == 'acik') ...[
