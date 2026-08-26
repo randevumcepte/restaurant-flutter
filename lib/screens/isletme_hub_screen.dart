@@ -3,7 +3,6 @@ import 'stok_screen.dart';
 import 'recete_screen.dart';
 import 'alis_fatura_screen.dart';
 import 'tedarikci_screen.dart';
-import 'finans_screen.dart';
 import 'gider_screen.dart';
 
 /// İşletme / Stok & Finans hub — stok, reçete, alış faturası, tedarikçi,
@@ -17,7 +16,6 @@ class IsletmeHubScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ogeler = <_Hub>[
-      _Hub('Finansal Özet', 'Gelir · Gider · Net kâr', Icons.trending_up, const Color(0xFF10B981), const FinansScreen()),
       _Hub('Stok / Malzeme', 'Mevcut stok · kritik · fire', Icons.inventory_2_outlined, const Color(0xFF4F46E5), const StokScreen()),
       _Hub('Reçeteler', 'Ürün maliyeti · food-cost', Icons.menu_book_outlined, const Color(0xFF7C3AED), const ReceteScreen()),
       _Hub('Alış Faturaları', 'Stok girişi · fiyat uyarısı', Icons.receipt_long_outlined, const Color(0xFFD97706), const AlisFaturaScreen()),
@@ -26,7 +24,7 @@ class IsletmeHubScreen extends StatelessWidget {
     ];
     return Scaffold(
       backgroundColor: _bg,
-      appBar: AppBar(backgroundColor: _bg, elevation: 0, iconTheme: const IconThemeData(color: Colors.white), title: const Text('Stok & Finans', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold))),
+      appBar: AppBar(backgroundColor: _bg, elevation: 0, iconTheme: const IconThemeData(color: Colors.white), title: const Text('Stok & Satın Alma', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold))),
       body: GridView.count(
         padding: const EdgeInsets.all(14),
         crossAxisCount: 2,
