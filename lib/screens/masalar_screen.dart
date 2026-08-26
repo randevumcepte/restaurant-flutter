@@ -219,11 +219,16 @@ class _MasalarScreenState extends State<MasalarScreen> {
 
   Widget _masaHucre(Map m) {
     final acik = m['adisyon_id'] != null;
-    // Dokununca ac/detay (mevcut davranis)
+    final birlesik = m['durum'].toString() == 'birlesik'; // baska masaya birlesmis kaynak masa
+    // Dokununca ac/detay (mevcut davranis). Birlesik kaynak masa -> hedef hesabi acar.
     final tapCell = GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () async {
-        if (acik) {
+        if (birlesik && m['birlesik_hedef_adisyon_id'] != null) {
+          await Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => DetayScreen(tip: 'adisyon', id: _n(m['birlesik_hedef_adisyon_id']).toInt(), baslikFallback: m['birlesik_hedef_ad']?.toString() ?? m['ad'].toString())));
+          _yukle();
+        } else if (acik) {
           await Navigator.of(context).push(MaterialPageRoute(
               builder: (_) => DetayScreen(tip: 'adisyon', id: _n(m['adisyon_id']).toInt(), baslikFallback: m['ad'].toString())));
           _yukle();
@@ -234,10 +239,10 @@ class _MasalarScreenState extends State<MasalarScreen> {
       child: _hucreGovde(m),
     );
 
-    // Her masa birakma hedefi olabilir: dolu -> birlestir, bos -> tasi.
+    // Her masa birakma hedefi olabilir: dolu -> birlestir, bos -> tasi. Birlesik kaynak masa hedef OLAMAZ.
     return DragTarget<Map>(
       onWillAcceptWithDetails: (d) =>
-          _n(d.data['id']).toInt() != _n(m['id']).toInt() && d.data['adisyon_id'] != null,
+          _n(d.data['id']).toInt() != _n(m['id']).toInt() && d.data['adisyon_id'] != null && !birlesik,
       onAcceptWithDetails: (d) => _birlestirVeyaTasi(d.data, m),
       builder: (ctx, cand, rej) {
         final hover = cand.isNotEmpty;
@@ -269,17 +274,68 @@ class _MasalarScreenState extends State<MasalarScreen> {
 
   Widget _hucreGovde(Map m) {
     final acik = m['adisyon_id'] != null;
+    final durum = m['durum'].toString();
+    final birlesik = durum == 'birlesik';
+    final grup = (m['birlesik_masalar'] as List?)?.map((e) => e.toString()).toList() ?? [];
+
+    // Kaynak masa (baska masaya birlesmis, artik bos): gri, linkli
+    if (birlesik) {
+      return Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFCBD5E1), width: 1.5, style: BorderStyle.solid),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(m['ad'].toString(),
+                style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF94A3B8), decoration: TextDecoration.lineThrough)),
+            const SizedBox(height: 4),
+            const Icon(Icons.merge_type, size: 15, color: Color(0xFF4F46E5)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              child: Text('${m['birlesik_hedef_ad'] ?? ''} ile birleşik',
+                  textAlign: TextAlign.center,
+                  maxLines: 2, overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5))),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       decoration: BoxDecoration(
-        color: _renk(m['durum'].toString()),
+        color: grup.length > 1 ? const Color(0xFFF5F3FF) : _renk(durum),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _kenar(m['durum'].toString()), width: 1.5),
+        border: Border.all(color: grup.length > 1 ? const Color(0xFFC4B5FD) : _kenar(durum), width: grup.length > 1 ? 2 : 1.5),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(m['ad'].toString(), style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-          Text('${m['kapasite']} kişi', style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8))),
+          // Birlesikse "Masa 1 + Masa 2" rozeti, degilse normal masa adi
+          if (grup.length > 1) ...[
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(color: const Color(0xFF4F46E5), borderRadius: BorderRadius.circular(20)),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(Icons.merge_type, size: 12, color: Colors.white),
+                const SizedBox(width: 3),
+                Flexible(
+                  child: Text(grup.join(' + '),
+                      textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Colors.white)),
+                ),
+              ]),
+            ),
+            const SizedBox(height: 2),
+            Text('birleşik masa', style: const TextStyle(fontSize: 9, color: Color(0xFF94A3B8))),
+          ] else ...[
+            Text(m['ad'].toString(), style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+            Text('${m['kapasite']} kişi', style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8))),
+          ],
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: acik
