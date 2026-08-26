@@ -198,6 +198,10 @@ class _DetayScreenState extends State<DetayScreen> {
     final gunluk = (d!['gunluk'] as List?) ?? [];
     final maliyetYuzde = _n(d!['maliyetYuzde']).toInt();
     final renk = maliyetYuzde >= 35 ? _kirmizi : (maliyetYuzde >= 25 ? const Color(0xFFF59E0B) : _yesil);
+    final yapilabilir = d!['yapilabilirPorsiyon'];         // int? — kalan stokla kaç porsiyon
+    final darbogaz = d!['darbogazMalzeme']?.toString();
+    final int? yapInt = yapilabilir is num ? yapilabilir.toInt() : null;
+    final stokRenk = yapInt == null ? const Color(0xFF94A3B8) : (yapInt < 10 ? _kirmizi : (yapInt < 30 ? const Color(0xFFF59E0B) : _yesil));
 
     return [
       // Ozet chip grid
@@ -241,6 +245,38 @@ class _DetayScreenState extends State<DetayScreen> {
             ),
           ]),
         ]),
+      ]),
+      const SizedBox(height: 14),
+      // Kalan stokla uretilebilir porsiyon (darbogaz malzeme)
+      _kutu('🍳 Kalan Stokla Üretilebilir', [
+        if (yapInt == null)
+          const Text('Reçete ya da stok bilgisi tanımlı değil.', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12))
+        else ...[
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, crossAxisAlignment: CrossAxisAlignment.center, children: [
+            const Expanded(child: Text('Şu anki stokla yapılabilir', style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 13))),
+            Text('$yapInt', style: TextStyle(color: stokRenk, fontSize: 26, fontWeight: FontWeight.w800)),
+            const SizedBox(width: 4),
+            Padding(padding: const EdgeInsets.only(top: 8), child: Text('porsiyon', style: TextStyle(color: stokRenk, fontSize: 12, fontWeight: FontWeight.w600))),
+          ]),
+          if (darbogaz != null && darbogaz.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text('⚠️ İlk biten malzeme: $darbogaz', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+            ),
+          const Divider(color: Color(0xFF243049), height: 20),
+          for (final r in recete)
+            if ((r as Map)['porsiyon'] != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(children: [
+                  Expanded(child: Text(r['malzeme'].toString(), style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 13))),
+                  Text('stok: ${_n(r['stok']) % 1 == 0 ? _n(r['stok']).toInt() : _n(r['stok'])}', style: const TextStyle(color: Color(0xFF64748B), fontSize: 11.5)),
+                  const SizedBox(width: 12),
+                  Text('${_n(r['porsiyon']).toInt()} porsiyon',
+                      style: TextStyle(color: r['malzeme'].toString() == darbogaz ? _kirmizi : const Color(0xFF94A3B8), fontSize: 12, fontWeight: FontWeight.w600)),
+                ]),
+              ),
+        ],
       ]),
       const SizedBox(height: 14),
       // En cok satan garson

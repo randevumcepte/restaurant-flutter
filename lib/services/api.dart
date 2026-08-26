@@ -35,6 +35,8 @@ class Api {
           {required String kapsam, int? id, String period = 'haftalik'}) =>
       _get('/api/patron/ai-analiz?kapsam=$kapsam&period=$period${id != null ? '&id=$id' : ''}', token);
 
+  static Future<Map<String, dynamic>> asistanTespitler(String token) => _get('/api/patron/asistan-tespitler', token);
+
   static Future<Map<String, dynamic>> asistanSor(String token, String soru) async {
     final r = await http.post(
       Uri.parse('$base/api/patron/asistan-sor'),

@@ -38,6 +38,10 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
   Map<String, dynamic>? _isKart;
   String _sistemMesaji = 'Başlamak için dokun';
 
+  // Proaktif tespitler (açılışta patronun göremediği kaçak/risk/fırsat)
+  List _tespitler = [];
+  String? _tespitSelam;
+
   Completer<String>? _dinleC;
   String _dinleSon = '';
   bool _konusmaBasladi = false;
@@ -57,6 +61,19 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
     super.initState();
     _pulse = AnimationController(vsync: this, duration: const Duration(seconds: 7))..repeat();
     _hazirla();
+    _tespitYukle();
+  }
+
+  Future<void> _tespitYukle() async {
+    try {
+      final auth = context.read<AuthProvider>();
+      final res = await Api.asistanTespitler(auth.token!);
+      if (!mounted || res['ok'] != 1) return;
+      setState(() {
+        _tespitler = (res['tespitler'] as List?) ?? [];
+        _tespitSelam = res['selam']?.toString();
+      });
+    } catch (_) {}
   }
 
   Future<void> _hazirla() async {
@@ -314,7 +331,10 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
       int kufurSay = 0;
       while (!_iptal && mounted) {
         if (ilk) {
-          await _konus('$selam Restoranınız hakkında ne öğrenmek istersiniz?');
+          final acilis = (_tespitSelam != null && _tespitSelam!.isNotEmpty)
+              ? '$selam $_tespitSelam'
+              : '$selam Restoranınız hakkında ne öğrenmek istersiniz?';
+          await _konus(acilis);
         }
         ilk = false;
         final c = await _dinle(pause: 2, listen: 15);
@@ -418,7 +438,12 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
             const SizedBox(height: 22),
             _mikrofon(),
             const SizedBox(height: 30),
-            _isCevap != null ? _isCevapKart() : _baslangicKart(),
+            if (_isCevap != null)
+              _isCevapKart()
+            else ...[
+              if (_tespitler.isNotEmpty) _tespitBolum(),
+              _baslangicKart(),
+            ],
           ],
         ),
       ),
@@ -549,8 +574,71 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
     );
   }
 
+  // Seviye -> (renk, arkaplan, ikon)
+  (Color, Color, IconData) _seviyeStil(String s) {
+    switch (s) {
+      case 'risk': return (const Color(0xFFDC2626), const Color(0xFFFEF2F2), Icons.warning_amber_rounded);
+      case 'firsat': return (const Color(0xFF7C3AED), const Color(0xFFF5F3FF), Icons.lightbulb_outline);
+      case 'uyari': return (const Color(0xFFD97706), const Color(0xFFFFFBEB), Icons.visibility_outlined);
+      case 'iyi': return (const Color(0xFF059669), const Color(0xFFECFDF5), Icons.check_circle_outline);
+      default: return (const Color(0xFF64748B), const Color(0xFFF8FAFC), Icons.info_outline);
+    }
+  }
+
+  Widget _tespitBolum() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          child: Row(children: [
+            const Icon(Icons.shield_moon_outlined, size: 19, color: _mor),
+            const SizedBox(width: 8),
+            const Text('Senin için baktım', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF221F35))),
+          ]),
+        ),
+        if (_tespitSelam != null && _tespitSelam!.isNotEmpty)
+          Padding(padding: const EdgeInsets.only(left: 4, bottom: 10, right: 4), child: Text(_tespitSelam!, style: const TextStyle(fontSize: 13.5, height: 1.4, color: Color(0xFF6B6880)))),
+        for (final tRaw in _tespitler) _tespitKart(Map<String, dynamic>.from(tRaw as Map)),
+      ]),
+    );
+  }
+
+  Widget _tespitKart(Map<String, dynamic> t) {
+    final stil = _seviyeStil((t['seviye'] ?? '').toString());
+    final kv = (t['kv'] is List) ? (t['kv'] as List) : const [];
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      decoration: BoxDecoration(color: stil.$2, borderRadius: BorderRadius.circular(16), border: Border.all(color: stil.$1.withValues(alpha: 0.22))),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Icon(stil.$3, size: 18, color: stil.$1),
+          const SizedBox(width: 8),
+          Expanded(child: Text((t['baslik'] ?? '').toString(), style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: stil.$1))),
+        ]),
+        const SizedBox(height: 6),
+        Text((t['mesaj'] ?? '').toString(), style: const TextStyle(fontSize: 13.5, height: 1.42, color: Color(0xFF2B2740))),
+        if (kv.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Wrap(spacing: 8, runSpacing: 6, children: [
+            for (final r in kv)
+              Builder(builder: (_) {
+                final m = Map<String, dynamic>.from(r as Map);
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(9), border: Border.all(color: stil.$1.withValues(alpha: 0.2))),
+                  child: Text('${m['k']}: ${m['v']}', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: stil.$1)),
+                );
+              }),
+          ]),
+        ],
+      ]),
+    );
+  }
+
   Widget _baslangicKart() {
-    const oneri = ['Bugün kasa ne durumda?', 'Bu ay ciro ne kadar?', 'En çok kim sattı?', 'Kaç masa dolu?', 'Food-cost ne durumda?', 'Kayıp radarı'];
+    const oneri = ['Kayıp radarı — nerede sızıyor?', 'Bu ay kâr mı ettim?', 'Fiyatı artan malzeme var mı?', 'Stokta ne bitiyor?', 'Personel maaş durumu', 'En çok hangi tedarikçiden aldım?'];
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
       decoration: BoxDecoration(
@@ -565,10 +653,10 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
           Row(children: const [
             Icon(Icons.auto_awesome_rounded, size: 19, color: _mor),
             SizedBox(width: 8),
-            Text('Ne öğrenmek istersiniz?', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF221F35))),
+            Text('Göremediğini sor', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF221F35))),
           ]),
           const SizedBox(height: 4),
-          const Text('Küreye dokunup konuşun ya da bir örnek seçin.', style: TextStyle(fontSize: 13, color: Color(0xFF8A8699))),
+          const Text('Rakamları uygulamada zaten görüyorsun. Bana asıl gözden kaçanı sor — küreye dokun ya da seç.', style: TextStyle(fontSize: 13, color: Color(0xFF8A8699))),
           const SizedBox(height: 12),
           Wrap(spacing: 8, runSpacing: 8, children: [
             for (final o in oneri)
@@ -650,6 +738,13 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
       satirlar.add(_satirKV('Ciro', _tl(k['ciro'] ?? 0)));
       satirlar.add(_satirKV('Adisyon', '${k['folyo'] ?? 0}'));
       satirlar.add(_satirKV('Açık masa', '${k['acik'] ?? 0}'));
+    }
+    // Genel anahtar-değer kartı (finans/stok/maaş/gider/satın alma vb.)
+    if (satirlar.isEmpty && k['kv'] is List) {
+      for (final r in (k['kv'] as List)) {
+        final m = Map<String, dynamic>.from(r as Map);
+        satirlar.add(_satirKV(m['k'].toString(), m['v'].toString()));
+      }
     }
     if (satirlar.isEmpty) return const SizedBox.shrink();
     return Padding(
