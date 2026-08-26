@@ -638,7 +638,7 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
   }
 
   Widget _baslangicKart() {
-    const oneri = ['Kayıp radarı — nerede sızıyor?', 'Bu ay kâr mı ettim?', 'Fiyatı artan malzeme var mı?', 'Stokta ne bitiyor?', 'Personel maaş durumu', 'En çok hangi tedarikçiden aldım?'];
+    const oneri = ['Benim göremediğim ne var?', 'Nerede para kaçıyor?', 'Bu ay kâr mı ettim?', 'Fiyatı artan malzeme var mı?', 'Stokta ne bitiyor?', 'En çok hangi tedarikçiden aldım?'];
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
       decoration: BoxDecoration(
