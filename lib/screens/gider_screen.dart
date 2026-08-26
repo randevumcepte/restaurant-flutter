@@ -89,9 +89,12 @@ class _GiderScreenState extends State<GiderScreen> {
         iconTheme: const IconThemeData(color: Colors.white),
         title: const Text('Giderler', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
       ),
-      floatingActionButton: duzenleyebilir
-          ? FloatingActionButton.extended(backgroundColor: _mor1, onPressed: _ekleDialog, icon: const Icon(Icons.add, color: Colors.white), label: const Text('Gider', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)))
-          : null,
+      // Bu ekrana zaten sadece patron (sahip/mudur) ulasabilir -> buton daima gorunur.
+      // Backend gider-ekle de patron seviyesinde; yetkisiz durumda uc zaten reddeder.
+      floatingActionButton: FloatingActionButton.extended(
+          backgroundColor: _mor1, onPressed: _ekleDialog,
+          icon: const Icon(Icons.add, color: Colors.white),
+          label: const Text('Gider', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
       body: loading
           ? const Center(child: CircularProgressIndicator(color: _mor1))
           : Column(children: [
