@@ -8,6 +8,7 @@ import 'asistan_screen.dart';
 import 'personel_yetkileri_screen.dart';
 import 'personel_screen.dart';
 import 'gider_screen.dart';
+import 'isletme_hub_screen.dart';
 import 'cari_hesaplar_screen.dart';
 import 'sebep_yonetimi_screen.dart';
 import 'menu_yonetimi_screen.dart';
@@ -162,6 +163,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 6),
           Expanded(
             child: ListView(padding: EdgeInsets.zero, children: [
+              if (patron) oge(Icons.inventory_2_outlined, 'Stok & Finans', () => git(const IsletmeHubScreen())),
               if (patron) oge(Icons.restaurant_menu, 'Menü Yönetimi', () => git(const MenuYonetimiScreen())),
               oge(Icons.account_balance_wallet_outlined, 'Cari / Açık Hesaplar', () => git(const CariHesaplarScreen())),
               if (patron) oge(Icons.badge_outlined, 'Personel & Maaş', () => git(const PersonelScreen())),

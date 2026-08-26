@@ -259,6 +259,47 @@ class Api {
   static Future<Map<String, dynamic>> giderSil(String token, int id) =>
       _post('/api/patron/gider-sil', token, {'id': '$id'});
 
+  // ---- STOK / MALZEME ----
+  static Future<Map<String, dynamic>> stokMeta(String token) => _get('/api/patron/stok-meta', token);
+  static Future<Map<String, dynamic>> malzemeler(String token) => _get('/api/patron/malzemeler', token);
+  static Future<Map<String, dynamic>> malzemeDetay(String token, int id) => _get('/api/patron/malzeme-detay?id=$id', token);
+  static Future<Map<String, dynamic>> malzemeKaydet(String token, {
+    int? id, required String ad, int kategoriId = 0, required int temelBirimId, double kritikStok = 0, bool stokTakipli = true, double guncelMaliyet = 0,
+  }) {
+    final body = <String, String>{'ad': ad, 'kategori_id': '$kategoriId', 'temel_birim_id': '$temelBirimId', 'kritik_stok': '$kritikStok', 'stok_takipli': stokTakipli ? '1' : '0', 'guncel_maliyet': '$guncelMaliyet'};
+    if (id != null) body['id'] = '$id';
+    return _post('/api/patron/malzeme-kaydet', token, body);
+  }
+  static Future<Map<String, dynamic>> malzemeSil(String token, int id) => _post('/api/patron/malzeme-sil', token, {'id': '$id'});
+  static Future<Map<String, dynamic>> malzemeKategoriEkle(String token, String ad) => _post('/api/patron/malzeme-kategori-ekle', token, {'ad': ad});
+  static Future<Map<String, dynamic>> stokHareket(String token, int malzemeId, String tip, double miktar, {String aciklama = ''}) =>
+      _post('/api/patron/stok-hareket', token, {'malzeme_id': '$malzemeId', 'tip': tip, 'miktar': '$miktar', 'aciklama': aciklama});
+
+  // ---- TEDARIKCILER ----
+  static Future<Map<String, dynamic>> tedarikciler(String token) => _get('/api/patron/tedarikciler', token);
+  static Future<Map<String, dynamic>> tedarikciKaydet(String token, {int? id, required String ad, String telefon = '', String aciklama = ''}) {
+    final body = <String, String>{'ad': ad, 'telefon': telefon, 'aciklama': aciklama};
+    if (id != null) body['id'] = '$id';
+    return _post('/api/patron/tedarikci-kaydet', token, body);
+  }
+  static Future<Map<String, dynamic>> tedarikciSil(String token, int id) => _post('/api/patron/tedarikci-sil', token, {'id': '$id'});
+
+  // ---- ALIS FATURALARI ----
+  static Future<Map<String, dynamic>> alisFaturalari(String token, {String? ay}) => _get('/api/patron/alis-faturalari${ay != null ? '?ay=$ay' : ''}', token);
+  static Future<Map<String, dynamic>> alisFaturaDetay(String token, int id) => _get('/api/patron/alis-fatura-detay?id=$id', token);
+  static Future<Map<String, dynamic>> alisFaturaKaydet(String token, {int? tedarikciId, String faturaNo = '', String tarih = '', required List<Map<String, dynamic>> kalemler}) =>
+      _post('/api/patron/alis-fatura-kaydet', token, {'tedarikci_id': tedarikciId != null ? '$tedarikciId' : '', 'fatura_no': faturaNo, 'tarih': tarih, 'kalemler': jsonEncode(kalemler)});
+  static Future<Map<String, dynamic>> alisFaturaSil(String token, int id) => _post('/api/patron/alis-fatura-sil', token, {'id': '$id'});
+
+  // ---- RECETE ----
+  static Future<Map<String, dynamic>> receteUrunler(String token) => _get('/api/patron/recete-urunler', token);
+  static Future<Map<String, dynamic>> urunRecete(String token, int urunId) => _get('/api/patron/urun-recete?urun_id=$urunId', token);
+  static Future<Map<String, dynamic>> receteKaydet(String token, int urunId, List<Map<String, dynamic>> kalemler) =>
+      _post('/api/patron/recete-kaydet', token, {'urun_id': '$urunId', 'kalemler': jsonEncode(kalemler)});
+
+  // ---- FINANS ----
+  static Future<Map<String, dynamic>> finans(String token, {String? ay}) => _get('/api/patron/finans${ay != null ? '?ay=$ay' : ''}', token);
+
   static Future<Map<String, dynamic>> masalar(String token) => _get('/api/masalar', token);
   static Future<Map<String, dynamic>> paket(String token) => _get('/api/paket', token);
   static Future<Map<String, dynamic>> paketDetay(String token, int id) => _get('/api/paket/$id', token);
