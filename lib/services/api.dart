@@ -300,6 +300,16 @@ class Api {
   // ---- FINANS ----
   static Future<Map<String, dynamic>> finans(String token, {String? ay}) => _get('/api/patron/finans${ay != null ? '?ay=$ay' : ''}', token);
 
+  // ---- KASA (vardiya bazli nakit) ----
+  static Future<Map<String, dynamic>> kasa(String token) => _get('/api/patron/kasa', token);
+  static Future<Map<String, dynamic>> kasaGecmis(String token) => _get('/api/patron/kasa-gecmis', token);
+  static Future<Map<String, dynamic>> kasaAc(String token, double devir) =>
+      _post('/api/patron/kasa-ac', token, {'devir': '$devir'});
+  static Future<Map<String, dynamic>> kasaHareket(String token, {required String yon, required double tutar, String aciklama = ''}) =>
+      _post('/api/patron/kasa-hareket', token, {'yon': yon, 'tutar': '$tutar', 'aciklama': aciklama});
+  static Future<Map<String, dynamic>> kasaKapat(String token, double sayilan, {String not = ''}) =>
+      _post('/api/patron/kasa-kapat', token, {'sayilan': '$sayilan', 'not': not});
+
   static Future<Map<String, dynamic>> masalar(String token) => _get('/api/masalar', token);
   static Future<Map<String, dynamic>> paket(String token) => _get('/api/paket', token);
   static Future<Map<String, dynamic>> paketDetay(String token, int id) => _get('/api/paket/$id', token);
