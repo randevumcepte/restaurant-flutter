@@ -127,7 +127,8 @@ class Api {
     return jsonDecode(r.body) as Map<String, dynamic>;
   }
 
-  static Future<Map<String, dynamic>> mutfak(String token) => _get('/api/mutfak', token);
+  static Future<Map<String, dynamic>> mutfak(String token, {String? istasyon}) =>
+      _get('/api/mutfak${istasyon != null && istasyon != 'hepsi' ? '?istasyon=$istasyon' : ''}', token);
 
   static Future<Map<String, dynamic>> mutfakHazir(String token, {int? kalemId, int? adisyonId}) async {
     final body = <String, String>{};
@@ -138,6 +139,23 @@ class Api {
     if (r.statusCode == 401) throw ApiYetkiHatasi();
     return jsonDecode(r.body) as Map<String, dynamic>;
   }
+
+  // Servise hazir (durum=hazir) siparisler + garson aldi (servis)
+  static Future<Map<String, dynamic>> mutfakServiseHazir(String token) => _get('/api/mutfak/servise-hazir', token);
+  static Future<Map<String, dynamic>> mutfakServis(String token, {int? kalemId, int? adisyonId}) async {
+    final body = <String, String>{};
+    if (kalemId != null) body['kalem_id'] = '$kalemId';
+    if (adisyonId != null) body['adisyon_id'] = '$adisyonId';
+    return _post('/api/mutfak/servis', token, body);
+  }
+
+  // 86 / Tukendi yonetimi
+  static Future<Map<String, dynamic>> mutfakUrunler(String token) => _get('/api/mutfak/urunler', token);
+  static Future<Map<String, dynamic>> mutfak86(String token, int urunId) =>
+      _post('/api/mutfak/86', token, {'urun_id': '$urunId'});
+
+  // Mutfak analitigi
+  static Future<Map<String, dynamic>> mutfakAnaliz(String token) => _get('/api/mutfak/analiz', token);
 
   static Future<Map<String, dynamic>> sebepler(String token, {String? tur}) =>
       _get('/api/patron/sebepler${tur != null ? '?tur=$tur' : ''}', token);
