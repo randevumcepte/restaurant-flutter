@@ -523,7 +523,18 @@ class _PersonelDetayScreenState extends State<PersonelDetayScreen> {
       );
 
   void _yetkiler() {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => PersonelYetkiDuzenleScreen(personelId: widget.id, personelAd: ozet['ad']?.toString() ?? 'Personel')));
+    // Koyu zeminli slide geçiş -> varsayılan Android geçişindeki gri flaş olmaz
+    Navigator.of(context).push(PageRouteBuilder(
+      transitionDuration: const Duration(milliseconds: 220),
+      reverseTransitionDuration: const Duration(milliseconds: 170),
+      opaque: true,
+      barrierColor: _bg,
+      pageBuilder: (_, __, ___) => PersonelYetkiDuzenleScreen(personelId: widget.id, personelAd: ozet['ad']?.toString() ?? 'Personel'),
+      transitionsBuilder: (_, anim, __, child) => SlideTransition(
+        position: Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
+        child: child,
+      ),
+    ));
   }
 
   // ---- Personel ekle/düzenle formu ----
