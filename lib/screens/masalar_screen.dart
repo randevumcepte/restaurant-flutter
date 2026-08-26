@@ -186,6 +186,20 @@ class _MasalarScreenState extends State<MasalarScreen> {
                   ),
                 ),
               ),
+              // Ipucu: surukle-birak
+              Container(
+                width: double.infinity,
+                color: Colors.white,
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                child: Row(children: const [
+                  Icon(Icons.touch_app_outlined, size: 14, color: Color(0xFF94A3B8)),
+                  SizedBox(width: 6),
+                  Expanded(
+                    child: Text('Dolu masayı basılı tutup sürükleyin — dolu masaya bırak: birleştir, boşa bırak: taşı',
+                        style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
+                  ),
+                ]),
+              ),
               // Secili bolgenin masalari
               Expanded(
                 child: RefreshIndicator(
@@ -205,7 +219,8 @@ class _MasalarScreenState extends State<MasalarScreen> {
 
   Widget _masaHucre(Map m) {
     final acik = m['adisyon_id'] != null;
-    return GestureDetector(
+    // Dokununca ac/detay (mevcut davranis)
+    final tapCell = GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () async {
         if (acik) {
@@ -216,26 +231,167 @@ class _MasalarScreenState extends State<MasalarScreen> {
           await _masaAc(m);
         }
       },
-      child: Container(
-        decoration: BoxDecoration(
-          color: _renk(m['durum'].toString()),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: _kenar(m['durum'].toString()), width: 1.5),
+      child: _hucreGovde(m),
+    );
+
+    // Her masa birakma hedefi olabilir: dolu -> birlestir, bos -> tasi.
+    return DragTarget<Map>(
+      onWillAcceptWithDetails: (d) =>
+          _n(d.data['id']).toInt() != _n(m['id']).toInt() && d.data['adisyon_id'] != null,
+      onAcceptWithDetails: (d) => _birlestirVeyaTasi(d.data, m),
+      builder: (ctx, cand, rej) {
+        final hover = cand.isNotEmpty;
+        // Sadece dolu masalar suruklenebilir (bos masanin hesabi yok)
+        Widget cell = acik
+            ? LongPressDraggable<Map>(
+                data: m,
+                feedback: _suruklenenGorunum(m),
+                childWhenDragging: Opacity(opacity: 0.3, child: _hucreGovde(m)),
+                child: tapCell,
+              )
+            : tapCell;
+        if (hover) {
+          // Uzerine gelince hedefi vurgula (dolu=mor birlestir, bos=mavi tasi)
+          final vurguRenk = acik ? const Color(0xFF4F46E5) : const Color(0xFF0EA5E9);
+          cell = DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: vurguRenk, width: 2.5),
+              color: vurguRenk.withValues(alpha: 0.08),
+            ),
+            child: cell,
+          );
+        }
+        return cell;
+      },
+    );
+  }
+
+  Widget _hucreGovde(Map m) {
+    final acik = m['adisyon_id'] != null;
+    return Container(
+      decoration: BoxDecoration(
+        color: _renk(m['durum'].toString()),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _kenar(m['durum'].toString()), width: 1.5),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(m['ad'].toString(), style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+          Text('${m['kapasite']} kişi', style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8))),
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: acik
+                ? Text(_n(m['tutar']) > 0 ? '${_f.format(_n(m['tutar']).round())} ₺' : 'açık',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5)))
+                : const Text('boş', style: TextStyle(fontSize: 10, color: Color(0xFFCBD5E1))),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Suruklerken parmagin altinda gorunen kart
+  Widget _suruklenenGorunum(Map m) => Material(
+        color: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: const Color(0xFF4F46E5),
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))],
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(Icons.drag_indicator, color: Colors.white70, size: 18),
+            const SizedBox(width: 6),
+            Text(m['ad'].toString(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            if (_n(m['tutar']) > 0) ...[
+              const SizedBox(width: 8),
+              Text('${_f.format(_n(m['tutar']).round())} ₺', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+            ],
+          ]),
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(m['ad'].toString(), style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-            Text('${m['kapasite']} kişi', style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8))),
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: acik
-                  ? Text(_n(m['tutar']) > 0 ? '${_f.format(_n(m['tutar']).round())} ₺' : 'açık',
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5)))
-                  : const Text('boş', style: TextStyle(fontSize: 10, color: Color(0xFFCBD5E1))),
+      );
+
+  // Surukle-birak sonucu: hedef dolu ise birlestir, bos ise tasi.
+  Future<void> _birlestirVeyaTasi(Map source, Map target) async {
+    final auth = context.read<AuthProvider>();
+    final hedefAcik = target['adisyon_id'] != null;
+
+    if (hedefAcik) {
+      final combined = _n(source['tutar']) + _n(target['tutar']);
+      final onay = await _onayDialog(
+        baslik: 'Masaları Birleştir',
+        ikon: Icons.merge_type,
+        renk: const Color(0xFF4F46E5),
+        mesaj: '${source['ad']} hesabı ${target['ad']} masasına aktarılacak.\n'
+            '${source['ad']} boşalacak, birleşik hesap ${target['ad']} masasında toplanacak.',
+        vurgu: 'Birleşik toplam: ${_f.format(combined.round())} ₺',
+        onayText: 'Birleştir',
+      );
+      if (onay != true) return;
+      try {
+        final res = await Api.masaBirlestir(auth.token!, _n(target['adisyon_id']).toInt(), _n(source['adisyon_id']).toInt());
+        if (!mounted) return;
+        _uyar(res['mesaj']?.toString() ?? res['hata']?.toString() ?? '');
+        if (res['ok'] == 1) _yukle();
+      } on ApiYetkiHatasi {
+        if (mounted) context.read<AuthProvider>().cikis();
+      } catch (_) {
+        _uyar('Bağlantı hatası');
+      }
+    } else {
+      final onay = await _onayDialog(
+        baslik: 'Masayı Taşı',
+        ikon: Icons.swap_horiz,
+        renk: const Color(0xFF0EA5E9),
+        mesaj: '${source['ad']} hesabı boş ${target['ad']} masasına taşınacak.',
+        vurgu: null,
+        onayText: 'Taşı',
+      );
+      if (onay != true) return;
+      try {
+        final res = await Api.masaTasi(auth.token!, _n(source['adisyon_id']).toInt(), _n(target['id']).toInt());
+        if (!mounted) return;
+        _uyar(res['mesaj']?.toString() ?? res['hata']?.toString() ?? '');
+        if (res['ok'] == 1) _yukle();
+      } on ApiYetkiHatasi {
+        if (mounted) context.read<AuthProvider>().cikis();
+      } catch (_) {
+        _uyar('Bağlantı hatası');
+      }
+    }
+  }
+
+  Future<bool?> _onayDialog({
+    required String baslik,
+    required IconData ikon,
+    required Color renk,
+    required String mesaj,
+    String? vurgu,
+    required String onayText,
+  }) {
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(children: [Icon(ikon, color: renk), const SizedBox(width: 8), Text(baslik, style: const TextStyle(fontSize: 17))]),
+        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(mesaj, style: const TextStyle(color: Color(0xFF475569), height: 1.4)),
+          if (vurgu != null) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(color: renk.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
+              child: Text(vurgu, style: TextStyle(color: renk, fontWeight: FontWeight.bold)),
             ),
           ],
-        ),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Vazgeç')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), style: FilledButton.styleFrom(backgroundColor: renk), child: Text(onayText)),
+        ],
       ),
     );
   }
