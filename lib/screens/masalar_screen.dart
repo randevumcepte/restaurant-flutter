@@ -195,7 +195,7 @@ class _MasalarScreenState extends State<MasalarScreen> {
                   Icon(Icons.touch_app_outlined, size: 14, color: Color(0xFF94A3B8)),
                   SizedBox(width: 6),
                   Expanded(
-                    child: Text('Dolu masayı basılı tutup sürükleyin — dolu masaya bırak: birleştir, boşa bırak: taşı',
+                    child: Text('Masayı basılı tutup sürükleyin — boş+boş: birleştir & aç, boş→dolu: hesaba ekle, dolu+dolu: birleştir, dolu→boş: taşı',
                         style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
                   ),
                 ]),
@@ -239,15 +239,15 @@ class _MasalarScreenState extends State<MasalarScreen> {
       child: _hucreGovde(m),
     );
 
-    // Her masa birakma hedefi olabilir: dolu -> birlestir, bos -> tasi. Birlesik kaynak masa hedef OLAMAZ.
+    // Her masa hem surukleyici hem hedef olabilir. Birlesik (linkli) kaynak masa haric.
     return DragTarget<Map>(
       onWillAcceptWithDetails: (d) =>
-          _n(d.data['id']).toInt() != _n(m['id']).toInt() && d.data['adisyon_id'] != null && !birlesik,
+          _n(d.data['id']).toInt() != _n(m['id']).toInt() && !birlesik && d.data['durum'].toString() != 'birlesik',
       onAcceptWithDetails: (d) => _birlestirVeyaTasi(d.data, m),
       builder: (ctx, cand, rej) {
         final hover = cand.isNotEmpty;
-        // Sadece dolu masalar suruklenebilir (bos masanin hesabi yok)
-        Widget cell = acik
+        // Birlesik olmayan tum masalar suruklenebilir (bos masayi da grup icin surukle)
+        Widget cell = !birlesik
             ? LongPressDraggable<Map>(
                 data: m,
                 feedback: _suruklenenGorunum(m),
@@ -256,8 +256,10 @@ class _MasalarScreenState extends State<MasalarScreen> {
               )
             : tapCell;
         if (hover) {
-          // Uzerine gelince hedefi vurgula (dolu=mor birlestir, bos=mavi tasi)
-          final vurguRenk = acik ? const Color(0xFF4F46E5) : const Color(0xFF0EA5E9);
+          // Renk niyet: sadece DOLU->BOS tasima mavi; digerleri (birlestir/grupla) mor
+          final srcAcik = cand.isNotEmpty && cand.first != null && cand.first!['adisyon_id'] != null;
+          final tasima = !acik && srcAcik; // dolu kaynak -> bos hedef
+          final vurguRenk = tasima ? const Color(0xFF0EA5E9) : const Color(0xFF4F46E5);
           cell = DecoratedBox(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
@@ -431,6 +433,20 @@ class _MasalarScreenState extends State<MasalarScreen> {
         }
         _yukle();
       }
+    } on ApiYetkiHatasi {
+      if (mounted) context.read<AuthProvider>().cikis();
+    } catch (_) {
+      _uyar('Bağlantı hatası');
+    }
+  }
+
+  // API cagrisi + standart hata/yenile akisi (tekrari onler)
+  Future<void> _apiCagir(Future<Map<String, dynamic>> Function() call) async {
+    try {
+      final res = await call();
+      if (!mounted) return;
+      _uyar(res['mesaj']?.toString() ?? res['hata']?.toString() ?? '');
+      if (res['ok'] == 1) _yukle();
     } on ApiYetkiHatasi {
       if (mounted) context.read<AuthProvider>().cikis();
     } catch (_) {
