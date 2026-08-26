@@ -217,15 +217,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             const SizedBox(width: 8),
             Text(auth.sube ?? '', style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
-            const SizedBox(width: 6),
-            GestureDetector(
-              onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AsistanScreen())),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                decoration: BoxDecoration(color: _mor1.withValues(alpha: 0.25), borderRadius: BorderRadius.circular(20)),
-                child: const Text('✨ Patron', style: TextStyle(color: Color(0xFFC4B5FD), fontSize: 11, fontWeight: FontWeight.bold)),
-              ),
-            ),
           ],
         ),
         actions: [
