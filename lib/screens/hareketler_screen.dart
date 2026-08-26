@@ -109,7 +109,7 @@ class _HareketlerScreenState extends State<HareketlerScreen> {
                               ]),
                             ),
                             if (tutar != null && _n(tutar) > 0)
-                              Text('₺${_f.format(_n(tutar).round())}', style: TextStyle(color: renk, fontSize: 14, fontWeight: FontWeight.bold)),
+                              Text('${_f.format(_n(tutar).round())}TL', style: TextStyle(color: renk, fontSize: 14, fontWeight: FontWeight.bold)),
                           ]),
                         ),
                       );

@@ -38,7 +38,7 @@ class _DetayScreenState extends State<DetayScreen> {
   static const _kirmizi = Color(0xFFF43F5E);
 
   num _n(dynamic v) => v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0);
-  String _tam(num v) => '₺${_f.format(v.round())}';
+  String _tam(num v) => '${_f.format(v.round())}TL';
 
   // Detaydan detaya gecis (koyu FADE -> beyaz parlama olmaz)
   void _push({required String tip, int? id, String baslik = 'Detay'}) {
@@ -56,9 +56,9 @@ class _DetayScreenState extends State<DetayScreen> {
   }
   String _k(num v) {
     final a = v.abs();
-    if (a >= 1000000) return '₺${(v / 1000000).toStringAsFixed(2)}M';
-    if (a >= 1000) return '₺${(v / 1000).toStringAsFixed(1)}K';
-    return '₺${_f.format(v.round())}';
+    if (a >= 1000000) return '${(v / 1000000).toStringAsFixed(2)}M TL';
+    if (a >= 1000) return '${(v / 1000).toStringAsFixed(1)}K TL';
+    return '${_f.format(v.round())}TL';
   }
 
   @override

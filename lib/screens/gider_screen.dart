@@ -27,7 +27,7 @@ Color _katRenk(String k) => {'kira': const Color(0xFFD97706), 'fatura': _mavi, '
 
 final _fmt = NumberFormat.decimalPattern('tr');
 num _n(dynamic v) => v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0);
-String _tl(dynamic v) => '₺${_fmt.format(_n(v).round())}';
+String _tl(dynamic v) => '${_fmt.format(_n(v).round())}TL';
 
 class _GiderScreenState extends State<GiderScreen> {
   List giderler = [];
@@ -203,7 +203,7 @@ class _GiderScreenState extends State<GiderScreen> {
               )),
             ),
             const SizedBox(height: 10),
-            TextField(controller: tutarC, autofocus: true, keyboardType: const TextInputType.numberWithOptions(decimal: true), style: const TextStyle(color: Colors.white), decoration: _dec('Tutar (₺)')),
+            TextField(controller: tutarC, autofocus: true, keyboardType: const TextInputType.numberWithOptions(decimal: true), style: const TextStyle(color: Colors.white), decoration: _dec('Tutar (TL)')),
             const SizedBox(height: 10),
             TextField(controller: aciklamaC, style: const TextStyle(color: Colors.white), decoration: _dec('Açıklama (opsiyonel)')),
             const SizedBox(height: 14),

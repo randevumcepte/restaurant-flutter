@@ -25,7 +25,7 @@ class _ZRaporuScreenState extends State<ZRaporuScreen> {
   static const _aylar = ['', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
 
   num _n(dynamic v) => v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0);
-  String _tl(num v) => '₺${_f.format(v.round())}';
+  String _tl(num v) => '${_f.format(v.round())}TL';
   String get _ymd => '${_tarih.year}-${_tarih.month.toString().padLeft(2, '0')}-${_tarih.day.toString().padLeft(2, '0')}';
   String get _tarihMetin => '${_tarih.day} ${_aylar[_tarih.month]} ${_tarih.year}';
 

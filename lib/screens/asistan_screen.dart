@@ -594,7 +594,7 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
       if (i > 0 && (tam.length - i) % 3 == 0) buf.write('.');
       buf.write(tam[i]);
     }
-    return '${buf.toString()} ₺';
+    return '${buf.toString()}TL';
   }
 
   Widget _satirKV(String etiket, String deger) {

@@ -173,7 +173,7 @@ class _PaketScreenState extends State<PaketScreen> {
                                   Column(
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
-                                      Text('${_f.format(_n(s['toplam']).round())} ₺',
+                                      Text('${_f.format(_n(s['toplam']).round())}TL',
                                           style: const TextStyle(
                                               fontWeight: FontWeight.bold, color: Color(0xFF0F172A), fontSize: 15)),
                                       const SizedBox(height: 4),
@@ -207,7 +207,7 @@ class _PaketDetayScreenState extends State<PaketDetayScreen> {
   final _f = NumberFormat.decimalPattern('tr');
 
   num _n(dynamic v) => v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0);
-  String _para(dynamic v) => '${_f.format(_n(v).round())} ₺';
+  String _para(dynamic v) => '${_f.format(_n(v).round())}TL';
 
   @override
   void initState() {

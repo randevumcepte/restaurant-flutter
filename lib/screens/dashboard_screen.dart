@@ -47,12 +47,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // Kisa para formati: 1.2M / 350K / 980
   String _k(num v) {
     final a = v.abs();
-    if (a >= 1000000) return '₺${(v / 1000000).toStringAsFixed(2)}M';
-    if (a >= 1000) return '₺${(v / 1000).toStringAsFixed(2)}K';
-    return '₺${_f.format(v.round())}';
+    if (a >= 1000000) return '${(v / 1000000).toStringAsFixed(2)}M TL';
+    if (a >= 1000) return '${(v / 1000).toStringAsFixed(2)}K TL';
+    return '${_f.format(v.round())}TL';
   }
 
-  String _tam(num v) => '₺${_f.format(v.round())}';
+  String _tam(num v) => '${_f.format(v.round())}TL';
 
   // Sayarak artan sayi (donem degisince sifirdan yukselir). key=period -> her degisimde yeniden animasyon.
   Widget _sayiAnim(num deger, TextStyle style, {String Function(num)? bicim}) {

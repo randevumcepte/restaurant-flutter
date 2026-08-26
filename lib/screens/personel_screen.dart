@@ -38,7 +38,7 @@ String _rolAd(String rol) => {'sahip': 'Sahip', 'mudur': 'Müdür', 'kasa': 'Kas
 
 final _fmt = NumberFormat.decimalPattern('tr');
 num _n(dynamic v) => v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0);
-String _tl(dynamic v) => '₺${_fmt.format(_n(v).round())}';
+String _tl(dynamic v) => '${_fmt.format(_n(v).round())}TL';
 
 class _PersonelScreenState extends State<PersonelScreen> {
   List personeller = [];
@@ -475,7 +475,7 @@ class _PersonelDetayScreenState extends State<PersonelDetayScreen> {
         title: Text(baslik, style: const TextStyle(color: Colors.white, fontSize: 17)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           TextField(controller: tutarC, autofocus: true, keyboardType: const TextInputType.numberWithOptions(decimal: true), style: const TextStyle(color: Colors.white),
-            decoration: _dec('Tutar (₺)')),
+            decoration: _dec('Tutar (TL)')),
           const SizedBox(height: 10),
           TextField(controller: aciklamaC, style: const TextStyle(color: Colors.white), decoration: _dec('Açıklama (opsiyonel)')),
         ]),
@@ -545,7 +545,7 @@ class _PersonelDetayScreenState extends State<PersonelDetayScreen> {
               _dropdown('Rol', rol, const {'sahip': 'Sahip', 'mudur': 'Müdür', 'kasa': 'Kasa', 'garson': 'Garson', 'mutfak': 'Mutfak'}, (v) => setS(() => rol = v)),
               const SizedBox(height: 10),
               Row(children: [
-                Expanded(flex: 2, child: TextField(controller: maasC, keyboardType: const TextInputType.numberWithOptions(decimal: true), style: const TextStyle(color: Colors.white), decoration: _dec('Maaş (₺)'))),
+                Expanded(flex: 2, child: TextField(controller: maasC, keyboardType: const TextInputType.numberWithOptions(decimal: true), style: const TextStyle(color: Colors.white), decoration: _dec('Maaş (TL)'))),
                 const SizedBox(width: 10),
                 Expanded(flex: 2, child: _dropdown('Tip', maasTipi, const {'aylik': 'Aylık', 'gunluk': 'Günlük', 'saatlik': 'Saatlik'}, (v) => setS(() => maasTipi = v))),
               ]),

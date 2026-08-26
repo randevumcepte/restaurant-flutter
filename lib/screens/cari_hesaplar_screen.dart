@@ -21,7 +21,7 @@ const _mavi = Color(0xFF4F46E5);
 const _yesil = Color(0xFF10B981);
 const _kirmizi = Color(0xFFF43F5E);
 final _f = NumberFormat.decimalPattern('tr');
-String _tl(num v) => '₺${_f.format(v.round())}';
+String _tl(num v) => '${_f.format(v.round())}TL';
 num _n(dynamic v) => v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0);
 
 Color _tipRenk(String t) => {'patron': _mor1, 'firma': _mavi, 'musteri': _yesil, 'personel': const Color(0xFFD97706)}[t] ?? const Color(0xFF64748B);
@@ -237,7 +237,7 @@ class _CariDetayScreenState extends State<_CariDetayScreen> {
         backgroundColor: _card,
         title: const Text('Tahsilat', style: TextStyle(color: Colors.white, fontSize: 16)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          TextField(controller: tutarC, keyboardType: TextInputType.number, autofocus: true, style: const TextStyle(color: Colors.white), decoration: _inp('Tutar ₺')),
+          TextField(controller: tutarC, keyboardType: TextInputType.number, autofocus: true, style: const TextStyle(color: Colors.white), decoration: _inp('Tutar (TL)')),
           const SizedBox(height: 12),
           Row(children: [
             for (final s in ['nakit', 'havale', 'kredi'])

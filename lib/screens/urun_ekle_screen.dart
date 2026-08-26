@@ -31,7 +31,7 @@ class _UrunEkleScreenState extends State<UrunEkleScreen> {
   static const _mavi = Color(0xFF4F46E5);
 
   num _n(dynamic v) => v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0);
-  String _tl(num v) => '₺${_f.format(v.round())}';
+  String _tl(num v) => '${_f.format(v.round())}TL';
 
   @override
   void initState() {

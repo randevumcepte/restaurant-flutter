@@ -287,7 +287,7 @@ class _YetkiDuzenleState extends State<_YetkiDuzenle> {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                       child: Row(children: [
-                        const Text('Limit ₺', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                        const Text('Limit TL', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
                         const SizedBox(width: 12),
                         Expanded(
                           child: TextFormField(

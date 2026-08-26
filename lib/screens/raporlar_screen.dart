@@ -25,7 +25,7 @@ class _RaporlarScreenState extends State<RaporlarScreen> {
   }
 
   num _n(dynamic v) => v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0);
-  String _p(num v) => '${_f.format(v.round())} ₺';
+  String _p(num v) => '${_f.format(v.round())}TL';
 
   Future<void> _yukle() async {
     final auth = context.read<AuthProvider>();

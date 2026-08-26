@@ -341,7 +341,7 @@ class _MasalarScreenState extends State<MasalarScreen> {
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: acik
-                ? Text(_n(m['tutar']) > 0 ? '${_f.format(_n(m['tutar']).round())} ₺' : 'açık',
+                ? Text(_n(m['tutar']) > 0 ? '${_f.format(_n(m['tutar']).round())}TL' : 'açık',
                     style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5)))
                 : const Text('boş', style: TextStyle(fontSize: 10, color: Color(0xFFCBD5E1))),
           ),
@@ -366,7 +366,7 @@ class _MasalarScreenState extends State<MasalarScreen> {
             Text(m['ad'].toString(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             if (_n(m['tutar']) > 0) ...[
               const SizedBox(width: 8),
-              Text('${_f.format(_n(m['tutar']).round())} ₺', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+              Text('${_f.format(_n(m['tutar']).round())}TL', style: const TextStyle(color: Colors.white70, fontSize: 12)),
             ],
           ]),
         ),
@@ -385,7 +385,7 @@ class _MasalarScreenState extends State<MasalarScreen> {
         baslik: 'Masaları Birleştir', ikon: Icons.merge_type, renk: const Color(0xFF4F46E5),
         mesaj: '${source['ad']} hesabı ${target['ad']} masasına aktarılacak.\n'
             '${source['ad']} boşalacak, birleşik hesap ${target['ad']} masasında toplanacak.',
-        vurgu: 'Birleşik toplam: ${_f.format(combined.round())} ₺', onayText: 'Birleştir',
+        vurgu: 'Birleşik toplam: ${_f.format(combined.round())}TL', onayText: 'Birleştir',
       );
       if (onay != true) return;
       await _apiCagir(() => Api.masaBirlestir(auth.token!, _n(target['adisyon_id']).toInt(), _n(source['adisyon_id']).toInt()));
