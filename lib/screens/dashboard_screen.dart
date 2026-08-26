@@ -200,13 +200,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         backgroundColor: _bg,
         elevation: 0,
         iconTheme: const IconThemeData(color: Color(0xFF94A3B8)),
-        leading: Builder(
-          builder: (ctx) => IconButton(
-            tooltip: 'Menü',
-            onPressed: () => Scaffold.of(ctx).openDrawer(),
-            icon: const Icon(Icons.menu, color: Color(0xFFCBD5E1), size: 24),
-          ),
-        ),
+        automaticallyImplyLeading: false,
         title: Row(
           children: [
             Container(
@@ -240,6 +234,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
             tooltip: 'Personel Yetkileri',
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PersonelYetkileriScreen())),
             icon: const Icon(Icons.manage_accounts, color: Color(0xFF64748B), size: 22),
+          ),
+          Builder(
+            builder: (ctx) => IconButton(
+              tooltip: 'Menü',
+              onPressed: () => Scaffold.of(ctx).openDrawer(),
+              icon: const Icon(Icons.menu, color: Color(0xFFCBD5E1), size: 24),
+            ),
           ),
         ],
       ),
