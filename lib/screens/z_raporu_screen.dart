@@ -52,6 +52,15 @@ class _ZRaporuScreenState extends State<ZRaporuScreen> {
     }
   }
 
+  Future<void> _yazdir() async {
+    if (d == null) return;
+    try {
+      await zRaporuYazdir(d!);
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Yazdırma penceresi açılamadı, tekrar deneyin.')));
+    }
+  }
+
   void _gunDegis(int delta) {
     final yeni = _tarih.add(Duration(days: delta));
     if (yeni.isAfter(DateTime.now())) return;
@@ -67,10 +76,14 @@ class _ZRaporuScreenState extends State<ZRaporuScreen> {
         backgroundColor: Colors.white,
         elevation: 0.5,
         iconTheme: const IconThemeData(color: Color(0xFF0F172A)),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF0F172A)),
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
         title: const Text('Gün Sonu (Z Raporu)', style: TextStyle(color: Color(0xFF0F172A), fontSize: 18, fontWeight: FontWeight.bold)),
         actions: [
           if (d != null)
-            IconButton(onPressed: () => zRaporuYazdir(d!), icon: const Icon(Icons.print, color: _mavi)),
+            IconButton(onPressed: () => _yazdir(), icon: const Icon(Icons.print, color: _mavi)),
         ],
       ),
       body: Column(children: [
@@ -148,7 +161,7 @@ class _ZRaporuScreenState extends State<ZRaporuScreen> {
         SizedBox(
           width: double.infinity,
           child: FilledButton.icon(
-            onPressed: () => zRaporuYazdir(d!),
+            onPressed: () => _yazdir(),
             style: FilledButton.styleFrom(backgroundColor: _mavi, padding: const EdgeInsets.symmetric(vertical: 14)),
             icon: const Icon(Icons.print, color: Colors.white),
             label: const Text('Z Raporunu Yazdır', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
