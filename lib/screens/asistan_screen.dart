@@ -398,7 +398,7 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         foregroundColor: const Color(0xFF221F35),
-        title: const Text('Sesli Asistan', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
+        title: const Text('Patron Asistan', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
         actions: [
           if (_sunulan.length >= 2)
             IconButton(

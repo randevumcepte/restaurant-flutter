@@ -172,7 +172,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               if (patron) oge(Icons.receipt_long_outlined, 'Giderler', () => git(const GiderScreen())),
               if (patron) oge(Icons.manage_accounts, 'Personel Yetkileri', () => git(const PersonelYetkileriScreen())),
               if (patron) oge(Icons.rule_folder_outlined, 'İptal / İkram Sebepleri', () => git(const SebepYonetimiScreen())),
-              oge(Icons.auto_awesome, 'AI Asistan', () => git(const AsistanScreen()), renk: const Color(0xFFC4B5FD)),
+              oge(Icons.auto_awesome, 'Patron Asistan', () => git(const AsistanScreen()), renk: const Color(0xFFC4B5FD)),
             ]),
           ),
           const Divider(height: 1, color: Color(0xFF2D3752)),
@@ -223,7 +223,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                 decoration: BoxDecoration(color: _mor1.withValues(alpha: 0.25), borderRadius: BorderRadius.circular(20)),
-                child: const Text('✨ AI', style: TextStyle(color: Color(0xFFC4B5FD), fontSize: 11, fontWeight: FontWeight.bold)),
+                child: const Text('✨ Patron', style: TextStyle(color: Color(0xFFC4B5FD), fontSize: 11, fontWeight: FontWeight.bold)),
               ),
             ),
           ],
@@ -252,7 +252,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AsistanScreen())),
         backgroundColor: _mor1,
         icon: const Text('✨', style: TextStyle(fontSize: 16)),
-        label: const Text('AI Asistan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        label: const Text('Patron Asistan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
       body: data == null
           ? (hata != null ? _hataGorunum() : const Center(child: CircularProgressIndicator(color: _mor2)))
