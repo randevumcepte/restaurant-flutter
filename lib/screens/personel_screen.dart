@@ -529,8 +529,8 @@ class _PersonelDetayScreenState extends State<PersonelDetayScreen> {
       reverseTransitionDuration: const Duration(milliseconds: 170),
       opaque: true,
       barrierColor: _bg,
-      pageBuilder: (_, __, ___) => PersonelYetkiDuzenleScreen(personelId: widget.id, personelAd: ozet['ad']?.toString() ?? 'Personel'),
-      transitionsBuilder: (_, anim, __, child) => SlideTransition(
+      pageBuilder: (_, _, _) => PersonelYetkiDuzenleScreen(personelId: widget.id, personelAd: ozet['ad']?.toString() ?? 'Personel'),
+      transitionsBuilder: (_, anim, _, child) => SlideTransition(
         position: Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
         child: child,
       ),
