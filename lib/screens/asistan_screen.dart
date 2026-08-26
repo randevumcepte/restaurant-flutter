@@ -114,7 +114,7 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
         _sesler = trAll.map((v) => {'name': v['name'].toString(), 'locale': v['locale'].toString()}).toList();
       }
     } catch (_) {}
-    await _tts.setSpeechRate(0.46);
+    await _tts.setSpeechRate(0.40); // daha yavas + daha vurgulu okusun (onceki 0.46 hizliydi)
     await _tts.setPitch(1.06);
     await _tts.awaitSpeakCompletion(true);
 
@@ -184,10 +184,27 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
   }
 
   String _trKucuk(String s) => s.replaceAll('I', 'ı').replaceAll('İ', 'i').toLowerCase();
-  String _seslendirmeMetni(String s) => s.replaceAllMapped(RegExp(r'[A-ZÇĞİÖŞÜ]{2,}'), (m) {
-        final w = m.group(0)!;
-        return w.substring(0, 1) + _trKucuk(w.substring(1));
-      });
+
+  // TTS icin metni KONUSMAYA uygun hale getir: sembolleri kelimeye cevir,
+  // binlik noktayi kaldir (106.942 -> dogru okunsun), TL->lira, %->yuzde.
+  String _seslendirmeMetni(String s) {
+    var t = s;
+    // Binlik ayirici nokta -> kaldir (coklu gruplar icin iki gecis)
+    t = t.replaceAllMapped(RegExp(r'(\d)\.(?=\d{3}\b)'), (m) => m.group(1)!);
+    t = t.replaceAllMapped(RegExp(r'(\d)\.(?=\d{3}\b)'), (m) => m.group(1)!);
+    // Semboller -> dogal soyleyis
+    t = t.replaceAll('→', ' ');
+    t = t.replaceAll('%', ' yüzde ');
+    t = t.replaceAll('/', ', ');
+    t = t.replaceAll('&', ' ve ');
+    t = t.replaceAllMapped(RegExp(r'TL\b'), (m) => ' lira');
+    // ALL-CAPS kisaltmalari Baslik yap (TTS harf harf hecelemesin)
+    t = t.replaceAllMapped(RegExp(r'[A-ZÇĞİÖŞÜ]{2,}'), (m) {
+      final w = m.group(0)!;
+      return w.substring(0, 1) + _trKucuk(w.substring(1));
+    });
+    return t.replaceAll(RegExp(r'\s+'), ' ').trim();
+  }
 
   /// Tek cumle dinler; oturum kapaninca duyulan metni doner.
   Future<String> _dinle({int pause = 2, int listen = 15}) async {
