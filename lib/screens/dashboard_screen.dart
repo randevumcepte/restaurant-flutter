@@ -6,7 +6,11 @@ import '../services/api.dart';
 import 'detay_screen.dart';
 import 'asistan_screen.dart';
 import 'personel_yetkileri_screen.dart';
+import 'personel_screen.dart';
+import 'gider_screen.dart';
 import 'cari_hesaplar_screen.dart';
+import 'sebep_yonetimi_screen.dart';
+import 'menu_yonetimi_screen.dart';
 
 /// Patron ana paneli — Kerzz BOSS yogunlugunda: tek ekranda her sey.
 /// Donem secici + karsilastirma + kayip radari + food-cost + odeme/servis dagilimi + 10 gunluk grafik.
@@ -123,14 +127,79 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: child,
       );
 
+  // Sol ust menu (drawer) — yonetim sayfalarina hizli gecis
+  Widget _drawer(BuildContext context, AuthProvider auth) {
+    final patron = auth.rol == 'sahip' || auth.rol == 'mudur';
+    void git(Widget ekran) {
+      Navigator.of(context).pop(); // drawer'i kapat
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => ekran));
+    }
+
+    Widget oge(IconData ikon, String baslik, VoidCallback onTap, {Color renk = const Color(0xFFE2E8F0)}) {
+      return ListTile(
+        leading: Icon(ikon, color: renk, size: 22),
+        title: Text(baslik, style: TextStyle(color: renk, fontSize: 15, fontWeight: FontWeight.w600)),
+        onTap: onTap,
+        dense: true,
+        visualDensity: const VisualDensity(vertical: -1),
+      );
+    }
+
+    return Drawer(
+      backgroundColor: _card,
+      child: SafeArea(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Container(
+            padding: const EdgeInsets.fromLTRB(18, 20, 18, 18),
+            decoration: const BoxDecoration(gradient: LinearGradient(colors: [_mor1, _mavi])),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('RestoOS', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              Text(auth.sube ?? '', style: const TextStyle(color: Colors.white, fontSize: 14)),
+              Text('${auth.ad ?? ''} · ${_rolAd(auth.rol)}', style: const TextStyle(color: Color(0xFFE9D5FF), fontSize: 12)),
+            ]),
+          ),
+          const SizedBox(height: 6),
+          Expanded(
+            child: ListView(padding: EdgeInsets.zero, children: [
+              if (patron) oge(Icons.restaurant_menu, 'Menü Yönetimi', () => git(const MenuYonetimiScreen())),
+              oge(Icons.account_balance_wallet_outlined, 'Cari / Açık Hesaplar', () => git(const CariHesaplarScreen())),
+              if (patron) oge(Icons.badge_outlined, 'Personel & Maaş', () => git(const PersonelScreen())),
+              if (patron) oge(Icons.receipt_long_outlined, 'Giderler', () => git(const GiderScreen())),
+              if (patron) oge(Icons.manage_accounts, 'Personel Yetkileri', () => git(const PersonelYetkileriScreen())),
+              if (patron) oge(Icons.rule_folder_outlined, 'İptal / İkram Sebepleri', () => git(const SebepYonetimiScreen())),
+              oge(Icons.auto_awesome, 'AI Asistan', () => git(const AsistanScreen()), renk: const Color(0xFFC4B5FD)),
+            ]),
+          ),
+          const Divider(height: 1, color: Color(0xFF2D3752)),
+          oge(Icons.logout, 'Çıkış', () { Navigator.of(context).pop(); context.read<AuthProvider>().cikis(); }, renk: const Color(0xFFF87171)),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
+  }
+
+  String _rolAd(String? rol) {
+    switch (rol) {
+      case 'sahip': return 'Sahip';
+      case 'mudur': return 'Müdür';
+      case 'kasa': return 'Kasa';
+      case 'garson': return 'Garson';
+      case 'mutfak': return 'Mutfak';
+      default: return rol ?? '';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     return Scaffold(
       backgroundColor: _bg,
+      drawer: _drawer(context, auth),
       appBar: AppBar(
         backgroundColor: _bg,
         elevation: 0,
+        iconTheme: const IconThemeData(color: Color(0xFF94A3B8)),
         title: Row(
           children: [
             Container(

@@ -373,50 +373,68 @@ class _MasalarScreenState extends State<MasalarScreen> {
   // Surukle-birak sonucu: hedef dolu ise birlestir, bos ise tasi.
   Future<void> _birlestirVeyaTasi(Map source, Map target) async {
     final auth = context.read<AuthProvider>();
-    final hedefAcik = target['adisyon_id'] != null;
+    final srcAcik = source['adisyon_id'] != null;
+    final tgtAcik = target['adisyon_id'] != null;
 
-    if (hedefAcik) {
+    // 1) DOLU -> DOLU: fatura birlestir
+    if (srcAcik && tgtAcik) {
       final combined = _n(source['tutar']) + _n(target['tutar']);
       final onay = await _onayDialog(
-        baslik: 'Masaları Birleştir',
-        ikon: Icons.merge_type,
-        renk: const Color(0xFF4F46E5),
+        baslik: 'Masaları Birleştir', ikon: Icons.merge_type, renk: const Color(0xFF4F46E5),
         mesaj: '${source['ad']} hesabı ${target['ad']} masasına aktarılacak.\n'
             '${source['ad']} boşalacak, birleşik hesap ${target['ad']} masasında toplanacak.',
-        vurgu: 'Birleşik toplam: ${_f.format(combined.round())} ₺',
-        onayText: 'Birleştir',
+        vurgu: 'Birleşik toplam: ${_f.format(combined.round())} ₺', onayText: 'Birleştir',
       );
       if (onay != true) return;
-      try {
-        final res = await Api.masaBirlestir(auth.token!, _n(target['adisyon_id']).toInt(), _n(source['adisyon_id']).toInt());
-        if (!mounted) return;
-        _uyar(res['mesaj']?.toString() ?? res['hata']?.toString() ?? '');
-        if (res['ok'] == 1) _yukle();
-      } on ApiYetkiHatasi {
-        if (mounted) context.read<AuthProvider>().cikis();
-      } catch (_) {
-        _uyar('Bağlantı hatası');
-      }
-    } else {
+      await _apiCagir(() => Api.masaBirlestir(auth.token!, _n(target['adisyon_id']).toInt(), _n(source['adisyon_id']).toInt()));
+      return;
+    }
+
+    // 2) DOLU -> BOS: tasi
+    if (srcAcik && !tgtAcik) {
       final onay = await _onayDialog(
-        baslik: 'Masayı Taşı',
-        ikon: Icons.swap_horiz,
-        renk: const Color(0xFF0EA5E9),
-        mesaj: '${source['ad']} hesabı boş ${target['ad']} masasına taşınacak.',
-        vurgu: null,
-        onayText: 'Taşı',
+        baslik: 'Masayı Taşı', ikon: Icons.swap_horiz, renk: const Color(0xFF0EA5E9),
+        mesaj: '${source['ad']} hesabı boş ${target['ad']} masasına taşınacak.', vurgu: null, onayText: 'Taşı',
       );
       if (onay != true) return;
-      try {
-        final res = await Api.masaTasi(auth.token!, _n(source['adisyon_id']).toInt(), _n(target['id']).toInt());
-        if (!mounted) return;
-        _uyar(res['mesaj']?.toString() ?? res['hata']?.toString() ?? '');
-        if (res['ok'] == 1) _yukle();
-      } on ApiYetkiHatasi {
-        if (mounted) context.read<AuthProvider>().cikis();
-      } catch (_) {
-        _uyar('Bağlantı hatası');
+      await _apiCagir(() => Api.masaTasi(auth.token!, _n(source['adisyon_id']).toInt(), _n(target['id']).toInt()));
+      return;
+    }
+
+    // 3) BOS kaynak -> grupla
+    int? misafir;
+    if (!tgtAcik) {
+      // BOS -> BOS: birlesik masa acilacak, once kisi sor (grup oturur, sonra siparis)
+      misafir = await _misafirSor('${source['ad']} + ${target['ad']}',
+          _n(source['kapasite']).toInt() + _n(target['kapasite']).toInt());
+      if (misafir == null) return;
+    } else {
+      // BOS -> DOLU: bos masayi mevcut hesaba ekle (grup genisliyor)
+      final onay = await _onayDialog(
+        baslik: 'Masaya Ekle', ikon: Icons.merge_type, renk: const Color(0xFF4F46E5),
+        mesaj: '${source['ad']} (boş), ${target['ad']} masasının hesabına eklenecek — grup genişliyor.',
+        vurgu: null, onayText: 'Birleştir',
+      );
+      if (onay != true) return;
+    }
+    try {
+      final res = await Api.masaGrupla(auth.token!,
+          hedefMasaId: _n(target['id']).toInt(), kaynakMasaId: _n(source['id']).toInt(), misafir: misafir);
+      if (!mounted) return;
+      _uyar(res['mesaj']?.toString() ?? res['hata']?.toString() ?? '');
+      if (res['ok'] == 1) {
+        // Yeni birlesik masa acildiysa hemen siparise gec
+        if (res['yeni_acildi'] == true && res['adisyon_id'] != null) {
+          await Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => DetayScreen(tip: 'adisyon', id: _n(res['adisyon_id']).toInt(),
+                  baslikFallback: '${source['ad']} + ${target['ad']}')));
+        }
+        _yukle();
       }
+    } on ApiYetkiHatasi {
+      if (mounted) context.read<AuthProvider>().cikis();
+    } catch (_) {
+      _uyar('Bağlantı hatası');
     }
   }
 

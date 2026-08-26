@@ -55,7 +55,7 @@ class _ZRaporuScreenState extends State<ZRaporuScreen> {
   Future<void> _yazdir() async {
     if (d == null) return;
     try {
-      await zRaporuYazdir(d!);
+      await zRaporuYazdir(context, d!);
     } catch (_) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Yazdırma penceresi açılamadı, tekrar deneyin.')));
     }

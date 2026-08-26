@@ -1,10 +1,47 @@
+import 'dart:typed_data';
+import 'package:flutter/material.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
 
-/// Adisyon fişi -> 80mm termal PDF -> sistem yazdır/paylaş (herhangi bir yazıcı / PDF kaydet).
-Future<void> fisYazdir(Map d) async {
+/// PDF'i UYGULAMA İÇİNDE önizler — kendi AppBar'ı + geri oku var, yazdır/paylaş
+/// butonları içinde. Böylece kullanıcı asla OS'in tam ekran yazdırma ekranında
+/// (geri dönemediği yerde) sıkışmaz.
+class PdfOnizlemeScreen extends StatelessWidget {
+  final String baslik;
+  final Uint8List Function() bytes;
+  const PdfOnizlemeScreen({super.key, required this.baslik, required this.bytes});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF334155),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0.5,
+        iconTheme: const IconThemeData(color: Color(0xFF0F172A)),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF0F172A)),
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
+        title: Text(baslik, style: const TextStyle(color: Color(0xFF0F172A), fontSize: 18, fontWeight: FontWeight.bold)),
+      ),
+      body: PdfPreview(
+        build: (format) => bytes(),
+        canChangePageFormat: false,
+        canChangeOrientation: false,
+        canDebug: false,
+        allowPrinting: true,
+        allowSharing: true,
+        pdfFileName: '$baslik.pdf',
+        actionBarTheme: const PdfActionBarTheme(backgroundColor: Color(0xFF4F46E5)),
+      ),
+    );
+  }
+}
+
+Future<Uint8List> _fisDoc(Map d) async {
   final f = NumberFormat.decimalPattern('tr');
   String tl(dynamic v) => '${f.format((v is num ? v : 0).round())} TL';
   num n(dynamic v) => v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0);
@@ -53,11 +90,10 @@ Future<void> fisYazdir(Map d) async {
     ]),
   ));
 
-  await Printing.layoutPdf(onLayout: (format) => doc.save());
+  return doc.save();
 }
 
-/// Gün Sonu (Z Raporu) -> A4 PDF -> yazdır/paylaş.
-Future<void> zRaporuYazdir(Map d) async {
+Future<Uint8List> _zRaporuDoc(Map d) async {
   final f = NumberFormat.decimalPattern('tr');
   String tl(dynamic v) => '${f.format((v is num ? v : 0).round())} TL';
   num n(dynamic v) => v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0);
@@ -110,5 +146,23 @@ Future<void> zRaporuYazdir(Map d) async {
       pw.Center(child: pw.Text('RestoOS · ${d['tarih']}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey))),
     ]),
   ));
-  await Printing.layoutPdf(onLayout: (format) => doc.save());
+  return doc.save();
+}
+
+/// Adisyon fişi -> uygulama içi önizleme (geri butonlu) -> oradan yazdır/paylaş.
+Future<void> fisYazdir(BuildContext context, Map d) async {
+  final data = await _fisDoc(d);
+  if (!context.mounted) return;
+  await Navigator.of(context).push(MaterialPageRoute(
+    builder: (_) => PdfOnizlemeScreen(baslik: 'Fiş', bytes: () => data),
+  ));
+}
+
+/// Gün Sonu (Z Raporu) -> uygulama içi önizleme (geri butonlu) -> oradan yazdır/paylaş.
+Future<void> zRaporuYazdir(BuildContext context, Map d) async {
+  final data = await _zRaporuDoc(d);
+  if (!context.mounted) return;
+  await Navigator.of(context).push(MaterialPageRoute(
+    builder: (_) => PdfOnizlemeScreen(baslik: 'Z Raporu', bytes: () => data),
+  ));
 }
