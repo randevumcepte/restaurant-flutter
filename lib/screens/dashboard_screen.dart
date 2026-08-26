@@ -5,7 +5,6 @@ import '../providers/auth_provider.dart';
 import '../services/api.dart';
 import 'detay_screen.dart';
 import 'asistan_screen.dart';
-import 'personel_yetkileri_screen.dart';
 import 'personel_screen.dart';
 import 'gider_screen.dart';
 import 'isletme_hub_screen.dart';
@@ -170,7 +169,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               oge(Icons.account_balance_wallet_outlined, 'Cari / Açık Hesaplar', () => git(const CariHesaplarScreen())),
               if (patron) oge(Icons.badge_outlined, 'Personel & Maaş', () => git(const PersonelScreen())),
               if (patron) oge(Icons.receipt_long_outlined, 'Giderler', () => git(const GiderScreen())),
-              if (patron) oge(Icons.manage_accounts, 'Personel Yetkileri', () => git(const PersonelYetkileriScreen())),
               if (patron) oge(Icons.rule_folder_outlined, 'İptal / İkram Sebepleri', () => git(const SebepYonetimiScreen())),
               oge(Icons.auto_awesome, 'Patron Asistan', () => git(const AsistanScreen()), renk: const Color(0xFFC4B5FD)),
             ]),
@@ -233,11 +231,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             tooltip: 'Cari / Açık Hesaplar',
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CariHesaplarScreen())),
             icon: const Icon(Icons.account_balance_wallet_outlined, color: Color(0xFF64748B), size: 21),
-          ),
-          IconButton(
-            tooltip: 'Personel Yetkileri',
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PersonelYetkileriScreen())),
-            icon: const Icon(Icons.manage_accounts, color: Color(0xFF64748B), size: 22),
           ),
           Builder(
             builder: (ctx) => IconButton(

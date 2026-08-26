@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
 import '../services/api.dart';
-import 'personel_yetkileri_screen.dart';
+import 'personel_yetki_duzenle_screen.dart';
 
 /// Personel & Maaş — kart, maaş/prim konfigu, otomatik prim (ciro), avans/ödeme/
 /// prim/kesinti defteri. Aylık özet. Para işlemleri SADECE sahip.
@@ -310,6 +310,8 @@ class _PersonelDetayScreenState extends State<PersonelDetayScreen> {
                 : ListView(padding: const EdgeInsets.all(14), children: [
                     _bilgiKart(),
                     const SizedBox(height: 12),
+                    _yetkiKart(),
+                    const SizedBox(height: 12),
                     _hesapKart(),
                     const SizedBox(height: 12),
                     if (duzenleyebilir) _islemler(),
@@ -340,8 +342,6 @@ class _PersonelDetayScreenState extends State<PersonelDetayScreen> {
               if ((ozet['telefon']?.toString() ?? '').isNotEmpty) ...[const SizedBox(width: 8), Text(ozet['telefon'].toString(), style: const TextStyle(color: _gri, fontSize: 12))],
             ]),
           ])),
-          if (duzenleyebilir)
-            IconButton(onPressed: _yetkiler, tooltip: 'Yetkiler', icon: const Icon(Icons.shield_outlined, color: _mavi)),
         ]),
         const Divider(color: Color(0xFF232B42), height: 22),
         _satir('Maaş', '${_tl(ozet['maas'])} / ${_maasTipiAd(ozet['maas_tipi']?.toString())}'),
@@ -351,6 +351,24 @@ class _PersonelDetayScreenState extends State<PersonelDetayScreen> {
       ]),
     );
   }
+
+  Widget _yetkiKart() => GestureDetector(
+        onTap: _yetkiler,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFF232B42))),
+          child: Row(children: [
+            Container(padding: const EdgeInsets.all(9), decoration: BoxDecoration(color: _mavi.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(12)), child: const Icon(Icons.shield_outlined, color: _mavi, size: 22)),
+            const SizedBox(width: 12),
+            const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Yetkiler & Limitler', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+              SizedBox(height: 2),
+              Text('Adisyon, para, yönetim yetkileri + iskonto/ikram limiti', style: TextStyle(color: _gri, fontSize: 12)),
+            ])),
+            Icon(duzenleyebilir ? Icons.chevron_right : Icons.visibility_outlined, color: _gri, size: 20),
+          ]),
+        ),
+      );
 
   Widget _hesapKart() {
     final net = _n(ozet['net']);
@@ -505,7 +523,7 @@ class _PersonelDetayScreenState extends State<PersonelDetayScreen> {
       );
 
   void _yetkiler() {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PersonelYetkileriScreen()));
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => PersonelYetkiDuzenleScreen(personelId: widget.id, personelAd: ozet['ad']?.toString() ?? 'Personel')));
   }
 
   // ---- Personel ekle/düzenle formu ----
