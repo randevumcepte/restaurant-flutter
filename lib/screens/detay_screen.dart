@@ -513,13 +513,22 @@ class _DetayScreenState extends State<DetayScreen> {
     if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m), backgroundColor: _card));
   }
 
-  Widget _masaIslemBar() => Row(children: [
-        Expanded(child: _kucukBtn(Icons.swap_horiz, 'Taşı', _masaTasi)),
+  Widget _masaIslemBar() {
+    final ayrilabilir = (d?['ayrilabilir_masalar'] as List?) ?? [];
+    final birlesik = ayrilabilir.isNotEmpty; // bu adisyon birlesik grup mu
+    return Row(children: [
+      Expanded(child: _kucukBtn(Icons.swap_horiz, 'Taşı', _masaTasi)),
+      const SizedBox(width: 8),
+      Expanded(child: _kucukBtn(Icons.merge_type, 'Birleştir', _masaBirlestir)),
+      const SizedBox(width: 8),
+      Expanded(child: _kucukBtn(Icons.call_split, 'Böl', _adisyonBol)),
+      // Birlesik masada -> gruptan masa ayirma
+      if (birlesik) ...[
         const SizedBox(width: 8),
-        Expanded(child: _kucukBtn(Icons.merge_type, 'Birleştir', _masaBirlestir)),
-        const SizedBox(width: 8),
-        Expanded(child: _kucukBtn(Icons.call_split, 'Böl', _adisyonBol)),
-      ]);
+        Expanded(child: _kucukBtn(Icons.safety_divider, 'Ayır', _masaAyir)),
+      ],
+    ]);
+  }
 
   Widget _kucukBtn(IconData ikon, String etiket, VoidCallback onTap) => GestureDetector(
         onTap: onTap,
@@ -683,6 +692,94 @@ class _DetayScreenState extends State<DetayScreen> {
       _yukle();
       final yid = res['yeni_adisyon_id'];
       if (yid != null) _push(tip: 'adisyon', id: _n(yid).toInt(), baslik: 'Bölünen Adisyon');
+    }
+  }
+
+  // Birlesik gruptan bir masayi AYIR: masa sec -> o masada kalan urunleri sec -> yeni bagimsiz adisyon
+  Future<void> _masaAyir() async {
+    if (widget.id == null) return;
+    final ayrilabilir = (d?['ayrilabilir_masalar'] as List?) ?? [];
+    if (ayrilabilir.isEmpty) { _snack('Bu masa birleşik değil.'); return; }
+
+    // 1) Hangi masa ayrılsın?
+    final secilenMasa = await showModalBottomSheet<Map>(
+      context: context, backgroundColor: _card,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const SizedBox(height: 12),
+          Container(width: 40, height: 4, decoration: BoxDecoration(color: const Color(0xFF334155), borderRadius: BorderRadius.circular(4))),
+          const Padding(padding: EdgeInsets.all(14), child: Text('Hangi masa ayrılsın?', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold))),
+          for (final m in ayrilabilir)
+            ListTile(
+              leading: const Icon(Icons.table_bar, color: Color(0xFFC4B5FD)),
+              title: Text((m as Map)['ad'].toString(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+              trailing: const Icon(Icons.chevron_right, color: Color(0xFF64748B)),
+              onTap: () => Navigator.pop(ctx, m),
+            ),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
+    if (secilenMasa == null || !mounted) return;
+    final masaId = _n(secilenMasa['id']).toInt();
+    final masaAd = secilenMasa['ad'].toString();
+
+    // 2) Bu masada kalan (ayrılan gruba ait) ürünleri seç
+    final kalemler = (d!['kalemler'] as List?) ?? [];
+    final aktif = kalemler.where((k) => (k as Map)['durum'] != 'iptal').toList();
+    final secili = <int>{};
+    final onay = await showModalBottomSheet<bool>(
+      context: context, backgroundColor: _card, isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => SafeArea(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const SizedBox(height: 12),
+            Container(width: 40, height: 4, decoration: BoxDecoration(color: const Color(0xFF334155), borderRadius: BorderRadius.circular(4))),
+            Padding(padding: const EdgeInsets.all(14), child: Text('$masaAd\'e taşınacak ürünler', style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold))),
+            const Padding(padding: EdgeInsets.symmetric(horizontal: 14), child: Text('Ürün seçmezsen masa boş açılır.', style: TextStyle(color: Color(0xFF64748B), fontSize: 12))),
+            const SizedBox(height: 6),
+            Flexible(
+              child: ListView(shrinkWrap: true, children: [
+                for (final k in aktif)
+                  CheckboxListTile(
+                    dense: true,
+                    activeColor: _mor1,
+                    value: secili.contains(_n((k as Map)['id']).toInt()),
+                    onChanged: (v) => setS(() {
+                      final id = _n(k['id']).toInt();
+                      v == true ? secili.add(id) : secili.remove(id);
+                    }),
+                    title: Text('${_n(k['adet']).toInt()}× ${k['ad']}', style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 14)),
+                    secondary: Text(_tam(_n(k['tutar'])), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                  ),
+              ]),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  style: FilledButton.styleFrom(backgroundColor: _mor1, padding: const EdgeInsets.symmetric(vertical: 13)),
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: Text(secili.isEmpty ? 'Boş masa olarak ayır' : 'Ayır (${secili.length} ürün)', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ),
+          ]),
+        ),
+      ),
+    );
+    if (onay != true || !mounted) return;
+    final auth = context.read<AuthProvider>();
+    final res = await Api.masaAyir(auth.token!, widget.id!, masaId, secili.join(','));
+    if (!mounted) return;
+    _snack(res['mesaj']?.toString() ?? res['hata']?.toString() ?? '');
+    if (res['ok'] == 1) {
+      _yukle();
+      final yid = res['yeni_adisyon_id'];
+      if (yid != null) _push(tip: 'adisyon', id: _n(yid).toInt(), baslik: masaAd);
     }
   }
 
