@@ -249,10 +249,12 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
             return;
           }
           // 4 FILTRE (hepsi gerekli -> echo elensin)
-          if (DateTime.now().difference(basla).inMilliseconds < 1000) return; // 1sn grace
+          final int ms = DateTime.now().difference(basla).inMilliseconds;
           final rec = _fold(t).split(' ').where((w) => w.length > 1).toList();
+          final int yabanci = rec.where((w) => !cevapKelime.contains(w)).length;
+          debugPrint('BARGE t="$t" kel=${rec.length} yab=$yabanci ses=${_sesN.toStringAsFixed(2)} ms=$ms final=${r.finalResult}'); // TESHIS
+          if (ms < 1000) return;                                              // 1sn grace
           if (rec.length < 3) return;                                         // 3+ kelime
-          final yabanci = rec.where((w) => !cevapKelime.contains(w)).length;
           if (yabanci < 2) return;                                            // cevapta olmayan 2+ kelime yoksa = echo
           if (_sesN < _bargeSes) return;                                      // ses dusuk = echo
           // GERCEK kullanici konusmasi -> TTS sustur, temiz yakala
