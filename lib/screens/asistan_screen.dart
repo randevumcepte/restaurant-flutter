@@ -205,6 +205,8 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
     // Binlik ayirici nokta -> kaldir (coklu gruplar icin iki gecis)
     t = t.replaceAllMapped(RegExp(r'(\d)\.(?=\d{3}\b)'), (m) => m.group(1)!);
     t = t.replaceAllMapped(RegExp(r'(\d)\.(?=\d{3}\b)'), (m) => m.group(1)!);
+    // Sayidan sonra cumle sonu noktasi -> kaldir (yoksa "800." -> "sekiz yuzuncu" okuyor)
+    t = t.replaceAllMapped(RegExp(r'(\d)\.(\s|$)'), (m) => '${m.group(1)}${m.group(2)}');
     // Semboller -> dogal soyleyis
     t = t.replaceAll('→', ' ');
     t = t.replaceAll('%', ' yüzde ');
