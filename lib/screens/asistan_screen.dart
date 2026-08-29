@@ -41,6 +41,8 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
   // Proaktif tespitler (açılışta patronun göremediği kaçak/risk/fırsat)
   List _tespitler = [];
   String? _tespitSelam;
+  bool _tespitBitti = false; // tespit isteği tamamlandı mı
+  bool _otoBasladi = false;  // açılışta otomatik konuşmayı bir kez başlat
 
   Completer<String>? _dinleC;
   String _dinleSon = '';
@@ -68,12 +70,24 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
     try {
       final auth = context.read<AuthProvider>();
       final res = await Api.asistanTespitler(auth.token!);
-      if (!mounted || res['ok'] != 1) return;
-      setState(() {
-        _tespitler = (res['tespitler'] as List?) ?? [];
-        _tespitSelam = res['selam']?.toString();
-      });
-    } catch (_) {}
+      if (mounted && res['ok'] == 1) {
+        setState(() {
+          _tespitler = (res['tespitler'] as List?) ?? [];
+          _tespitSelam = res['selam']?.toString();
+        });
+      }
+    } catch (_) {} finally {
+      _tespitBitti = true;
+      _otoBaslat();
+    }
+  }
+
+  // Ekran acilir acilmaz asistan KENDISI konussun (dokunmaya gerek yok).
+  // Hem TTS hazir hem tespitler yuklendiyse tek sefer baslatir.
+  void _otoBaslat() {
+    if (_otoBasladi || !_hazir || !_tespitBitti || !mounted || _mesgul) return;
+    _otoBasladi = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) { if (mounted) _basla(); });
   }
 
   Future<void> _hazirla() async {
@@ -88,6 +102,7 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
     );
     await _sesAyarla();
     if (mounted) _ss(() => _hazir = ok);
+    _otoBaslat(); // hazir olunca (tespitler de bittiyse) kendiliginden konus
   }
 
   Future<void> _sesAyarla() async {
@@ -350,7 +365,7 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
         if (ilk) {
           final acilis = (_tespitSelam != null && _tespitSelam!.isNotEmpty)
               ? '$selam $_tespitSelam'
-              : '$selam Restoranınız hakkında ne öğrenmek istersiniz?';
+              : '$selam Nasıl yardımcı olabilirim?';
           await _konus(acilis);
         }
         ilk = false;
