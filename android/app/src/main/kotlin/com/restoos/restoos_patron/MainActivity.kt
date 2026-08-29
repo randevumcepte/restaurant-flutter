@@ -70,7 +70,7 @@ class MainActivity : FlutterActivity() {
             val frame = ShortArray(480) // 30ms @ 16k
             val t0 = System.currentTimeMillis()
             var ustuste = 0
-            val gerekli = 3 // ~90ms sureli konusma
+            val gerekli = 2 // ~60ms sureli konusma (erken tetik -> ilk soruyu kacirma)
             while (calisiyor) {
                 val n = try { rec.read(frame, 0, frame.size) } catch (e: Exception) { -1 }
                 if (n <= 0) continue

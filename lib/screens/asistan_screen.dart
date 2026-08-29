@@ -217,7 +217,7 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
         await Future.any([_ttsBitti!.future, Future.delayed(tahmin)]);
       }
     } catch (_) {} finally {
-      if (bargeIn) await BargeVad.dur();
+      if (bargeIn) BargeVad.dur(); // await ETME -> dinlemeye hizli gec (ilk soruyu kacirma)
       _konusuyor = false;
     }
   }
@@ -252,8 +252,8 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
     if (!_hazir) return '';
     // Onceki oturumdan kalan dinlemeyi kapat + mikrofonu serbest birak (TTS'ten sonra sart).
     try { if (_speech.isListening) await _speech.stop(); } catch (_) {}
-    // VAD ile kesildiyse kullanici zaten konusuyor -> daha hizli baslat (sozunu kacirma).
-    await Future.delayed(Duration(milliseconds: _vadKesti ? 60 : 180));
+    // VAD ile kesildiyse kullanici zaten konusuyor -> BEKLEME, hemen dinle (ilk soruyu kacirma).
+    if (!_vadKesti) await Future.delayed(const Duration(milliseconds: 180));
     _vadKesti = false;
     if (_iptal || !mounted) return '';
     _dinleC = Completer<String>();
