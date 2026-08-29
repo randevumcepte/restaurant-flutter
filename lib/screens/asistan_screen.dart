@@ -243,7 +243,7 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
     if (!_hazir) return '';
     // Onceki oturumdan kalan dinlemeyi kapat + mikrofonu serbest birak (TTS'ten sonra sart).
     try { if (_speech.isListening) await _speech.stop(); } catch (_) {}
-    await Future.delayed(const Duration(milliseconds: 300));
+    await Future.delayed(const Duration(milliseconds: 180));
     if (_iptal || !mounted) return '';
     _dinleC = Completer<String>();
     _dinleSon = '';
@@ -255,7 +255,8 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
 
     Timer? sessizlikT;
     Timer? watchdogT;
-    final int sessizlikMs = pause.clamp(1, 5) * 1000 + 400;
+    // Sen sustuktan sonra "bitti" sayma suresi. Kisa tuttum ki cevap hizli gelsin (~1.1sn).
+    final int sessizlikMs = pause.clamp(1, 5) * 1000 + 100;
 
     void kapat() {
       sessizlikT?.cancel();
@@ -419,7 +420,7 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
           await _konus('$selam Nasıl yardımcı olabilirim?');
         }
         final t0 = DateTime.now();
-        final c = await _dinle(pause: 2, listen: 15);
+        final c = await _dinle(pause: 1, listen: 15);
         if (_iptal) return;
         if (c.trim().isEmpty) {
           // Cok hizli bos dondu -> mikrofon hazir degildi, SESSIZCE tekrar dinle (kapatma sayma).
