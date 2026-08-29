@@ -8,6 +8,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/auth_provider.dart';
 import '../services/api.dart';
+import '../services/barge_vad.dart';
 
 /// SESLI ASISTAN — Randevumcepte sesli_randevu.dart tasariminin birebir portu.
 /// Buyuk Siri kuresi + surekli konusma dongusu (_basla): karsilar -> dinler ->
@@ -192,12 +193,18 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
   int _konusToken = 0;
   Completer<void>? _ttsBitti; // TTS gercek bitis sinyali
   bool _konusuyor = false;    // su an TTS ile konusuyor mu (dokununca kesmek icin)
-  Future<void> _konus(String metin) async {
+  bool _vadKesti = false;     // native VAD (sesli araya girme) TTS'i kesti mi
+  // bargeIn=true: konusurken native yanki-engellemeli VAD dinler; Ozcan konusunca TTS susar (dokunmasiz).
+  Future<void> _konus(String metin, {bool bargeIn = false}) async {
     final int tok = ++_konusToken;
     _ss(() => _sistemMesaji = metin);
     try { HapticFeedback.lightImpact(); } catch (_) {}
     final spoken = _seslendirmeMetni(metin);
     _konusuyor = true;
+    if (bargeIn) {
+      _vadKesti = false;
+      BargeVad.basla(() { _vadKesti = true; try { _tts.stop(); } catch (_) {} });
+    }
     try {
       await _tts.stop();
       if (tok != _konusToken) return;
@@ -210,6 +217,7 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
         await Future.any([_ttsBitti!.future, Future.delayed(tahmin)]);
       }
     } catch (_) {} finally {
+      if (bargeIn) await BargeVad.dur();
       _konusuyor = false;
     }
   }
@@ -244,7 +252,9 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
     if (!_hazir) return '';
     // Onceki oturumdan kalan dinlemeyi kapat + mikrofonu serbest birak (TTS'ten sonra sart).
     try { if (_speech.isListening) await _speech.stop(); } catch (_) {}
-    await Future.delayed(const Duration(milliseconds: 180));
+    // VAD ile kesildiyse kullanici zaten konusuyor -> daha hizli baslat (sozunu kacirma).
+    await Future.delayed(Duration(milliseconds: _vadKesti ? 60 : 180));
+    _vadKesti = false;
     if (_iptal || !mounted) return '';
     _dinleC = Completer<String>();
     _dinleSon = '';
@@ -460,8 +470,8 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
             final cevap = (yanit['cevap'] ?? 'Bir sorun oldu.').toString();
             final kart = yanit['kart'] is Map ? Map<String, dynamic>.from(yanit['kart']) : null;
             _ss(() { _isCevap = cevap; _isKart = kart; });
-            // Konusurken kureye dokun -> susar, seni dinler (guvenilir; sesli barge-in cihaz AEC'siz calismaz).
-            if (yanit['seslendir'] == true) await _konus(cevap);
+            // Konusurken native yanki-engellemeli VAD dinler: Ozcan konusunca TTS susar (DOKUNMASIZ).
+            if (yanit['seslendir'] == true) await _konus(cevap, bargeIn: true);
           }
         } on ApiYetkiHatasi {
           auth.cikis();

@@ -1,0 +1,30 @@
+<svg width="860" height="320" viewBox="0 0 860 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="tileD" x1="30" y1="60" x2="230" y2="260" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#6D28D9"/>
+      <stop offset="0.55" stop-color="#5B4BE6"/>
+      <stop offset="1" stop-color="#4F46E5"/>
+    </linearGradient>
+    <linearGradient id="osD" x1="620" y1="120" x2="820" y2="210" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#A78BFA"/>
+      <stop offset="1" stop-color="#818CF8"/>
+    </linearGradient>
+  </defs>
+  <!-- icon tile -->
+  <rect x="30" y="60" width="200" height="200" rx="46" fill="url(#tileD)"/>
+  <g transform="translate(30,60) scale(0.390625)" stroke="#FFFFFF" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="256" cy="256" r="92" stroke-width="16"/>
+    <circle cx="256" cy="256" r="56" stroke-width="8" opacity="0.5"/>
+    <path d="M150 148 V196" stroke-width="9"/>
+    <path d="M132 148 V194" stroke-width="9"/>
+    <path d="M168 148 V194" stroke-width="9"/>
+    <path d="M150 196 V366" stroke-width="13"/>
+    <path d="M362 150 C 388 176, 388 236, 362 262" stroke-width="13"/>
+    <path d="M362 150 V366" stroke-width="13"/>
+  </g>
+  <!-- wordmark -->
+  <text x="262" y="196" font-family="'Segoe UI Semibold','Segoe UI',Arial,sans-serif" font-size="132" letter-spacing="-3">
+    <tspan fill="#F8FAFC" font-weight="600">Resto</tspan><tspan fill="url(#osD)" font-weight="800">OS</tspan>
+  </text>
+  <text x="266" y="252" font-family="'Segoe UI','Arial',sans-serif" font-size="25" letter-spacing="7.5" fill="#94A3B8" font-weight="600">RESTAURANT OPERATING SYSTEM</text>
+</svg>

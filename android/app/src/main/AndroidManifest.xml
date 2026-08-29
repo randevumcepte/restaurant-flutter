@@ -4,6 +4,8 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Sesli asistan (STT) icin mikrofon -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <!-- Menu yonetimi: urun fotografi cekme (kamera) -->
+    <uses-permission android:name="android.permission.CAMERA"/>
     <application
         android:label="restoos_patron"
         android:name="${applicationName}"
