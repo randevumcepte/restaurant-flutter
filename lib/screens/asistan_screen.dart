@@ -311,11 +311,29 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
 
   String _kufurCevabi() => 'Sizi saygıya davet ediyorum. Böyle devam ederseniz görüşmeyi kapatmak zorunda kalacağım.';
 
-  bool _tesekkurMu(String metin) {
+  // AÇIK veda -> görüşmeyi kapat (teşekkür değil!)
+  bool _vedaMu(String metin) {
     final c = _fold(metin);
-    if (RegExp(r'\d').hasMatch(c)) return false;
-    const ks = ['tesekkur', 'tesekurler', 'sagol', 'sag ol', 'eyvallah', 'yeter bu kadar', 'gorusuruz', 'hosca kal', 'iyi gunler', 'kendine iyi bak', 'var ol'];
-    return ks.any((k) => c.contains(k));
+    const v = ['gorusuruz', 'hosca kal', 'hoscakal', 'iyi gunler', 'iyi aksamlar', 'iyi geceler',
+      'kendine iyi bak', 'bay bay', 'baybay', 'gorusmek uzere', 'yeter bu kadar', 'yeter artik',
+      'kapatabilirsin', 'konusmayi kapat', 'konusmayi bitir', 'gorusmeyi kapat', 'simdilik bu kadar', 'kapanabilirsin'];
+    return v.any((k) => c.contains(k));
+  }
+
+  // SADECE teşekkür (içinde soru/istek YOK) -> kapatma; "rica ederim" deyip dinlemeye devam
+  bool _sadeceTesekkurMu(String metin) {
+    final c = _fold(metin);
+    const tesk = ['tesekkur', 'tesekurler', 'tesekkurler', 'sagol', 'sag ol', 'saol', 'eyvallah'];
+    if (!tesk.any((k) => c.contains(k))) return false;
+    if (RegExp(r'\d').hasMatch(c)) return false; // rakam -> muhtemelen soru/istek
+    // Teşekkür + dolgu kelimelerini çıkar; geriye anlamlı söz kalırsa (soru) teşekkür sayma
+    var kalan = c;
+    for (final k in [...tesk, 'ederim', 'ederiz', 'cok', 'ya', 'be', 'abi', 'kardesim', 'canim', 'valla', 'iste', 'sana', 'size', 'her', 'sey', 'hersey', 'yardim', 'icin']) {
+      kalan = kalan.replaceAll(k, ' ');
+    }
+    kalan = kalan.replaceAll(RegExp(r'[^a-z ]'), ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
+    final anlamli = kalan.isEmpty ? 0 : kalan.split(' ').where((w) => w.length > 2).length;
+    return anlamli == 0;
   }
 
   /// Saat / tarih (bedava, offline).
@@ -379,7 +397,9 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
           await _konus(_kufurCevabi());
           continue;
         }
-        if (_tesekkurMu(c)) { await _konus('Ben teşekkür ederim. Başka isteğiniz yoksa konuşmayı kapatıyorum.'); return; }
+        // AÇIK veda -> kapat. Ama SADECE teşekkür -> "rica ederim" deyip DİNLEMEYE DEVAM (kapatma).
+        if (_vedaMu(c)) { await _konus('Rica ederim, görüşmek üzere. İyi çalışmalar.'); return; }
+        if (_sadeceTesekkurMu(c)) { await _konus('Rica ederim. Başka merak ettiğin bir şey varsa dinliyorum.'); continue; }
         final bilgi = _bilgiCevap(c);
         if (bilgi != null) { _ss(() { _isCevap = bilgi; _isKart = null; }); await _konus(bilgi); continue; }
         // Restoran sorusu -> backend
