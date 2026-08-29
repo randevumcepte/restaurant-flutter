@@ -93,19 +93,19 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFF0B1020),
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => DraggableScrollableSheet(
         expand: false, initialChildSize: 0.78, maxChildSize: 0.95, minChildSize: 0.4,
         builder: (ctx, scroll) => Column(children: [
-          Container(width: 40, height: 4, margin: const EdgeInsets.only(top: 10), decoration: BoxDecoration(color: const Color(0xFFE6DDF4), borderRadius: BorderRadius.circular(2))),
+          Container(width: 40, height: 4, margin: const EdgeInsets.only(top: 10), decoration: BoxDecoration(color: const Color(0xFF232B42), borderRadius: BorderRadius.circular(2))),
           const Padding(
             padding: EdgeInsets.fromLTRB(18, 14, 18, 8),
-            child: Row(children: [Icon(Icons.history_rounded, color: _mor, size: 20), SizedBox(width: 8), Text('Konuşma Geçmişi', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Color(0xFF221F35)))]),
+            child: Row(children: [Icon(Icons.history_rounded, color: _mor, size: 20), SizedBox(width: 8), Text('Konuşma Geçmişi', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Color(0xFFF1F5F9)))]),
           ),
           Expanded(
             child: gecmis.isEmpty
-                ? const Center(child: Text('Henüz kayıtlı konuşma yok.', style: TextStyle(color: Color(0xFF8A8699))))
+                ? const Center(child: Text('Henüz kayıtlı konuşma yok.', style: TextStyle(color: Color(0xFF94A3B8))))
                 : ListView.builder(
                     controller: scroll,
                     padding: const EdgeInsets.fromLTRB(14, 0, 14, 24),
@@ -115,17 +115,17 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
                       return Container(
                         margin: const EdgeInsets.only(bottom: 10),
                         padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(color: const Color(0xFFF8F7FC), borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFECE7F6))),
+                        decoration: BoxDecoration(color: const Color(0xFF161C2E), borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFF232B42))),
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            Expanded(child: Text('“${g['soru']}”', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF221F35), fontSize: 14))),
+                            Expanded(child: Text('“${g['soru']}”', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFF1F5F9), fontSize: 14))),
                             const SizedBox(width: 8),
-                            Text('${g['tarih']}', style: const TextStyle(color: Color(0xFF8A8699), fontSize: 11)),
+                            Text('${g['tarih']}', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
                           ]),
                           const SizedBox(height: 6),
-                          Text('${g['cevap']}', style: const TextStyle(color: Color(0xFF4A4660), fontSize: 13, height: 1.35)),
+                          Text('${g['cevap']}', style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 13, height: 1.35)),
                           if ((g['kim'] ?? '').toString().isNotEmpty)
-                            Padding(padding: const EdgeInsets.only(top: 5), child: Text('— ${g['kim']}', style: const TextStyle(color: Color(0xFF8A8699), fontSize: 11, fontWeight: FontWeight.w600))),
+                            Padding(padding: const EdgeInsets.only(top: 5), child: Text('— ${g['kim']}', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11, fontWeight: FontWeight.w600))),
                         ]),
                       );
                     },
@@ -628,12 +628,12 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F5FB),
+      backgroundColor: const Color(0xFF0B1020),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF6F5FB),
+        backgroundColor: const Color(0xFF0B1020),
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        foregroundColor: const Color(0xFF221F35),
+        foregroundColor: const Color(0xFFF1F5F9),
         title: const Text('Patron Asistan', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
         actions: [
           IconButton(
@@ -690,7 +690,7 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
               textAlign: TextAlign.center,
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Color(0xFF6B6880), fontSize: 15, height: 1.35, fontWeight: FontWeight.w500),
+              style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 15, height: 1.35, fontWeight: FontWeight.w500),
             ),
           ),
         ],
@@ -722,7 +722,7 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
     if (_sunulan.length < 2) return;
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFF0B1020),
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheet) => Padding(
@@ -736,10 +736,10 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
               Row(children: const [
                 Icon(Icons.record_voice_over_rounded, size: 20, color: _mor),
                 SizedBox(width: 8),
-                Text('Asistan sesi', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Color(0xFF221F35))),
+                Text('Asistan sesi', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Color(0xFFF1F5F9))),
               ]),
               const SizedBox(height: 4),
-              const Text('Dokunup dinleyin, beğendiğinizi seçin.', style: TextStyle(fontSize: 13, color: Color(0xFF8A8699))),
+              const Text('Dokunup dinleyin, beğendiğinizi seçin.', style: TextStyle(fontSize: 13, color: Color(0xFF94A3B8))),
               const SizedBox(height: 14),
               ..._sunulan.map((s) {
                 final name = s['name']!;
@@ -752,13 +752,13 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       decoration: BoxDecoration(
                         gradient: secili ? const LinearGradient(colors: [Color(0xFF8B5CF6), Color(0xFF6366F1)]) : null,
-                        color: secili ? null : const Color(0xFFF3F1FA),
+                        color: secili ? null : const Color(0xFF232B42),
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: Row(children: [
                         Icon(secili ? Icons.check_circle_rounded : Icons.volume_up_rounded, size: 20, color: secili ? Colors.white : _mor),
                         const SizedBox(width: 10),
-                        Text(s['etiket']!, style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w600, color: secili ? Colors.white : const Color(0xFF4A4660))),
+                        Text(s['etiket']!, style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w600, color: secili ? Colors.white : const Color(0xFFCBD5E1))),
                       ]),
                     ),
                   ),
@@ -775,9 +775,9 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFF161C2E),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFEEEBF7)),
+        border: Border.all(color: const Color(0xFF232B42)),
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 16, offset: const Offset(0, 6))],
       ),
       child: Column(
@@ -786,10 +786,10 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
           Row(children: const [
             Icon(Icons.auto_awesome_rounded, size: 19, color: _mor),
             SizedBox(width: 8),
-            Text('Asistan', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF221F35))),
+            Text('Asistan', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFFF1F5F9))),
           ]),
           const SizedBox(height: 8),
-          Text(_isCevap ?? '', style: const TextStyle(fontSize: 15, height: 1.4, color: Color(0xFF2B2740))),
+          Text(_isCevap ?? '', style: const TextStyle(fontSize: 15, height: 1.4, color: Color(0xFFE2E8F0))),
           if (_isKart != null) _kart(_isKart!),
         ],
       ),
@@ -799,11 +799,11 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
   // Seviye -> (renk, arkaplan, ikon)
   (Color, Color, IconData) _seviyeStil(String s) {
     switch (s) {
-      case 'risk': return (const Color(0xFFDC2626), const Color(0xFFFEF2F2), Icons.warning_amber_rounded);
-      case 'firsat': return (const Color(0xFF7C3AED), const Color(0xFFF5F3FF), Icons.lightbulb_outline);
-      case 'uyari': return (const Color(0xFFD97706), const Color(0xFFFFFBEB), Icons.visibility_outlined);
-      case 'iyi': return (const Color(0xFF059669), const Color(0xFFECFDF5), Icons.check_circle_outline);
-      default: return (const Color(0xFF64748B), const Color(0xFFF8FAFC), Icons.info_outline);
+      case 'risk': return (const Color(0xFFF87171), const Color(0xFF2A1518), Icons.warning_amber_rounded);
+      case 'firsat': return (const Color(0xFFC4B5FD), const Color(0xFF1E1A38), Icons.lightbulb_outline);
+      case 'uyari': return (const Color(0xFFFBBF24), const Color(0xFF2A2113), Icons.visibility_outlined);
+      case 'iyi': return (const Color(0xFF34D399), const Color(0xFF122A20), Icons.check_circle_outline);
+      default: return (const Color(0xFF94A3B8), const Color(0xFF161C2E), Icons.info_outline);
     }
   }
 
@@ -816,11 +816,11 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
           child: Row(children: [
             const Icon(Icons.shield_moon_outlined, size: 19, color: _mor),
             const SizedBox(width: 8),
-            const Text('Senin için baktım', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF221F35))),
+            const Text('Senin için baktım', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFFF1F5F9))),
           ]),
         ),
         if (_tespitSelam != null && _tespitSelam!.isNotEmpty)
-          Padding(padding: const EdgeInsets.only(left: 4, bottom: 10, right: 4), child: Text(_tespitSelam!, style: const TextStyle(fontSize: 13.5, height: 1.4, color: Color(0xFF6B6880)))),
+          Padding(padding: const EdgeInsets.only(left: 4, bottom: 10, right: 4), child: Text(_tespitSelam!, style: const TextStyle(fontSize: 13.5, height: 1.4, color: Color(0xFF94A3B8)))),
         for (final tRaw in _tespitler) _tespitKart(Map<String, dynamic>.from(tRaw as Map)),
       ]),
     );
@@ -840,7 +840,7 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
           Expanded(child: Text((t['baslik'] ?? '').toString(), style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: stil.$1))),
         ]),
         const SizedBox(height: 6),
-        Text((t['mesaj'] ?? '').toString(), style: const TextStyle(fontSize: 13.5, height: 1.42, color: Color(0xFF2B2740))),
+        Text((t['mesaj'] ?? '').toString(), style: const TextStyle(fontSize: 13.5, height: 1.42, color: Color(0xFFE2E8F0))),
         if (kv.isNotEmpty) ...[
           const SizedBox(height: 8),
           Wrap(spacing: 8, runSpacing: 6, children: [
@@ -849,7 +849,7 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
                 final m = Map<String, dynamic>.from(r as Map);
                 return Container(
                   padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(9), border: Border.all(color: stil.$1.withValues(alpha: 0.2))),
+                  decoration: BoxDecoration(color: const Color(0xFF0B1020), borderRadius: BorderRadius.circular(9), border: Border.all(color: stil.$1.withValues(alpha: 0.3))),
                   child: Text('${m['k']}: ${m['v']}', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: stil.$1)),
                 );
               }),
@@ -864,9 +864,9 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFF161C2E),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFEEEBF7)),
+        border: Border.all(color: const Color(0xFF232B42)),
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 16, offset: const Offset(0, 6))],
       ),
       child: Column(
@@ -875,10 +875,10 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
           Row(children: const [
             Icon(Icons.auto_awesome_rounded, size: 19, color: _mor),
             SizedBox(width: 8),
-            Text('Göremediğini sor', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF221F35))),
+            Text('Göremediğini sor', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFFF1F5F9))),
           ]),
           const SizedBox(height: 4),
-          const Text('Rakamları uygulamada zaten görüyorsun. Bana asıl gözden kaçanı sor — küreye dokun ya da seç.', style: TextStyle(fontSize: 13, color: Color(0xFF8A8699))),
+          const Text('Rakamları uygulamada zaten görüyorsun. Bana asıl gözden kaçanı sor — küreye dokun ya da seç.', style: TextStyle(fontSize: 13, color: Color(0xFF94A3B8))),
           const SizedBox(height: 12),
           Wrap(spacing: 8, runSpacing: 8, children: [
             for (final o in oneri)
@@ -886,8 +886,8 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
                 onTap: _mesgul ? null : () => _yaziliSor(o),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(color: const Color(0xFFF3F1FA), borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFFE6DDF4))),
-                  child: Text(o, style: const TextStyle(fontSize: 12.5, color: Color(0xFF6D4AA8), fontWeight: FontWeight.w600)),
+                  decoration: BoxDecoration(color: const Color(0xFF232B42), borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFF232B42))),
+                  child: Text(o, style: const TextStyle(fontSize: 12.5, color: Color(0xFFC4B5FD), fontWeight: FontWeight.w600)),
                 ),
               ),
           ]),
@@ -911,9 +911,9 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Flexible(child: Text(etiket, style: const TextStyle(fontSize: 13.5, color: Color(0xFF6B6880)))),
+        Flexible(child: Text(etiket, style: const TextStyle(fontSize: 13.5, color: Color(0xFF94A3B8)))),
         const SizedBox(width: 10),
-        Text(deger, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: Color(0xFF221F35))),
+        Text(deger, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: Color(0xFFF1F5F9))),
       ]),
     );
   }
@@ -973,7 +973,7 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
       padding: const EdgeInsets.only(top: 12),
       child: Container(
         padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-        decoration: BoxDecoration(color: const Color(0xFFF8F7FC), borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFECE7F6))),
+        decoration: BoxDecoration(color: const Color(0xFF161C2E), borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFF232B42))),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Text((k['baslik'] ?? '').toString().toUpperCase(), style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: _mor, letterSpacing: .3)),
           const SizedBox(height: 6),
