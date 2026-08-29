@@ -65,6 +65,37 @@ class _PaketScreenState extends State<PaketScreen> {
     return const Color(0xFF16A34A); // yeşil
   }
 
+  // Ödeme yöntemi: kurye/paket çalışanı hazırlığını buna göre yapar
+  static Map<String, dynamic> odemeStil(String? y) {
+    switch (y) {
+      case 'online':
+        return {'ad': 'Online Ödendi', 'renk': const Color(0xFF16A34A), 'ikon': Icons.check_circle, 'tahsilat': false};
+      case 'kredi':
+        return {'ad': 'Kart · Kapıda', 'renk': const Color(0xFF2563EB), 'ikon': Icons.credit_card, 'tahsilat': true};
+      case 'nakit':
+      default:
+        return {'ad': 'Nakit · Kapıda', 'renk': const Color(0xFFD97706), 'ikon': Icons.payments, 'tahsilat': true};
+    }
+  }
+
+  Widget _odemeRozet(String? y, {bool buyuk = false}) {
+    final st = odemeStil(y);
+    final renk = st['renk'] as Color;
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: buyuk ? 10 : 8, vertical: buyuk ? 5 : 3),
+      decoration: BoxDecoration(
+        color: renk.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: renk.withValues(alpha: 0.35)),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(st['ikon'] as IconData, size: buyuk ? 15 : 13, color: renk),
+        const SizedBox(width: 4),
+        Text(st['ad'] as String, style: TextStyle(fontSize: buyuk ? 13 : 11.5, fontWeight: FontWeight.bold, color: renk)),
+      ]),
+    );
+  }
+
   void _detayAc(int id) {
     Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => PaketDetayScreen(id: id),
@@ -149,7 +180,10 @@ class _PaketScreenState extends State<PaketScreen> {
                                         Text(s['musteri']?.toString() ?? 'Müşteri',
                                             style: const TextStyle(
                                                 fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-                                        const SizedBox(height: 2),
+                                        const SizedBox(height: 5),
+                                        // Ödeme yöntemi — paket çalışanı buna göre hazırlanır
+                                        _odemeRozet(s['odeme_yontemi']?.toString()),
+                                        const SizedBox(height: 5),
                                         Row(children: [
                                           if (adet > 0) ...[
                                             const Icon(Icons.shopping_bag_outlined,
@@ -348,6 +382,41 @@ class _PaketDetayScreenState extends State<PaketDetayScreen> {
                         ],
                       ),
                     ),
+
+                    // ÖDEME YÖNTEMİ — paket çalışanı/kurye için en kritik bilgi
+                    Builder(builder: (_) {
+                      final st = _PaketScreenState.odemeStil(d?['odeme_yontemi']?.toString());
+                      final renk = st['renk'] as Color;
+                      final tahsilat = st['tahsilat'] as bool;
+                      return Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: renk.withValues(alpha: 0.10),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: renk.withValues(alpha: 0.4), width: 1.5),
+                        ),
+                        child: Row(children: [
+                          Container(
+                            width: 44, height: 44,
+                            decoration: BoxDecoration(color: renk.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(12)),
+                            child: Icon(st['ikon'] as IconData, color: renk, size: 24),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              Text(st['ad'] as String, style: TextStyle(color: renk, fontSize: 16, fontWeight: FontWeight.bold)),
+                              const SizedBox(height: 2),
+                              Text(tahsilat ? 'Kapıda tahsil edilecek' : 'Ödeme alındı — tahsilat yok',
+                                  style: const TextStyle(color: Color(0xFF64748B), fontSize: 12)),
+                            ]),
+                          ),
+                          if (tahsilat)
+                            Text(_para(d?['toplam']), style: TextStyle(color: renk, fontSize: 18, fontWeight: FontWeight.bold)),
+                        ]),
+                      );
+                    }),
 
                     // Müşteri / teslimat bilgileri
                     _kart(
