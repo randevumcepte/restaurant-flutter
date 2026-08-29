@@ -20,9 +20,9 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _index = 0;
 
-  static const _bar = Color(0xFF141A2E); // bar zemini (app ile uyumlu koyu)
-  static const _secili = Color(0xFFA78BFA); // mor vurgu
-  static const _pasif = Color(0xFF64748B);
+  static const _bar = Colors.white; // beyaz bar -> belirgin, koyu app uzerinde ayrisir
+  static const _secili = Color(0xFF7C3AED); // mor vurgu
+  static const _pasif = Color(0xFF94A3B8);
 
   void _asistanAc() {
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AsistanScreen()));
@@ -40,7 +40,6 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_index >= ekranlar.length) _index = 0;
 
     return Scaffold(
-      extendBody: true,
       body: IndexedStack(index: _index, children: ekranlar),
       floatingActionButton: patron ? _mikrofon() : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
@@ -48,27 +47,25 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Ortada yükseltilmiş mikrofon — Patron Asistan devreye girer
+  // Ortada yükseltilmiş mikrofon — Patron Asistan devreye girer.
+  // Beyaz kenar bar ile kaynasir (notch icinde kare artefakt olmaz), yumusak mor golge.
   Widget _mikrofon() {
-    return SizedBox(
-      width: 62,
-      height: 62,
+    return Container(
+      width: 64,
+      height: 64,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: const LinearGradient(colors: [Color(0xFF7C3AED), Color(0xFF4F46E5)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+        boxShadow: [BoxShadow(color: const Color(0xFF7C3AED).withValues(alpha: 0.45), blurRadius: 14, offset: const Offset(0, 6))],
+        border: Border.all(color: Colors.white, width: 4),
+      ),
       child: Material(
         color: Colors.transparent,
         shape: const CircleBorder(),
-        elevation: 0,
-        child: Ink(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: const LinearGradient(colors: [Color(0xFF7C3AED), Color(0xFF4F46E5)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-            boxShadow: [BoxShadow(color: const Color(0xFF7C3AED).withValues(alpha: 0.55), blurRadius: 16, offset: const Offset(0, 6))],
-            border: Border.all(color: const Color(0xFF0B1020), width: 3),
-          ),
-          child: InkWell(
-            customBorder: const CircleBorder(),
-            onTap: _asistanAc,
-            child: const Center(child: Icon(Icons.mic, color: Colors.white, size: 28)),
-          ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: _asistanAc,
+          child: const Center(child: Icon(Icons.mic, color: Colors.white, size: 27)),
         ),
       ),
     );
@@ -78,16 +75,18 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _patronBar() {
     return BottomAppBar(
       color: _bar,
-      elevation: 0,
+      elevation: 12,
+      shadowColor: Colors.black26,
+      surfaceTintColor: Colors.white,
       shape: const CircularNotchedRectangle(),
-      notchMargin: 8,
-      height: 68,
+      notchMargin: 6,
+      height: 66,
       padding: EdgeInsets.zero,
       child: Row(
         children: [
           _item(0, Icons.dashboard_outlined, Icons.dashboard, 'Özet'),
           _item(1, Icons.table_bar_outlined, Icons.table_bar, 'Masalar'),
-          const SizedBox(width: 66), // orta mikrofon boşluğu
+          const SizedBox(width: 64), // orta mikrofon boşluğu
           _item(2, Icons.restaurant_menu_outlined, Icons.restaurant_menu, 'Mutfak'),
           _item(3, Icons.delivery_dining_outlined, Icons.delivery_dining, 'Paket'),
         ],
@@ -99,7 +98,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _personelBar() {
     return BottomAppBar(
       color: _bar,
-      elevation: 0,
+      elevation: 12,
+      shadowColor: Colors.black26,
+      surfaceTintColor: Colors.white,
       height: 64,
       padding: EdgeInsets.zero,
       child: Row(children: [
