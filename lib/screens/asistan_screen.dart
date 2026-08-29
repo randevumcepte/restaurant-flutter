@@ -81,6 +81,61 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
     }
   }
 
+  // Konusma gecmisi (kalici) -> alttan panel
+  Future<void> _gecmisAc() async {
+    List gecmis = [];
+    try {
+      final auth = context.read<AuthProvider>();
+      final res = await Api.asistanGecmis(auth.token!);
+      if (res['ok'] == 1) gecmis = (res['gecmis'] as List?) ?? [];
+    } catch (_) {}
+    if (!mounted) return;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => DraggableScrollableSheet(
+        expand: false, initialChildSize: 0.78, maxChildSize: 0.95, minChildSize: 0.4,
+        builder: (ctx, scroll) => Column(children: [
+          Container(width: 40, height: 4, margin: const EdgeInsets.only(top: 10), decoration: BoxDecoration(color: const Color(0xFFE6DDF4), borderRadius: BorderRadius.circular(2))),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(18, 14, 18, 8),
+            child: Row(children: [Icon(Icons.history_rounded, color: _mor, size: 20), SizedBox(width: 8), Text('Konuşma Geçmişi', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Color(0xFF221F35)))]),
+          ),
+          Expanded(
+            child: gecmis.isEmpty
+                ? const Center(child: Text('Henüz kayıtlı konuşma yok.', style: TextStyle(color: Color(0xFF8A8699))))
+                : ListView.builder(
+                    controller: scroll,
+                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 24),
+                    itemCount: gecmis.length,
+                    itemBuilder: (_, i) {
+                      final g = Map<String, dynamic>.from(gecmis[i] as Map);
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(color: const Color(0xFFF8F7FC), borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFECE7F6))),
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Expanded(child: Text('“${g['soru']}”', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF221F35), fontSize: 14))),
+                            const SizedBox(width: 8),
+                            Text('${g['tarih']}', style: const TextStyle(color: Color(0xFF8A8699), fontSize: 11)),
+                          ]),
+                          const SizedBox(height: 6),
+                          Text('${g['cevap']}', style: const TextStyle(color: Color(0xFF4A4660), fontSize: 13, height: 1.35)),
+                          if ((g['kim'] ?? '').toString().isNotEmpty)
+                            Padding(padding: const EdgeInsets.only(top: 5), child: Text('— ${g['kim']}', style: const TextStyle(color: Color(0xFF8A8699), fontSize: 11, fontWeight: FontWeight.w600))),
+                        ]),
+                      );
+                    },
+                  ),
+          ),
+        ]),
+      ),
+    );
+  }
+
   // Ekran acilir acilmaz asistan KENDISI konussun (dokunmaya gerek yok).
   // TTS hazir olur olmaz tek sefer baslatir (tespitler arkada yuklenmeye devam eder).
   void _otoBaslat() {
@@ -581,6 +636,12 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
         foregroundColor: const Color(0xFF221F35),
         title: const Text('Patron Asistan', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
         actions: [
+          IconButton(
+            tooltip: 'Konuşma geçmişi',
+            icon: const Icon(Icons.history_rounded),
+            color: _mor,
+            onPressed: _gecmisAc,
+          ),
           if (_sunulan.length >= 2)
             IconButton(
               tooltip: 'Asistan sesi',

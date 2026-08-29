@@ -36,6 +36,7 @@ class Api {
       _get('/api/patron/ai-analiz?kapsam=$kapsam&period=$period${id != null ? '&id=$id' : ''}', token);
 
   static Future<Map<String, dynamic>> asistanTespitler(String token) => _get('/api/patron/asistan-tespitler', token);
+  static Future<Map<String, dynamic>> asistanGecmis(String token, {int limit = 40}) => _get('/api/patron/asistan-gecmis?limit=$limit', token);
 
   static Future<Map<String, dynamic>> asistanSor(String token, String soru) async {
     final r = await http.post(
