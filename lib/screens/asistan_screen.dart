@@ -637,6 +637,12 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
         title: const Text('Patron Asistan', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
         actions: [
           IconButton(
+            tooltip: 'Öneriler',
+            icon: const Icon(Icons.lightbulb_outline_rounded),
+            color: _mor,
+            onPressed: _onerilerAc,
+          ),
+          IconButton(
             tooltip: 'Konuşma geçmişi',
             icon: const Icon(Icons.history_rounded),
             color: _mor,
@@ -662,10 +668,8 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
             const SizedBox(height: 30),
             if (_isCevap != null)
               _isCevapKart()
-            else ...[
-              if (_tespitler.isNotEmpty) _tespitBolum(),
+            else
               _baslangicKart(),
-            ],
           ],
         ),
       ),
@@ -807,22 +811,32 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
     }
   }
 
-  Widget _tespitBolum() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 8),
-          child: Row(children: [
-            const Icon(Icons.shield_moon_outlined, size: 19, color: _mor),
-            const SizedBox(width: 8),
-            const Text('Senin için baktım', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFFF1F5F9))),
-          ]),
-        ),
-        if (_tespitSelam != null && _tespitSelam!.isNotEmpty)
-          Padding(padding: const EdgeInsets.only(left: 4, bottom: 10, right: 4), child: Text(_tespitSelam!, style: const TextStyle(fontSize: 13.5, height: 1.4, color: Color(0xFF94A3B8)))),
-        for (final tRaw in _tespitler) _tespitKart(Map<String, dynamic>.from(tRaw as Map)),
-      ]),
+  // "Öneriler" — proaktif tespitleri (senin için baktım) alttan panelde gösterir.
+  void _onerilerAc() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF0B1020),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => DraggableScrollableSheet(
+        expand: false, initialChildSize: 0.8, maxChildSize: 0.95, minChildSize: 0.4,
+        builder: (ctx, scroll) => Column(children: [
+          Container(width: 40, height: 4, margin: const EdgeInsets.only(top: 10), decoration: BoxDecoration(color: const Color(0xFF2D3752), borderRadius: BorderRadius.circular(2))),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(18, 14, 18, 6),
+            child: Row(children: [Icon(Icons.shield_moon_outlined, size: 20, color: _mor), SizedBox(width: 8), Text('Senin İçin Baktım', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Color(0xFFF1F5F9)))]),
+          ),
+          Expanded(
+            child: _tespitler.isEmpty
+                ? const Center(child: Text('Şu an göze batan bir şey yok, tablo temiz.', style: TextStyle(color: Color(0xFF94A3B8))))
+                : ListView(controller: scroll, padding: const EdgeInsets.fromLTRB(14, 4, 14, 24), children: [
+                    if (_tespitSelam != null && _tespitSelam!.isNotEmpty)
+                      Padding(padding: const EdgeInsets.only(left: 4, bottom: 12, right: 4), child: Text(_tespitSelam!, style: const TextStyle(fontSize: 13.5, height: 1.4, color: Color(0xFF94A3B8)))),
+                    for (final tRaw in _tespitler) _tespitKart(Map<String, dynamic>.from(tRaw as Map)),
+                  ]),
+          ),
+        ]),
+      ),
     );
   }
 
