@@ -13,6 +13,7 @@ import 'kasa_screen.dart';
 import 'cari_hesaplar_screen.dart';
 import 'sebep_yonetimi_screen.dart';
 import 'menu_yonetimi_screen.dart';
+import 'ai_bildirim_screen.dart';
 import 'raporlar_screen.dart';
 
 /// Patron ana paneli — Kerzz BOSS yogunlugunda: tek ekranda her sey.
@@ -199,6 +200,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
+    final bildirimler = (data?['bildirimler'] as List?) ?? [];
     return Scaffold(
       backgroundColor: _bg,
       drawer: _drawer(context, auth),
@@ -222,6 +224,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
         actions: [
+          _bildirimCani(bildirimler),
           Builder(
             builder: (ctx) => IconButton(
               tooltip: 'Menü',
@@ -272,7 +275,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final servis = (d['servisTipleri'] as List?) ?? [];
     final gunluk = (d['gunluk'] as List?) ?? [];
     final urunler = (d['urunler'] as List?) ?? [];
-    final uyarilar = (d['uyarilar'] as List?) ?? [];
     final maliyet = _n(d['maliyet']);
     final maliyetYuzde = _n(d['maliyetYuzde']).toInt();
 
@@ -282,10 +284,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _donemSecici(),
         const SizedBox(height: 12),
 
-        // Uyarilar (AI oncesi)
-        for (final u in uyarilar) _uyariSatir(u.toString()),
-
-        // ANA CIRO karti (Total Amount + comparison)
+        // ANA CIRO karti (Total Amount + comparison) — uyarilar artik AppBar'daki AI cani altinda
         _ciroHero(ciro, ciroYuzde, info, comp),
         const SizedBox(height: 10),
 
@@ -386,16 +385,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _uyariSatir(String u) => Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-            color: const Color(0xFF3B1D1D), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFF7F1D1D))),
-        child: Row(children: [
-          const Text('⚠️ '),
-          Expanded(child: Text(u, style: const TextStyle(color: Color(0xFFFCA5A5), fontWeight: FontWeight.w500, fontSize: 13))),
-        ]),
-      );
+  // ---- AI Bildirim cani (AppBar) — uyarilari toplayan badge'li ikon ----
+  Widget _bildirimCani(List bildirimler) {
+    final n = bildirimler.length;
+    Color badge = _mor2;
+    if (bildirimler.any((x) => (x as Map)['seviye'] == 'riskli')) {
+      badge = _kirmizi;
+    } else if (bildirimler.any((x) => (x as Map)['seviye'] == 'uyari')) {
+      badge = const Color(0xFFF59E0B);
+    }
+    return Stack(clipBehavior: Clip.none, children: [
+      IconButton(
+        tooltip: 'AI Bildirimleri',
+        onPressed: () => Navigator.of(context).push(PageRouteBuilder(
+          transitionDuration: const Duration(milliseconds: 220),
+          opaque: true,
+          barrierColor: _bg,
+          pageBuilder: (_, _, _) => AiBildirimScreen(bildirimler: bildirimler, period: period),
+          transitionsBuilder: (_, anim, _, child) => SlideTransition(
+            position: Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
+            child: child,
+          ),
+        )),
+        icon: const Icon(Icons.notifications_none_rounded, color: Color(0xFFCBD5E1), size: 25),
+      ),
+      if (n > 0)
+        Positioned(
+          right: 6,
+          top: 6,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+            constraints: const BoxConstraints(minWidth: 18),
+            decoration: BoxDecoration(color: badge, borderRadius: BorderRadius.circular(20), border: Border.all(color: _bg, width: 1.5)),
+            child: Text('$n', textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+          ),
+        ),
+    ]);
+  }
 
   // ---- Ana ciro karti ----
   Widget _ciroHero(num ciro, double? yuzde, Map info, Map comp) {
