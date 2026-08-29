@@ -329,23 +329,58 @@ class _DetayScreenState extends State<DetayScreen> {
         if (kayitlar.isEmpty)
           const Text('Bu dönemde kayıt yok.', style: TextStyle(color: Color(0xFF64748B), fontSize: 12))
         else
-          for (final k in kayitlar)
-            Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(color: const Color(0xFF1E263B), borderRadius: BorderRadius.circular(12)),
-              child: Row(children: [
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text((k as Map)['garson'].toString(), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
-                    Text('${k['sebep']} · ${k['zaman']}', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
-                  ]),
-                ),
-                Text(_tam(_n(k['tutar'])), style: const TextStyle(color: _kirmizi, fontSize: 14, fontWeight: FontWeight.bold)),
-              ]),
-            ),
+          for (final k in kayitlar) _kayipKayitSatir(k as Map),
       ]),
     ];
+  }
+
+  // Kayip kaydi -> tiklaninca ilgili adisyon detayina gider (musteri/masa/urun/odeme hepsi orada)
+  Widget _kayipKayitSatir(Map k) {
+    final aid = k['adisyon_id'] != null ? _n(k['adisyon_id']).toInt() : 0;
+    final tiklanabilir = aid > 0;
+    final masa = (k['masa'] ?? '').toString();
+    final musteri = (k['musteri'] ?? '').toString();
+    // Alt satir: masa · müşteri (varsa) · sebep · zaman
+    final parcalar = <String>[
+      if (masa.isNotEmpty) masa,
+      if (musteri.isNotEmpty) '👤 $musteri',
+      k['sebep'].toString(),
+      k['zaman'].toString(),
+    ];
+    final govde = Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E263B),
+        borderRadius: BorderRadius.circular(12),
+        border: tiklanabilir ? Border.all(color: const Color(0xFF2D3752)) : null,
+      ),
+      child: Row(children: [
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(k['garson'].toString(), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 2),
+            Text(parcalar.join(' · '), maxLines: 2, overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
+          ]),
+        ),
+        const SizedBox(width: 8),
+        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          Text(_tam(_n(k['tutar'])), style: const TextStyle(color: _kirmizi, fontSize: 14, fontWeight: FontWeight.bold)),
+          if (tiklanabilir)
+            const Padding(
+              padding: EdgeInsets.only(top: 2),
+              child: Icon(Icons.chevron_right, size: 16, color: Color(0xFF64748B)),
+            ),
+        ]),
+      ]),
+    );
+    if (!tiklanabilir) return govde;
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () => _push(tip: 'adisyon', id: aid, baslik: masa.isNotEmpty ? masa : 'Adisyon'),
+      child: govde,
+    );
   }
 
   // ---------------- ACIK ADISYON ----------------
