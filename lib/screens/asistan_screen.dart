@@ -41,7 +41,6 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
   // Proaktif tespitler (açılışta patronun göremediği kaçak/risk/fırsat)
   List _tespitler = [];
   String? _tespitSelam;
-  bool _tespitBitti = false; // tespit isteği tamamlandı mı
   bool _otoBasladi = false;  // açılışta otomatik konuşmayı bir kez başlat
 
   Completer<String>? _dinleC;
@@ -77,15 +76,14 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
         });
       }
     } catch (_) {} finally {
-      _tespitBitti = true;
       _otoBaslat();
     }
   }
 
   // Ekran acilir acilmaz asistan KENDISI konussun (dokunmaya gerek yok).
-  // Hem TTS hazir hem tespitler yuklendiyse tek sefer baslatir.
+  // TTS hazir olur olmaz tek sefer baslatir (tespitler arkada yuklenmeye devam eder).
   void _otoBaslat() {
-    if (_otoBasladi || !_hazir || !_tespitBitti || !mounted || _mesgul) return;
+    if (_otoBasladi || !_hazir || !mounted || _mesgul) return;
     _otoBasladi = true;
     WidgetsBinding.instance.addPostFrameCallback((_) { if (mounted) _basla(); });
   }
@@ -363,10 +361,8 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
       int kufurSay = 0;
       while (!_iptal && mounted) {
         if (ilk) {
-          final acilis = (_tespitSelam != null && _tespitSelam!.isNotEmpty)
-              ? '$selam $_tespitSelam'
-              : '$selam Nasıl yardımcı olabilirim?';
-          await _konus(acilis);
+          // Acilista SADECE sicak selam; bulgular sorulunca verilir (karta da bakabilir).
+          await _konus('$selam Nasıl yardımcı olabilirim?');
         }
         ilk = false;
         final c = await _dinle(pause: 2, listen: 15);
