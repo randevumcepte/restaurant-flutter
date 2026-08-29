@@ -194,6 +194,7 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
   Completer<void>? _ttsBitti; // TTS gercek bitis sinyali
   bool _konusuyor = false;    // su an TTS ile konusuyor mu (dokununca kesmek icin)
   bool _vadKesti = false;     // native VAD (sesli araya girme) TTS'i kesti mi
+  String? _vadSoru;           // VAD ile araya girip yakalanan soru (dongu bunu isler)
   // bargeIn=true: konusurken native yanki-engellemeli VAD dinler; Ozcan konusunca TTS susar (dokunmasiz).
   Future<void> _konus(String metin, {bool bargeIn = false}) async {
     final int tok = ++_konusToken;
@@ -201,9 +202,17 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
     try { HapticFeedback.lightImpact(); } catch (_) {}
     final spoken = _seslendirmeMetni(metin);
     _konusuyor = true;
+    Completer<String>? vadC;
     if (bargeIn) {
       _vadKesti = false;
-      BargeVad.basla(() { _vadKesti = true; try { _tts.stop(); } catch (_) {} });
+      BargeVad.basla(() {
+        _vadKesti = true;
+        try { _tts.stop(); } catch (_) {}
+        // Ozcan konusmaya BASLADI -> dinlemeyi HEMEN baslat (STT init'i TTS-stop ile es zamanli;
+        // boylece ilk kelime kacmaz). Sonuc _vadSoru'ya gider, dongu isler.
+        vadC = Completer<String>();
+        _vadListen(vadC!);
+      });
     }
     try {
       await _tts.stop();
@@ -217,9 +226,47 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
         await Future.any([_ttsBitti!.future, Future.delayed(tahmin)]);
       }
     } catch (_) {} finally {
-      if (bargeIn) BargeVad.dur(); // await ETME -> dinlemeye hizli gec (ilk soruyu kacirma)
+      if (bargeIn) BargeVad.dur();
       _konusuyor = false;
     }
+    // VAD araya girdiyse: baslattigimiz dinlemenin sonucunu bekle (ilk kelime dahil).
+    if (bargeIn && vadC != null) {
+      try { _vadSoru = await vadC!.future; } catch (_) { _vadSoru = null; }
+    }
+  }
+
+  /// VAD araya girince ANINDA baslayan dinleme; yakalanan cumleyi [c]'ye koyar.
+  Future<void> _vadListen(Completer<String> c) async {
+    String son = '';
+    Timer? sessiz;
+    void bitir() { if (!c.isCompleted) c.complete(son.trim()); }
+    void sessizKur() { sessiz?.cancel(); sessiz = Timer(const Duration(milliseconds: 1100), bitir); }
+    _ss(() => _dinliyor = true);
+    try { if (_speech.isListening) await _speech.stop(); } catch (_) {}
+    final watchdog = Timer(const Duration(seconds: 12), bitir);
+    try {
+      await _speech.listen(
+        onResult: (r) {
+          final t = r.recognizedWords.trim();
+          if (t.isEmpty) return;
+          son = t;
+          _ss(() {});
+          if (r.finalResult) { bitir(); return; }
+          sessizKur();
+        },
+        onSoundLevelChange: (l) { _sesN = (l.clamp(0.0, 10.0)) / 10.0; },
+        // ignore: deprecated_member_use
+        listenFor: const Duration(seconds: 15),
+        // ignore: deprecated_member_use
+        pauseFor: const Duration(seconds: 15),
+        listenOptions: stt.SpeechListenOptions(localeId: 'tr_TR', partialResults: true, cancelOnError: true),
+      );
+    } catch (_) { bitir(); }
+    await c.future;
+    sessiz?.cancel();
+    watchdog.cancel();
+    try { await _speech.stop(); } catch (_) {}
+    if (mounted) _ss(() => _dinliyor = false);
   }
 
   String _trKucuk(String s) => s.replaceAll('I', 'ı').replaceAll('İ', 'i').toLowerCase();
@@ -430,22 +477,31 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
           // Acilista SADECE sicak selam; bulgular sorulunca verilir (karta da bakabilir).
           await _konus('$selam Nasıl yardımcı olabilirim?');
         }
-        final t0 = DateTime.now();
-        final c = await _dinle(pause: 1, listen: 15);
-        if (_iptal) return;
-        if (c.trim().isEmpty) {
-          // Cok hizli bos dondu -> mikrofon hazir degildi, SESSIZCE tekrar dinle (kapatma sayma).
-          if (DateTime.now().difference(t0).inMilliseconds < 2500 && hizliBos < 3) {
-            hizliBos++;
-            await Future.delayed(const Duration(milliseconds: 250));
+        String c;
+        // VAD ile araya girip yakalanan soru varsa -> onu isle (dinlemeyi tekrar bekleme, ilk kelime dahil).
+        if (_vadSoru != null && _vadSoru!.trim().isNotEmpty) {
+          c = _vadSoru!.trim();
+          _vadSoru = null;
+          bosSay = 0; hizliBos = 0;
+        } else {
+          _vadSoru = null;
+          final t0 = DateTime.now();
+          c = await _dinle(pause: 1, listen: 15);
+          if (_iptal) return;
+          if (c.trim().isEmpty) {
+            // Cok hizli bos dondu -> mikrofon hazir degildi, SESSIZCE tekrar dinle (kapatma sayma).
+            if (DateTime.now().difference(t0).inMilliseconds < 2500 && hizliBos < 3) {
+              hizliBos++;
+              await Future.delayed(const Duration(milliseconds: 250));
+              continue;
+            }
+            if (++bosSay >= 3) { await _konus('Şimdilik kapatıyorum, ihtiyacın olduğunda yeniden dokun.'); return; }
+            await _konus('Seni tam duyamadım, tekrar söyler misin?');
             continue;
           }
-          if (++bosSay >= 3) { await _konus('Şimdilik kapatıyorum, ihtiyacın olduğunda yeniden dokun.'); return; }
-          await _konus('Seni tam duyamadım, tekrar söyler misin?');
-          continue;
+          bosSay = 0;
+          hizliBos = 0;
         }
-        bosSay = 0;
-        hizliBos = 0;
 
         if (_kufurMu(c)) {
           kufurSay++;
