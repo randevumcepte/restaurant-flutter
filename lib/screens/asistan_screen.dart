@@ -196,6 +196,64 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
     } catch (_) {}
   }
 
+  /// BARGE-IN: cevabı seslendirirken AYNI ANDA dinler. Özcan konuşmaya başlarsa
+  /// TTS'i keser, sözünü tamamlamasını bekleyip sorusunu döner (yoksa null).
+  Future<String?> _soyleVeDinle(String metin) async {
+    if (!_hazir) { await _konus(metin); return null; }
+    final int tok = ++_konusToken;
+    _ss(() => _sistemMesaji = metin);
+    try { HapticFeedback.lightImpact(); } catch (_) {}
+
+    final String normMetin = _fold(metin);
+    final DateTime basla = DateTime.now();
+    String yakalanan = '';
+    bool kesildi = false;
+    final Completer<void> bitti = Completer<void>();
+    Timer? sessizlik;
+    void kapat() { if (!bitti.isCompleted) bitti.complete(); }
+    void sessizligiKur() { sessizlik?.cancel(); sessizlik = Timer(const Duration(milliseconds: 1300), kapat); }
+
+    try { if (_speech.isListening) await _speech.stop(); } catch (_) {}
+    try {
+      await _speech.listen(
+        onResult: (r) {
+          final t = r.recognizedWords.trim();
+          if (t.isEmpty) return;
+          // Ilk ~0.7 sn ve asistanin kendi sesi (echo) -> yoksay
+          if (!kesildi && DateTime.now().difference(basla).inMilliseconds < 700) return;
+          final nt = _fold(t);
+          if (normMetin.contains(nt)) return; // echo: soylenenin parcasi
+          if (!kesildi && t.split(RegExp(r'\s+')).length < 2) return; // tek kelimelik gurultuyu bekle
+          if (!kesildi) { kesildi = true; try { _tts.stop(); } catch (_) {} _ss(() => _dinliyor = true); }
+          yakalanan = t;
+          if (r.finalResult) { kapat(); return; }
+          sessizligiKur();
+        },
+        // ignore: deprecated_member_use
+        listenFor: const Duration(seconds: 30),
+        // ignore: deprecated_member_use
+        pauseFor: const Duration(seconds: 30),
+        onSoundLevelChange: (level) { _sesN = (level.clamp(0.0, 10.0)) / 10.0; },
+        listenOptions: stt.SpeechListenOptions(localeId: 'tr_TR', partialResults: true, cancelOnError: true),
+      );
+    } catch (_) {}
+
+    try {
+      await _tts.stop();
+      if (tok == _konusToken) await _tts.speak(_seslendirmeMetni(metin));
+    } catch (_) {}
+
+    // TTS bitti/kesildi. Kesildiyse kullanicinin sozunu bitirmesini bekle.
+    if (kesildi) {
+      await Future.any([bitti.future, Future.delayed(const Duration(seconds: 4))]);
+    }
+    sessizlik?.cancel();
+    try { await _speech.stop(); } catch (_) {}
+    _sesN = 0;
+    if (mounted) _ss(() => _dinliyor = false);
+    return kesildi ? yakalanan.trim() : null;
+  }
+
   String _trKucuk(String s) => s.replaceAll('I', 'ı').replaceAll('İ', 'i').toLowerCase();
 
   // TTS icin metni KONUSMAYA uygun hale getir: sembolleri kelimeye cevir,
@@ -389,28 +447,38 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
       int bosSay = 0;      // gercek sessizlik sayaci
       int hizliBos = 0;    // mikrofon hazir degildi (cok hizli bos donen) sayaci
       int kufurSay = 0;
+      String? bekleyen;    // barge-in ile yakalanan soru (sozunu kesip sordu) -> hemen islenir
       while (!_iptal && mounted) {
         if (ilk) {
+          ilk = false;
           // Acilista SADECE sicak selam; bulgular sorulunca verilir (karta da bakabilir).
           await _konus('$selam Nasıl yardımcı olabilirim?');
         }
-        ilk = false;
-        final t0 = DateTime.now();
-        final c = await _dinle(pause: 2, listen: 15);
-        if (_iptal) return;
-        if (c.trim().isEmpty) {
-          // Cok hizli bos dondu -> mikrofon hazir degildi, SESSIZCE tekrar dinle (kapatma sayma).
-          if (DateTime.now().difference(t0).inMilliseconds < 2500 && hizliBos < 3) {
-            hizliBos++;
-            await Future.delayed(const Duration(milliseconds: 250));
+
+        // Soruyu al: ya barge-in'den bekleyen var, ya da dinle.
+        String c;
+        if (bekleyen != null && bekleyen.trim().isNotEmpty) {
+          c = bekleyen.trim();
+          bekleyen = null;
+        } else {
+          final t0 = DateTime.now();
+          c = await _dinle(pause: 2, listen: 15);
+          if (_iptal) return;
+          if (c.trim().isEmpty) {
+            // Cok hizli bos dondu -> mikrofon hazir degildi, SESSIZCE tekrar dinle (kapatma sayma).
+            if (DateTime.now().difference(t0).inMilliseconds < 2500 && hizliBos < 3) {
+              hizliBos++;
+              await Future.delayed(const Duration(milliseconds: 250));
+              continue;
+            }
+            if (++bosSay >= 3) { await _konus('Şimdilik kapatıyorum, ihtiyacın olduğunda yeniden dokun.'); return; }
+            await _konus('Seni tam duyamadım, tekrar söyler misin?');
             continue;
           }
-          if (++bosSay >= 3) { await _konus('Şimdilik kapatıyorum, ihtiyacın olduğunda yeniden dokun.'); return; }
-          await _konus('Seni tam duyamadım, tekrar söyler misin?');
-          continue;
+          bosSay = 0;
+          hizliBos = 0;
         }
-        bosSay = 0;
-        hizliBos = 0;
+
         if (_kufurMu(c)) {
           kufurSay++;
           if (kufurSay >= 2) { await _konus('Bu şekilde devam edemeyeceğim. Görüşmeyi kapatıyorum.'); return; }
@@ -421,20 +489,21 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
         if (_vedaMu(c)) { await _konus('Rica ederim, görüşmek üzere. İyi çalışmalar.'); return; }
         if (_sadeceTesekkurMu(c)) { await _konus('Rica ederim. Başka merak ettiğin bir şey varsa dinliyorum.'); continue; }
         final bilgi = _bilgiCevap(c);
-        if (bilgi != null) { _ss(() { _isCevap = bilgi; _isKart = null; }); await _konus(bilgi); continue; }
+        if (bilgi != null) { _ss(() { _isCevap = bilgi; _isKart = null; }); bekleyen = await _soyleVeDinle(bilgi); continue; }
         // Restoran sorusu -> backend
         _ss(() => _sistemMesaji = 'Bakıyorum…');
         try {
           final yanit = await Api.asistanSor(auth.token!, c);
           if (_anlasilmadi(yanit)) {
-            const m = 'Sizi tam anlayamadım. Sorunuzu tekrarlar mısınız?';
+            const m = 'Seni tam anlayamadım, biraz daha açar mısın?';
             _ss(() { _isCevap = m; _isKart = null; });
-            await _konus(m);
+            bekleyen = await _soyleVeDinle(m);
           } else {
             final cevap = (yanit['cevap'] ?? 'Bir sorun oldu.').toString();
             final kart = yanit['kart'] is Map ? Map<String, dynamic>.from(yanit['kart']) : null;
             _ss(() { _isCevap = cevap; _isKart = kart; });
-            if (yanit['seslendir'] == true) await _konus(cevap);
+            // Cevabi barge-in ile soyle: konusurken Ozcan sorarsa TTS kesilir, sorusu yakalanir.
+            if (yanit['seslendir'] == true) bekleyen = await _soyleVeDinle(cevap);
           }
         } on ApiYetkiHatasi {
           auth.cikis();
@@ -442,7 +511,7 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
         } catch (_) {
           await _konus('Bağlantı hatası oldu, tekrar dener misiniz?');
         }
-        continue; // LOOP -> tekrar dinle (2. soru)
+        continue;
       }
     } finally {
       if (mounted) _ss(() => _mesgul = false);
