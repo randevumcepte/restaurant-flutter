@@ -13,6 +13,7 @@ import 'kasa_screen.dart';
 import 'cari_hesaplar_screen.dart';
 import 'sebep_yonetimi_screen.dart';
 import 'menu_yonetimi_screen.dart';
+import 'raporlar_screen.dart';
 
 /// Patron ana paneli — Kerzz BOSS yogunlugunda: tek ekranda her sey.
 /// Donem secici + karsilastirma + kayip radari + food-cost + odeme/servis dagilimi + 10 gunluk grafik.
@@ -171,6 +172,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               oge(Icons.account_balance_wallet_outlined, 'Cari / Açık Hesaplar', () => git(const CariHesaplarScreen())),
               if (patron) oge(Icons.badge_outlined, 'Personel & Maaş', () => git(const PersonelScreen())),
               if (patron) oge(Icons.receipt_long_outlined, 'Giderler', () => git(const GiderScreen())),
+              if (patron) oge(Icons.bar_chart_outlined, 'Raporlar', () => git(const RaporlarScreen())),
               if (patron) oge(Icons.rule_folder_outlined, 'İptal / İkram Sebepleri', () => git(const SebepYonetimiScreen())),
               oge(Icons.auto_awesome, 'Patron Asistan', () => git(const AsistanScreen()), renk: const Color(0xFFC4B5FD)),
             ]),
@@ -228,12 +230,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AsistanScreen())),
-        backgroundColor: _mor1,
-        icon: const Text('✨', style: TextStyle(fontSize: 16)),
-        label: const Text('Patron Asistan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
       body: data == null
           ? (hata != null ? _hataGorunum() : const Center(child: CircularProgressIndicator(color: _mor2)))
