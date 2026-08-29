@@ -224,6 +224,10 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
   /// Tek cumle dinler; oturum kapaninca duyulan metni doner.
   Future<String> _dinle({int pause = 2, int listen = 15}) async {
     if (!_hazir) return '';
+    // Onceki oturumdan kalan dinlemeyi kapat + mikrofonu serbest birak (TTS'ten sonra sart).
+    try { if (_speech.isListening) await _speech.stop(); } catch (_) {}
+    await Future.delayed(const Duration(milliseconds: 300));
+    if (_iptal || !mounted) return '';
     _dinleC = Completer<String>();
     _dinleSon = '';
     _konusmaBasladi = false;
@@ -371,13 +375,19 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
       _ss(() => _mesgul = false);
       return;
     }
+    final auth = context.read<AuthProvider>(); // await'lerden ONCE yakala (context guvenli)
+    // Temiz baslangic: onceki oturum kalintilarini sifirla (2. konusma sorunsuz baslasin).
+    try { await _speech.stop(); } catch (_) {}
+    try { await _tts.stop(); } catch (_) {}
+    _dinlemeBekle = false;
+    _konusmaBasladi = false;
     _ss(() { _mesgul = true; _iptal = false; });
-    final auth = context.read<AuthProvider>();
     try {
       final ad = auth.ad?.split(' ').first ?? '';
       final selam = ad.isNotEmpty ? 'Merhaba $ad.' : 'Merhaba.';
       bool ilk = true;
-      int bosSay = 0;
+      int bosSay = 0;      // gercek sessizlik sayaci
+      int hizliBos = 0;    // mikrofon hazir degildi (cok hizli bos donen) sayaci
       int kufurSay = 0;
       while (!_iptal && mounted) {
         if (ilk) {
@@ -385,14 +395,22 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
           await _konus('$selam Nasıl yardımcı olabilirim?');
         }
         ilk = false;
+        final t0 = DateTime.now();
         final c = await _dinle(pause: 2, listen: 15);
         if (_iptal) return;
         if (c.trim().isEmpty) {
-          if (++bosSay >= 2) { await _konus('Başka sorunuz yoksa konuşmayı kapatıyorum. İstediğinizde tekrar dokunun.'); return; }
-          await _konus('Sizi tam anlayamadım. Sorunuzu tekrarlar mısınız?');
+          // Cok hizli bos dondu -> mikrofon hazir degildi, SESSIZCE tekrar dinle (kapatma sayma).
+          if (DateTime.now().difference(t0).inMilliseconds < 2500 && hizliBos < 3) {
+            hizliBos++;
+            await Future.delayed(const Duration(milliseconds: 250));
+            continue;
+          }
+          if (++bosSay >= 3) { await _konus('Şimdilik kapatıyorum, ihtiyacın olduğunda yeniden dokun.'); return; }
+          await _konus('Seni tam duyamadım, tekrar söyler misin?');
           continue;
         }
         bosSay = 0;
+        hizliBos = 0;
         if (_kufurMu(c)) {
           kufurSay++;
           if (kufurSay >= 2) { await _konus('Bu şekilde devam edemeyeceğim. Görüşmeyi kapatıyorum.'); return; }
