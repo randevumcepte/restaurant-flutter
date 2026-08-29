@@ -400,6 +400,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // ---- Ana ciro karti ----
   Widget _ciroHero(num ciro, double? yuzde, Map info, Map comp) {
     final up = (yuzde ?? 0) >= 0;
+    // Onceki donemde veri var mi? (yoksa 0 yerine '—' gosterilir; or. yillikta gecen yil)
+    final oncekiVar = _n(data?['compCiro']) > 0 || _n(comp['folyo']) > 0 || _n(comp['misafir']) > 0;
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -422,7 +424,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 4),
           _sayiAnim(ciro, const TextStyle(color: Colors.white, fontSize: 34, fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
-          Text('önceki dönem: ${_tam(_n(data!['compCiro']))}', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+          // Onceki donemde veri yoksa (or. yillikta gecen yil) '0TL' yerine bilgi ver
+          Text(oncekiVar ? 'önceki dönem: ${_tam(_n(data!['compCiro']))}' : 'karşılaştırılacak önceki dönem verisi yok',
+              style: const TextStyle(color: Colors.white54, fontSize: 12)),
           const SizedBox(height: 14),
           // info vs comp satiri (Kerzz'in en yogun satiri)
           Container(
@@ -430,10 +434,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(14)),
             child: Column(children: [
               Row(children: [
-                _kib('Folyo', '${_n(info['folyo']).toInt()}', '${_n(comp['folyo']).toInt()}'),
-                _kib('Ort. Adisyon', _tam(_n(info['folyo_ort'])), _tam(_n(comp['folyo_ort']))),
-                _kib('Misafir', '${_n(info['misafir']).toInt()}', '${_n(comp['misafir']).toInt()}'),
-                _kib('Kişi Başı', _tam(_n(info['kisi_basi'])), _tam(_n(comp['kisi_basi'])), son: true),
+                _kib('Folyo', '${_n(info['folyo']).toInt()}', '${_n(comp['folyo']).toInt()}', oncekiVar: oncekiVar),
+                _kib('Ort. Adisyon', _tam(_n(info['folyo_ort'])), _tam(_n(comp['folyo_ort'])), oncekiVar: oncekiVar),
+                _kib('Misafir', '${_n(info['misafir']).toInt()}', '${_n(comp['misafir']).toInt()}', oncekiVar: oncekiVar),
+                _kib('Kişi Başı', _tam(_n(info['kisi_basi'])), _tam(_n(comp['kisi_basi'])), son: true, oncekiVar: oncekiVar),
               ]),
             ]),
           ),
@@ -442,8 +446,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // key-info-block: bu donem (ustte) vs onceki (altta)
-  Widget _kib(String etiket, String simdi, String onceki, {bool son = false}) {
+  // key-info-block: bu donem (ustte) vs onceki (altta). Onceki yoksa '—'.
+  Widget _kib(String etiket, String simdi, String onceki, {bool son = false, bool oncekiVar = true}) {
     return Expanded(
       child: Container(
         decoration: son ? null : const BoxDecoration(border: Border(right: BorderSide(color: Colors.white24))),
@@ -452,7 +456,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Text(etiket, style: const TextStyle(color: Colors.white60, fontSize: 9)),
           const SizedBox(height: 3),
           FittedBox(child: Text(simdi, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
-          FittedBox(child: Text(onceki, style: const TextStyle(color: Colors.white38, fontSize: 10))),
+          FittedBox(child: Text(oncekiVar ? onceki : '—', style: const TextStyle(color: Colors.white38, fontSize: 10))),
         ]),
       ),
     );
