@@ -130,6 +130,10 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
     await _tts.setSpeechRate(0.40); // daha yavas + daha vurgulu okusun (onceki 0.46 hizliydi)
     await _tts.setPitch(1.06);
     await _tts.awaitSpeakCompletion(true);
+    // TTS gercekten bitince/iptal olunca isaretle (bazi cihazlar erken "bitti" der -> konusma kesiliyordu)
+    _tts.setCompletionHandler(() { if (_ttsBitti != null && !_ttsBitti!.isCompleted) _ttsBitti!.complete(); });
+    _tts.setCancelHandler(() { if (_ttsBitti != null && !_ttsBitti!.isCompleted) _ttsBitti!.complete(); });
+    _tts.setErrorHandler((_) { if (_ttsBitti != null && !_ttsBitti!.isCompleted) _ttsBitti!.complete(); });
 
     // Sunulacak sesler: isimle sabit 2 erkek secenek; yoksa siraya gore
     _sunulan = [];
@@ -185,14 +189,23 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
 
   // ---------------- SES: konus / dinle ----------------
   int _konusToken = 0;
+  Completer<void>? _ttsBitti; // TTS gercek bitis sinyali
   Future<void> _konus(String metin) async {
     final int tok = ++_konusToken;
     _ss(() => _sistemMesaji = metin);
     try { HapticFeedback.lightImpact(); } catch (_) {}
+    final spoken = _seslendirmeMetni(metin);
     try {
       await _tts.stop();
       if (tok != _konusToken) return;
-      await _tts.speak(_seslendirmeMetni(metin));
+      _ttsBitti = Completer<void>();
+      await _tts.speak(spoken);
+      // GERCEKTEN bitene kadar bekle. awaitSpeakCompletion bazi cihazlarda erken doner;
+      // o yuzden completion handler'i + uzunluga gore guvenlik suresi ile TAM bekle.
+      if (tok == _konusToken && _ttsBitti != null && !_ttsBitti!.isCompleted) {
+        final tahmin = Duration(milliseconds: 800 + spoken.length * 75);
+        await Future.any([_ttsBitti!.future, Future.delayed(tahmin)]);
+      }
     } catch (_) {}
   }
 
