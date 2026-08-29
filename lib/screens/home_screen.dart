@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../ana_sekme.dart';
 import 'dashboard_screen.dart';
 import 'masalar_screen.dart';
 import 'mutfak_screen.dart';
@@ -18,11 +19,25 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _index = 0;
+  int get _index => anaSekme.value;
 
   static const _bar = Colors.white; // beyaz bar -> belirgin, koyu app uzerinde ayrisir
   static const _secili = Color(0xFF7C3AED); // mor vurgu
   static const _pasif = Color(0xFF94A3B8);
+
+  @override
+  void initState() {
+    super.initState();
+    anaSekme.addListener(_sekmeDinle); // Asistan gibi ekranlardan sekme degisince guncelle
+  }
+
+  @override
+  void dispose() {
+    anaSekme.removeListener(_sekmeDinle);
+    super.dispose();
+  }
+
+  void _sekmeDinle() { if (mounted) setState(() {}); }
 
   void _asistanAc() {
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AsistanScreen()));
@@ -37,7 +52,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ? const [DashboardScreen(), MasalarScreen(), MutfakScreen(), PaketScreen()]
         : const [MasalarScreen(), MutfakScreen(), PaketScreen()];
 
-    if (_index >= ekranlar.length) _index = 0;
+    if (_index >= ekranlar.length) anaSekme.value = 0;
 
     return Scaffold(
       body: IndexedStack(index: _index, children: ekranlar),
@@ -116,7 +131,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final renk = secili ? _secili : _pasif;
     return Expanded(
       child: InkWell(
-        onTap: () => setState(() => _index = i),
+        onTap: () => anaSekme.value = i,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,

@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/auth_provider.dart';
 import '../services/api.dart';
 import '../services/barge_vad.dart';
+import '../ana_sekme.dart';
 
 /// SESLI ASISTAN — Randevumcepte sesli_randevu.dart tasariminin birebir portu.
 /// Buyuk Siri kuresi + surekli konusma dongusu (_basla): karsilar -> dinler ->
@@ -672,6 +673,41 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
               _baslangicKart(),
           ],
         ),
+      ),
+      bottomNavigationBar: _altMenu(),
+    );
+  }
+
+  // Ana ekrandaki alt menü (Özet/Masalar/Mutfak/Paket) — dokununca o sekmeye döner.
+  Widget _altMenu() {
+    return BottomAppBar(
+      color: Colors.white,
+      elevation: 12,
+      shadowColor: Colors.black26,
+      surfaceTintColor: Colors.white,
+      height: 64,
+      padding: EdgeInsets.zero,
+      child: Row(children: [
+        _altItem(0, Icons.dashboard_outlined, 'Özet'),
+        _altItem(1, Icons.table_bar_outlined, 'Masalar'),
+        _altItem(2, Icons.restaurant_menu_outlined, 'Mutfak'),
+        _altItem(3, Icons.delivery_dining_outlined, 'Paket'),
+      ]),
+    );
+  }
+
+  Widget _altItem(int i, IconData ikon, String label) {
+    return Expanded(
+      child: InkWell(
+        onTap: () {
+          anaSekme.value = i;
+          Navigator.of(context).popUntil((r) => r.isFirst); // ana ekrana dön, sekme degissin
+        },
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, mainAxisSize: MainAxisSize.min, children: [
+          Icon(ikon, color: const Color(0xFF94A3B8), size: 23),
+          const SizedBox(height: 3),
+          Text(label, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11, fontWeight: FontWeight.w500)),
+        ]),
       ),
     );
   }
