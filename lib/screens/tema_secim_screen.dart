@@ -26,6 +26,7 @@ class _TemaSecimScreenState extends State<TemaSecimScreen> {
   Color ozelAna = const Color(0xFFC41E3A);   // varsayilan ozel: kirmizi
   Color ozelDetay = const Color(0xFFE9C46A);  // varsayilan detay: altin
   bool detayAyri = false;                      // detay ayri renk mi (yoksa genel renkle ayni)
+  String mod = 'koyu';                         // QR menu varsayilan modu (koyu/acik)
 
   @override
   void initState() { super.initState(); _yukle(); }
@@ -52,6 +53,7 @@ class _TemaSecimScreenState extends State<TemaSecimScreen> {
           final r2 = res['renk2']?.toString() ?? '';
           detayAyri = r2.isNotEmpty;
           ozelDetay = r2.isNotEmpty ? _hex(r2) : const Color(0xFFE9C46A);
+          mod = res['mod']?.toString() ?? 'koyu';
           loading = false;
         });
       } else {
@@ -86,6 +88,45 @@ class _TemaSecimScreenState extends State<TemaSecimScreen> {
       setState(() { secili = onceki; kaydediliyor = null; });
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bağlantı hatası')));
     }
+  }
+
+  Future<void> _modKaydet(String m) async {
+    if (!duzenleyebilir || mod == m) return;
+    final auth = context.read<AuthProvider>();
+    final onceki = mod;
+    setState(() => mod = m);
+    try {
+      final res = await Api.temaMod(auth.token!, m);
+      if (!mounted) return;
+      if (res['ok'] != 1) { setState(() => mod = onceki); return; }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(m == 'acik' ? '☀️ Varsayılan: Açık mod' : '🌙 Varsayılan: Koyu mod'),
+        backgroundColor: const Color(0xFF16A34A), duration: const Duration(seconds: 2)));
+    } catch (_) { if (mounted) setState(() => mod = onceki); }
+  }
+
+  Widget _modSecici() {
+    Widget seg(String m, IconData ik, String etiket) {
+      final aktif = mod == m;
+      return Expanded(child: GestureDetector(
+        onTap: () => _modKaydet(m),
+        child: Container(
+          margin: const EdgeInsets.all(4),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: aktif ? _gold : Colors.transparent, borderRadius: BorderRadius.circular(12)),
+          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Icon(ik, size: 18, color: aktif ? const Color(0xFF3A2600) : Colors.white70),
+            const SizedBox(width: 7),
+            Text(etiket, style: TextStyle(color: aktif ? const Color(0xFF3A2600) : Colors.white70, fontSize: 14, fontWeight: FontWeight.w800)),
+          ]),
+        ),
+      ));
+    }
+    return Container(
+      decoration: BoxDecoration(color: _bg, borderRadius: BorderRadius.circular(15), border: Border.all(color: const Color(0xFF2D3752))),
+      child: Row(children: [seg('koyu', Icons.dark_mode, 'Koyu'), seg('acik', Icons.light_mode, 'Açık')]),
+    );
   }
 
   void _ozelDuzenle() {
@@ -162,6 +203,13 @@ class _TemaSecimScreenState extends State<TemaSecimScreen> {
                       child: Text('Bu ayarı yalnızca Sahip/Müdür değiştirebilir.', style: TextStyle(color: Color(0xFFF87171), fontSize: 12.5))),
 
                   const SizedBox(height: 18),
+                  const Text('Menü Modu', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 4),
+                  const Text('QR menünün açılış modu. Müşteri sol üstteki ☀️/🌙 ile kendi de değiştirebilir.', style: TextStyle(color: Colors.white38, fontSize: 11.5)),
+                  const SizedBox(height: 8),
+                  _modSecici(),
+
+                  const SizedBox(height: 22),
                   const Text('Kendi Rengin', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
                   const SizedBox(height: 8),
                   _ozelKart(),

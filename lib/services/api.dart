@@ -224,6 +224,7 @@ class Api {
     if (renk2 != null) body['renk2'] = renk2;
     return _post('/api/patron/tema-kaydet', token, body);
   }
+  static Future<Map<String, dynamic>> temaMod(String token, String mod) => _post('/api/patron/tema-mod', token, {'mod': mod});
 
   static Future<Map<String, dynamic>> urunKaydet(String token,
       {int? id, required String ad, String aciklama = '', required double fiyat, int kategoriId = 0, bool tukendi = false, bool aktif = true}) {
