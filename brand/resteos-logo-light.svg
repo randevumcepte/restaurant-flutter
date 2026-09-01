@@ -22,7 +22,7 @@
     <path d="M362 150 V366" stroke-width="13"/>
   </g>
   <text x="262" y="196" font-family="'Segoe UI Semibold','Segoe UI',Arial,sans-serif" font-size="132" letter-spacing="-3">
-    <tspan fill="#0F172A" font-weight="600">Resto</tspan><tspan fill="url(#osL)" font-weight="800">OS</tspan>
+    <tspan fill="#0F172A" font-weight="600">Reste</tspan><tspan fill="url(#osL)" font-weight="800">OS</tspan>
   </text>
   <text x="266" y="252" font-family="'Segoe UI','Arial',sans-serif" font-size="25" letter-spacing="7.5" fill="#64748B" font-weight="600">RESTAURANT OPERATING SYSTEM</text>
 </svg>

@@ -157,7 +157,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             padding: const EdgeInsets.fromLTRB(18, 20, 18, 18),
             decoration: const BoxDecoration(gradient: LinearGradient(colors: [_mor1, _mavi])),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('RestoOS', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+              const Text('ResteOS', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
               const SizedBox(height: 4),
               Text(auth.sube ?? '', style: const TextStyle(color: Colors.white, fontSize: 14)),
               Text('${auth.ad ?? ''} · ${_rolAd(auth.rol)}', style: const TextStyle(color: Color(0xFFE9D5FF), fontSize: 12)),
@@ -217,7 +217,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 gradient: const LinearGradient(colors: [_mor1, _mavi]),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Text('RestoOS', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+              child: const Text('ResteOS', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
             ),
             const SizedBox(width: 8),
             Text(auth.sube ?? '', style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),

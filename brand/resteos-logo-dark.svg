@@ -10,7 +10,6 @@
       <stop offset="1" stop-color="#818CF8"/>
     </linearGradient>
   </defs>
-  <!-- icon tile -->
   <rect x="30" y="60" width="200" height="200" rx="46" fill="url(#tileD)"/>
   <g transform="translate(30,60) scale(0.390625)" stroke="#FFFFFF" fill="none" stroke-linecap="round" stroke-linejoin="round">
     <circle cx="256" cy="256" r="92" stroke-width="16"/>
@@ -22,9 +21,8 @@
     <path d="M362 150 C 388 176, 388 236, 362 262" stroke-width="13"/>
     <path d="M362 150 V366" stroke-width="13"/>
   </g>
-  <!-- wordmark -->
   <text x="262" y="196" font-family="'Segoe UI Semibold','Segoe UI',Arial,sans-serif" font-size="132" letter-spacing="-3">
-    <tspan fill="#F8FAFC" font-weight="600">Resto</tspan><tspan fill="url(#osD)" font-weight="800">OS</tspan>
+    <tspan fill="#F8FAFC" font-weight="600">Reste</tspan><tspan fill="url(#osD)" font-weight="800">OS</tspan>
   </text>
   <text x="266" y="252" font-family="'Segoe UI','Arial',sans-serif" font-size="25" letter-spacing="7.5" fill="#94A3B8" font-weight="600">RESTAURANT OPERATING SYSTEM</text>
 </svg>

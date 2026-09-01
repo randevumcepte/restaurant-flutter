@@ -37,7 +37,7 @@ class _LoginScreenState extends State<LoginScreen> {
             children: [
               const Text('🍔', style: TextStyle(fontSize: 56)),
               const SizedBox(height: 8),
-              const Text('RestoOS Patron',
+              const Text('ResteOS Patron',
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
               const Text('Yönetici girişi', style: TextStyle(color: Color(0xFF64748B))),
               const SizedBox(height: 28),

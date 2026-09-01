@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-/// RestoOS backend (Laravel) — restoran API'si.
+/// ResteOS backend (Laravel) — restoran API'si.
 class Api {
   static const String base = 'https://restaurant.webfirmam.com.tr';
 

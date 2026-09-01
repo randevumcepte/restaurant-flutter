@@ -63,7 +63,7 @@ Future<Uint8List> _fisDoc(Map d) async {
     pageFormat: PdfPageFormat.roll80,
     theme: pw.ThemeData.withFont(base: font, bold: fontB),
     build: (ctx) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.stretch, children: [
-      pw.Center(child: pw.Text(d['isletme']?.toString() ?? 'RestoOS', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold))),
+      pw.Center(child: pw.Text(d['isletme']?.toString() ?? 'ResteOS', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold))),
       if ((d['adres']?.toString() ?? '').isNotEmpty) pw.Center(child: pw.Text(d['adres'].toString(), style: const pw.TextStyle(fontSize: 8))),
       if ((d['telefon']?.toString() ?? '').isNotEmpty) pw.Center(child: pw.Text(d['telefon'].toString(), style: const pw.TextStyle(fontSize: 8))),
       pw.Divider(),
@@ -118,7 +118,7 @@ Future<Uint8List> _zRaporuDoc(Map d) async {
     pageFormat: PdfPageFormat.a4,
     theme: pw.ThemeData.withFont(base: font, bold: fontB),
     build: (ctx) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.stretch, children: [
-      pw.Center(child: pw.Text(d['isletme']?.toString() ?? 'RestoOS', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold))),
+      pw.Center(child: pw.Text(d['isletme']?.toString() ?? 'ResteOS', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold))),
       pw.Center(child: pw.Text('GÜN SONU / Z RAPORU · ${d['tarih']}', style: const pw.TextStyle(fontSize: 12))),
       pw.Divider(thickness: 1.5),
       satir('Toplam Ciro', tl(d['ciro']), bold: true),
@@ -143,7 +143,7 @@ Future<Uint8List> _zRaporuDoc(Map d) async {
       baslik('En Çok Satan'),
       for (final t in top) satir((t as Map)['urun_adi'].toString(), '${n(t['adet']).toInt()} adet'),
       pw.SizedBox(height: 16),
-      pw.Center(child: pw.Text('RestoOS · ${d['tarih']}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey))),
+      pw.Center(child: pw.Text('ResteOS · ${d['tarih']}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey))),
     ]),
   ));
   return doc.save();
