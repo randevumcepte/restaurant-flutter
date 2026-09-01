@@ -3,7 +3,10 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import '../providers/auth_provider.dart';
+import '../providers/tema_provider.dart';
 import '../services/api.dart';
+import '../responsive.dart';
+import '../ui/masaustu_kit.dart';
 
 /// Menü Yönetimi — kategori bazlı: yeni yemek ekle, tüm detayları düzenle, fotoğraf yükle.
 /// Sadece Sahip/Müdür (backend ayrıca doğrular).
@@ -62,6 +65,7 @@ class _MenuYonetimiScreenState extends State<MenuYonetimiScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (genisMi(context)) return _masaustu(context);
     final kategorisiz = urunler.where((u) => (u['kategori_id'] ?? 0) == 0).toList();
     return Scaffold(
       backgroundColor: _bg,
@@ -112,6 +116,141 @@ class _MenuYonetimiScreenState extends State<MenuYonetimiScreen> {
                 ),
     );
   }
+
+  // ================== MASAÜSTÜ (gece/gündüz temalı) ==================
+  Widget _masaustu(BuildContext context) {
+    final t = context.watch<TemaProvider>();
+    final kategorisiz = urunler.where((u) => (u['kategori_id'] ?? 0) == 0).toList()
+      ..sort((a, b) => '${a['ad']}'.compareTo('${b['ad']}'));
+    final bosMu = kategoriler.isEmpty && urunler.isEmpty;
+    return MasaustuSayfa(
+      baslik: 'Menü Yönetimi',
+      ikon: Icons.restaurant_menu,
+      altBaslik: loading || hata != null ? null : '${urunler.length} ürün · ${kategoriler.length} kategori',
+      araclar: [
+        MButon('Kategori', t.mavi, () => _kategoriDuzenle(null), dolu: false, ikon: Icons.create_new_folder_outlined),
+        const SizedBox(width: 10),
+        MButon('Yeni Ürün', t.mor1, () => _urunDuzenle(null), ikon: Icons.add),
+      ],
+      govde: loading
+          ? Center(child: CircularProgressIndicator(color: t.mor1))
+          : hata != null
+              ? Center(
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(Icons.wifi_off, color: t.sub, size: 46),
+                    const SizedBox(height: 10),
+                    Text(hata ?? '', style: TextStyle(color: t.sub, fontSize: 14)),
+                    const SizedBox(height: 14),
+                    MButon('Tekrar dene', t.mor1, _yukle, ikon: Icons.refresh),
+                  ]),
+                )
+              : bosMu
+                  ? Center(
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(Icons.restaurant_menu, color: t.sub, size: 54),
+                        const SizedBox(height: 12),
+                        Text('Henüz menü yok.\nÖnce kategori, sonra ürün ekleyin.',
+                            textAlign: TextAlign.center, style: TextStyle(color: t.sub, fontSize: 14)),
+                      ]),
+                    )
+                  : RefreshIndicator(
+                      onRefresh: _yukle,
+                      color: t.mor1,
+                      backgroundColor: t.card,
+                      child: ListView(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
+                        children: [
+                          for (final k in kategoriler)
+                            ..._masaustuBolum(t, k, _katUrunleri(k['id'] as int)),
+                          if (kategorisiz.isNotEmpty) ..._masaustuBolum(t, null, kategorisiz),
+                        ],
+                      ),
+                    ),
+    );
+  }
+
+  List<Widget> _masaustuBolum(TemaProvider t, Map<String, dynamic>? kat, List<Map<String, dynamic>> list) {
+    final baslik = kat?['ad']?.toString() ?? 'Kategorisiz';
+    return [
+      MBolumBaslik(
+        baslik,
+        renk: t.mor1,
+        sayi: list.length,
+        sag: kat != null
+            ? MButon('Düzenle', t.mavi, () => _kategoriDuzenle(kat), dolu: false, ikon: Icons.edit_outlined)
+            : null,
+      ),
+      if (list.isEmpty)
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          child: Text('Bu kategoride ürün yok', style: TextStyle(color: t.sub, fontSize: 13)),
+        )
+      else
+        GridView.count(
+          crossAxisCount: 4,
+          childAspectRatio: 0.86,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          children: [for (final u in list) _masaustuUrunKart(t, u)],
+        ),
+      const SizedBox(height: 18),
+    ];
+  }
+
+  Widget _masaustuUrunKart(TemaProvider t, Map<String, dynamic> u) {
+    final gorsel = u['gorsel']?.toString();
+    final tukendi = u['tukendi'] == true;
+    final pasif = u['aktif'] == false;
+    return MKart(
+      padding: EdgeInsets.zero,
+      onTap: () => _urunDuzenle(u),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(13)),
+          child: SizedBox(
+            height: 120,
+            width: double.infinity,
+            child: gorsel != null
+                ? Image.network(gorsel, fit: BoxFit.cover, errorBuilder: (_, _, _) => _masaustuFotoYer(t))
+                : _masaustuFotoYer(t),
+          ),
+        ),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(11, 9, 11, 9),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('${u['ad']}',
+                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: t.ink, fontSize: 14.5, fontWeight: FontWeight.bold)),
+              if (('${u['aciklama'] ?? ''}').isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text('${u['aciklama']}',
+                    maxLines: 2, overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: t.sub, fontSize: 11.5)),
+              ],
+              const Spacer(),
+              Row(children: [
+                Expanded(
+                  child: Text(_tl(u['fiyat']),
+                      maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: t.gold, fontSize: 14, fontWeight: FontWeight.bold)),
+                ),
+                if (tukendi) MRozet('Tükendi', t.kirmizi),
+                if (pasif) ...[if (tukendi) const SizedBox(width: 5), MRozet('Pasif', t.sub)],
+              ]),
+            ]),
+          ),
+        ),
+      ]),
+    );
+  }
+
+  Widget _masaustuFotoYer(TemaProvider t) => Container(
+        color: t.card2,
+        child: Icon(Icons.image_outlined, color: t.sub, size: 30),
+      );
 
   Widget _hataGorunum() => Center(
         child: Column(mainAxisSize: MainAxisSize.min, children: [

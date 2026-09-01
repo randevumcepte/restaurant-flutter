@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
+import '../providers/tema_provider.dart';
+import '../responsive.dart';
+import '../ui/masaustu_kit.dart';
 import '../services/api.dart';
 
 /// Kasa (vardiya bazlı nakit çekmece):
@@ -161,6 +164,7 @@ class _KasaScreenState extends State<KasaScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (genisMi(context)) return _masaustu(context);
     final acik = d?['acik'] == true;
     return Scaffold(
       backgroundColor: _bg,
@@ -324,6 +328,162 @@ class _KasaScreenState extends State<KasaScreen> {
           Text(h['zaman']?.toString() ?? '', style: const TextStyle(color: Color(0xFF64748B), fontSize: 10)),
         ]),
       ]),
+    );
+  }
+
+  // ==================== MASAÜSTÜ (PC/tablet) ====================
+  Widget _masaustu(BuildContext context) {
+    final t = context.watch<TemaProvider>();
+    final acik = d?['acik'] == true;
+    return MasaustuSayfa(
+      baslik: 'Kasa (Vardiya)',
+      ikon: Icons.point_of_sale,
+      altBaslik: acik ? 'Açık · ${d?['acilis'] ?? ''}' : 'Kapalı',
+      araclar: [
+        if (!loading && acik) ...[
+          MButon('Kasaya Koy', t.yesil, () => _hareket('giris'), dolu: false, ikon: Icons.add),
+          const SizedBox(width: 8),
+          MButon('Kasadan Al', t.amber, () => _hareket('cikis'), dolu: false, ikon: Icons.remove),
+          const SizedBox(width: 8),
+          MButon('Kasa Kapat (Say)', t.kirmizi, _kasaKapat, ikon: Icons.lock_outline),
+          const SizedBox(width: 8),
+        ] else if (!loading) ...[
+          MButon('Kasa Aç', t.yesil, _kasaAc, ikon: Icons.lock_open),
+          const SizedBox(width: 8),
+        ],
+        IconButton(onPressed: _yukle, icon: Icon(Icons.refresh, color: t.sub2, size: 22), tooltip: 'Yenile'),
+      ],
+      govde: loading
+          ? Center(child: CircularProgressIndicator(color: t.mor1))
+          : (acik ? _masaustuAcik(t) : _masaustuKapali(t)),
+    );
+  }
+
+  Widget _masaustuKapali(TemaProvider t) {
+    final sonDevir = _n(d?['son_devir']).toDouble();
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 460),
+        child: MKart(
+          padding: const EdgeInsets.all(32),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Icon(Icons.point_of_sale, size: 64, color: t.line),
+            const SizedBox(height: 16),
+            Text('Kasa kapalı', style: TextStyle(color: t.ink, fontSize: 22, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text(
+              'Vardiyayı başlatmak için kasayı açın.\nAçılış devir = şu an çekmecedeki nakit.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: t.sub, fontSize: 13),
+            ),
+            if (sonDevir > 0) ...[
+              const SizedBox(height: 10),
+              Text('Son kapanış: ${_tl(sonDevir)}', style: TextStyle(color: t.sub2, fontSize: 12)),
+            ],
+            const SizedBox(height: 24),
+            SizedBox(width: 220, child: MButon('Kasa Aç', t.yesil, _kasaAc, ikon: Icons.lock_open)),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  Widget _masaustuAcik(TemaProvider t) {
+    final beklenen = _n(d?['beklenen']).toDouble();
+    final devir = _n(d?['devir']).toDouble();
+    final giris = _n(d?['giris']).toDouble();
+    final cikis = _n(d?['cikis']).toDouble();
+    final hareketler = (d?['hareketler'] as List?) ?? [];
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        // Üst özet — 3 istatistik kartı
+        LayoutBuilder(builder: (ctx, kis) {
+          final genis = kis.maxWidth >= 720;
+          final beklenenKart = MIstatKart(
+            baslik: 'Kasada Beklenen Nakit',
+            renk: t.mor1,
+            buyukDeger: _tl(beklenen),
+            satirlar: [
+              MIstatSatir('Açan', (d?['acan'] ?? '-').toString()),
+              MIstatSatir('Açılış devir', _tl(devir)),
+            ],
+          );
+          final girisKart = MIstatKart(
+            baslik: 'Giriş (+)',
+            renk: t.yesil,
+            buyukDeger: _tl(giris),
+            satirlar: [MIstatSatir('Devir dahil kasaya eklenen', '', renk: t.sub)],
+          );
+          final cikisKart = MIstatKart(
+            baslik: 'Çıkış (−)',
+            renk: t.kirmizi,
+            buyukDeger: _tl(cikis),
+            satirlar: [MIstatSatir('Kasadan alınan', '', renk: t.sub)],
+          );
+          if (genis) {
+            return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Expanded(flex: 12, child: beklenenKart),
+              const SizedBox(width: 14),
+              Expanded(flex: 9, child: girisKart),
+              const SizedBox(width: 14),
+              Expanded(flex: 9, child: cikisKart),
+            ]);
+          }
+          return Column(children: [
+            beklenenKart,
+            const SizedBox(height: 14),
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Expanded(child: girisKart),
+              const SizedBox(width: 14),
+              Expanded(child: cikisKart),
+            ]),
+          ]);
+        }),
+        const SizedBox(height: 22),
+        MBolumBaslik('Hareketler', renk: t.mor1, sayi: hareketler.length),
+        const SizedBox(height: 4),
+        if (hareketler.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 30),
+            child: Center(child: Text('Henüz hareket yok.', style: TextStyle(color: t.sub))),
+          )
+        else
+          _masaustuTablo(t, hareketler),
+      ],
+    );
+  }
+
+  Widget _masaustuTablo(TemaProvider t, List hareketler) {
+    const etiket = {'devir': 'Devir', 'satis': 'Nakit Satış', 'tahsilat': 'Tahsilat', 'gider': 'Gider', 'personel': 'Personel', 'al': 'Kasadan Al', 'koy': 'Kasaya Koy'};
+    return MTablo(
+      sutunlar: const [
+        MSutun('Tip', flex: 14),
+        MSutun('Açıklama', flex: 22),
+        MSutun('Yön', flex: 10, hiza: TextAlign.center),
+        MSutun('Tutar', flex: 12, hiza: TextAlign.right),
+        MSutun('Zaman', flex: 12, hiza: TextAlign.right),
+      ],
+      satirlar: [
+        for (final raw in hareketler)
+          () {
+            final h = raw as Map;
+            final girisMi = h['yon'] == 'giris';
+            final renk = girisMi ? t.yesil : t.kirmizi;
+            return <Widget>[
+              Text(etiket[h['tip']] ?? h['tip'].toString(), style: TextStyle(color: t.ink, fontSize: 13, fontWeight: FontWeight.w600)),
+              Text(
+                '${h['aciklama'] ?? ''}${h['personel'] != null ? ' · ${h['personel']}' : ''}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: t.sub, fontSize: 12),
+              ),
+              MRozet(girisMi ? 'Giriş' : 'Çıkış', renk, ikon: girisMi ? Icons.south_west : Icons.north_east),
+              Text('${girisMi ? '+' : '−'}${_tl(h['tutar'])}', style: TextStyle(color: renk, fontSize: 13, fontWeight: FontWeight.bold)),
+              Text(h['zaman']?.toString() ?? '', style: TextStyle(color: t.sub2, fontSize: 12)),
+            ];
+          }(),
+      ],
     );
   }
 }

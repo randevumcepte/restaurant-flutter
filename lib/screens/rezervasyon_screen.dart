@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/tema_provider.dart';
+import '../responsive.dart';
 import '../services/api.dart';
+import '../ui/masaustu_kit.dart';
 
 /// Online masa rezervasyonu — gün seçici + günlük özet + rezervasyon kartları
 /// (onayla/geldi/gelmedi/iptal) + yeni rezervasyon ekleme.
@@ -80,6 +83,7 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (genisMi(context)) return _masaustu(context);
     final rezervasyonlar = (data?['rezervasyonlar'] as List?) ?? [];
     final ozet = (data?['ozet'] as Map?) ?? {};
     final gunler = (data?['gunler'] as List?) ?? [];
@@ -139,6 +143,186 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
               ),
             ]),
     );
+  }
+
+  // ================= MASAÜSTÜ (gece/gündüz) =================
+  Widget _masaustu(BuildContext context) {
+    final t = context.watch<TemaProvider>();
+    final rezervasyonlar = (data?['rezervasyonlar'] as List?) ?? [];
+    final ozet = (data?['ozet'] as Map?) ?? {};
+    final gunler = (data?['gunler'] as List?) ?? [];
+    return MasaustuSayfa(
+      baslik: 'Rezervasyonlar',
+      ikon: Icons.event_available_outlined,
+      altBaslik: tarih.isEmpty ? null : tarih,
+      araclar: [
+        IconButton(
+          onPressed: () => _yukle(),
+          icon: Icon(Icons.refresh, color: t.sub2, size: 22),
+          tooltip: 'Yenile',
+        ),
+        const SizedBox(width: 4),
+        MButon('Yeni Rezervasyon', t.mor1, _ekleDialog, ikon: Icons.add),
+      ],
+      govde: (loading && data == null)
+          ? Center(child: CircularProgressIndicator(color: t.mor1))
+          : ListView(padding: const EdgeInsets.all(24), children: [
+              _mGunSecici(t, gunler),
+              const SizedBox(height: 18),
+              _mOzet(t, ozet),
+              const SizedBox(height: 22),
+              MBolumBaslik('Rezervasyonlar', renk: t.mor1, sayi: rezervasyonlar.length),
+              if (rezervasyonlar.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 40),
+                  child: Center(child: Text('Bu gün için rezervasyon yok.', style: TextStyle(color: t.sub))),
+                )
+              else
+                _mTablo(t, rezervasyonlar),
+            ]),
+    );
+  }
+
+  Widget _mGunSecici(TemaProvider t, List gunler) {
+    return SizedBox(
+      height: 76,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          for (final g in gunler) _mGunPill(t, g as Map),
+        ],
+      ),
+    );
+  }
+
+  Widget _mGunPill(TemaProvider t, Map g) {
+    final gt = g['tarih'].toString();
+    final aktif = gt == tarih;
+    final adet = _n(g['adet']).toInt();
+    return GestureDetector(
+      onTap: () { setState(() => tarih = gt); _yukle(t: gt); },
+      child: Container(
+        width: 66,
+        margin: const EdgeInsets.only(right: 10),
+        decoration: BoxDecoration(
+          color: aktif ? t.mor1 : t.card,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: aktif ? t.mor1 : t.line),
+        ),
+        child: Stack(children: [
+          Center(
+            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+              Text(_gunKisa(gt), style: TextStyle(color: aktif ? Colors.white : t.sub, fontSize: 12, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 3),
+              Text('${DateTime.tryParse(gt)?.day ?? ''}', style: TextStyle(color: aktif ? Colors.white : t.ink, fontSize: 18, fontWeight: FontWeight.bold)),
+            ]),
+          ),
+          if (adet > 0)
+            Positioned(
+              right: 5, top: 5,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                decoration: BoxDecoration(color: aktif ? Colors.white24 : t.mavi, borderRadius: BorderRadius.circular(20)),
+                child: Text('$adet', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+              ),
+            ),
+        ]),
+      ),
+    );
+  }
+
+  Widget _mOzet(TemaProvider t, Map ozet) {
+    Widget kart(String etiket, int deger, Color renk) => Expanded(
+          child: MKart(
+            child: Column(children: [
+              Text('$deger', style: TextStyle(color: renk, fontSize: 26, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 2),
+              Text(etiket, style: TextStyle(color: t.sub, fontSize: 12.5)),
+            ]),
+          ),
+        );
+    return Row(children: [
+      kart('Bekleyen', _n(ozet['bekleyen']).toInt(), t.amber),
+      const SizedBox(width: 14),
+      kart('Onaylı', _n(ozet['onayli']).toInt(), t.mavi),
+      const SizedBox(width: 14),
+      kart('Geldi', _n(ozet['geldi']).toInt(), t.yesil),
+      const SizedBox(width: 14),
+      kart('Kişi', _n(ozet['kisi']).toInt(), t.mor1),
+    ]);
+  }
+
+  Color _renkT(TemaProvider t, String d) => {
+        'bekliyor': t.amber, 'onaylandi': t.mavi, 'geldi': t.yesil, 'iptal': const Color(0xFF64748B), 'gelmedi': t.kirmizi,
+      }[d] ?? t.mor1;
+
+  Widget _mTablo(TemaProvider t, List rezervasyonlar) {
+    return MTablo(
+      sutunlar: const [
+        MSutun('Saat', flex: 8),
+        MSutun('Müşteri', flex: 26),
+        MSutun('Kişi', flex: 8, hiza: TextAlign.center),
+        MSutun('Masa', flex: 12),
+        MSutun('Durum', flex: 14, hiza: TextAlign.center),
+        MSutun('İşlem', flex: 22, hiza: TextAlign.right),
+      ],
+      satirlar: [
+        for (final r in rezervasyonlar)
+          () {
+            final rm = r as Map;
+            final durum = rm['durum'].toString();
+            final renk = _renkT(t, durum);
+            final pasif = durum == 'iptal' || durum == 'gelmedi';
+            final not = (rm['not']?.toString() ?? '');
+            final tel = (rm['telefon']?.toString() ?? '');
+            final masa = (rm['masa_ad']?.toString() ?? '');
+            return <Widget>[
+              Text(rm['saat'].toString(), style: TextStyle(color: renk, fontSize: 15, fontWeight: FontWeight.bold)),
+              Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                Row(mainAxisSize: MainAxisSize.min, children: [
+                  Flexible(
+                    child: Text(
+                      rm['ad'].toString(),
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: pasif ? t.sub : t.ink, fontSize: 14, fontWeight: FontWeight.bold,
+                        decoration: pasif ? TextDecoration.lineThrough : null,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(_kaynakIkon(rm['kaynak'].toString()), style: const TextStyle(fontSize: 12)),
+                ]),
+                if (tel.isNotEmpty)
+                  Text('📞 $tel', style: TextStyle(color: t.sub, fontSize: 12)),
+                if (not.isNotEmpty)
+                  Text('📝 $not', style: TextStyle(color: t.sub2, fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis),
+              ]),
+              Text('${_n(rm['kisi']).toInt()}', style: TextStyle(color: t.ink, fontSize: 14, fontWeight: FontWeight.w600)),
+              Text(masa.isEmpty ? '—' : 'Masa $masa', style: TextStyle(color: masa.isEmpty ? t.sub : t.ink, fontSize: 13)),
+              Align(alignment: Alignment.center, child: MRozet(_durumAd(durum), renk)),
+              _mAksiyonlar(t, rm, durum),
+            ];
+          }(),
+      ],
+    );
+  }
+
+  Widget _mAksiyonlar(TemaProvider t, Map r, String durum) {
+    final id = _n(r['id']).toInt();
+    final btns = <Widget>[];
+    if (durum == 'bekliyor') {
+      btns.add(MButon('Onayla', t.yesil, () => _durum(id, 'onaylandi'), ikon: Icons.check));
+      btns.add(const SizedBox(width: 8));
+      btns.add(MButon('İptal', t.kirmizi, () => _durum(id, 'iptal'), dolu: false, ikon: Icons.close));
+    } else if (durum == 'onaylandi') {
+      btns.add(MButon('Geldi', t.yesil, () => _durum(id, 'geldi'), ikon: Icons.login));
+      btns.add(const SizedBox(width: 8));
+      btns.add(MButon('Gelmedi', t.kirmizi, () => _durum(id, 'gelmedi'), dolu: false, ikon: Icons.person_off));
+    } else {
+      return Align(alignment: Alignment.centerRight, child: Text('—', style: TextStyle(color: t.sub)));
+    }
+    return Row(mainAxisAlignment: MainAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: btns);
   }
 
   Widget _gunPill(Map g) {

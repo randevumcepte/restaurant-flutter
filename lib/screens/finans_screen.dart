@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
+import '../providers/tema_provider.dart';
 import '../services/api.dart';
+import '../responsive.dart';
+import '../ui/masaustu_kit.dart';
 
 /// Finansal Özet — aylık gelir / gider / net kâr. Gelir ödeme tipine, gider
 /// kategoriye göre kırılım. Personel maaş + alış faturaları otomatik giderde.
@@ -65,6 +68,7 @@ class _FinansScreenState extends State<FinansScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (genisMi(context)) return _masaustu(context);
     final net = _n(d['net']);
     final gelirTip = (d['gelir_tip'] as List?) ?? [];
     final giderKat = (d['gider_kategori'] as List?) ?? [];
@@ -111,6 +115,149 @@ class _FinansScreenState extends State<FinansScreen> {
             ]),
     );
   }
+
+  // ---------------------------------------------------------------------------
+  // MASAÜSTÜ (PC/tablet) — SepetTakip tarzı: büyük renkli KPI kartları + tablolar.
+  // Tüm iş mantığı (Api.finans, _yukle, _ayDegis, alan adları) mobil ile ortak.
+  // ---------------------------------------------------------------------------
+  Widget _masaustu(BuildContext context) {
+    final t = context.watch<TemaProvider>();
+    final net = _n(d['net']);
+    final gelir = _n(d['gelir']);
+    final gider = _n(d['gider']);
+    final bahsis = _n(d['bahsis']);
+    final alis = _n(d['alis_toplam']);
+    final gelirTip = (d['gelir_tip'] as List?) ?? [];
+    final giderKat = (d['gider_kategori'] as List?) ?? [];
+    return MasaustuSayfa(
+      baslik: 'Finans / Kâr-Zarar',
+      ikon: Icons.analytics_outlined,
+      altBaslik: _ayMetin,
+      araclar: [
+        IconButton(
+          onPressed: () => _ayDegis(-1),
+          icon: Icon(Icons.chevron_left, color: t.sub2, size: 22),
+          tooltip: 'Önceki ay',
+        ),
+        Text(_ayMetin, style: TextStyle(color: t.ink, fontSize: 14, fontWeight: FontWeight.bold)),
+        IconButton(
+          onPressed: () => _ayDegis(1),
+          icon: Icon(Icons.chevron_right, color: t.sub2, size: 22),
+          tooltip: 'Sonraki ay',
+        ),
+      ],
+      govde: loading
+          ? Center(child: CircularProgressIndicator(color: t.mor1))
+          : d.isEmpty
+              ? Center(child: Text('Bu ay için veri yok.', style: TextStyle(color: t.sub)))
+              : ListView(padding: const EdgeInsets.all(24), children: [
+                  // Üst satır: 3 (opsiyonel 4) büyük KPI kartı yan yana
+                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Expanded(
+                      child: MIstatKart(
+                        baslik: 'Gelir',
+                        renk: t.yesil,
+                        buyukDeger: _tl(gelir),
+                        satirlar: [
+                          if (bahsis > 0) MIstatSatir('Bahşiş', _tl(bahsis), renk: t.yesil),
+                          MIstatSatir('Ödeme tipi', '${gelirTip.length} kalem'),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: MIstatKart(
+                        baslik: 'Gider',
+                        renk: t.kirmizi,
+                        buyukDeger: _tl(gider),
+                        satirlar: [
+                          if (alis > 0) MIstatSatir('Tedarikçi alışı', _tl(alis), renk: t.kirmizi),
+                          MIstatSatir('Kategori', '${giderKat.length} kalem'),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: MIstatKart(
+                        baslik: net >= 0 ? 'Net Kâr' : 'Net Zarar',
+                        renk: net >= 0 ? t.mor1 : t.kirmizi,
+                        buyukDeger: _tl(net),
+                        satirlar: [
+                          MIstatSatir('Gelir', _tl(gelir), renk: t.yesil),
+                          MIstatSatir('Gider', _tl(gider), renk: t.kirmizi),
+                        ],
+                      ),
+                    ),
+                  ]),
+                  const SizedBox(height: 22),
+                  // Alt: gelir/gider döküm tabloları yan yana
+                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                        MBolumBaslik('Gelir — Ödeme Tipi', renk: t.yesil, sayi: gelirTip.length),
+                        if (gelirTip.isEmpty)
+                          _mBos(t, 'Bu ay tahsilat yok.')
+                        else
+                          MTablo(
+                            sutunlar: const [
+                              MSutun('Ödeme Tipi', flex: 16),
+                              MSutun('Tutar', flex: 10, hiza: TextAlign.right),
+                            ],
+                            satirlar: [
+                              for (final g in gelirTip)
+                                <Widget>[
+                                  Text(_tipAd[(g as Map)['tip']] ?? g['tip'].toString(), style: TextStyle(color: t.ink, fontSize: 13)),
+                                  Text(_tl(g['tutar']), style: TextStyle(color: t.yesil, fontSize: 13, fontWeight: FontWeight.bold)),
+                                ],
+                            ],
+                          ),
+                      ]),
+                    ),
+                    const SizedBox(width: 20),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                        MBolumBaslik('Gider — Kategori', renk: t.kirmizi, sayi: giderKat.length),
+                        if (giderKat.isEmpty)
+                          _mBos(t, 'Bu ay gider yok.')
+                        else
+                          MTablo(
+                            sutunlar: const [
+                              MSutun('Kategori', flex: 16),
+                              MSutun('Tutar', flex: 10, hiza: TextAlign.right),
+                            ],
+                            satirlar: [
+                              for (final g in giderKat)
+                                <Widget>[
+                                  Text(_katAd[(g as Map)['kategori']] ?? g['kategori'].toString(), style: TextStyle(color: t.ink, fontSize: 13)),
+                                  Text(_tl(g['tutar']), style: TextStyle(color: t.kirmizi, fontSize: 13, fontWeight: FontWeight.bold)),
+                                ],
+                            ],
+                          ),
+                        if (alis > 0) ...[
+                          const SizedBox(height: 14),
+                          MBolumBaslik('Tedarikçi Alışı', renk: t.amber),
+                          MTablo(
+                            sutunlar: const [
+                              MSutun('Kalem', flex: 16),
+                              MSutun('Tutar', flex: 10, hiza: TextAlign.right),
+                            ],
+                            satirlar: [
+                              <Widget>[
+                                Text('Toplam alış faturası', style: TextStyle(color: t.ink, fontSize: 13)),
+                                Text(_tl(alis), style: TextStyle(color: t.amber, fontSize: 13, fontWeight: FontWeight.bold)),
+                              ],
+                            ],
+                          ),
+                        ],
+                      ]),
+                    ),
+                  ]),
+                  const SizedBox(height: 24),
+                ]),
+    );
+  }
+
+  Widget _mBos(TemaProvider t, String m) => MKart(child: Text(m, style: TextStyle(color: t.sub, fontSize: 13)));
 
   Widget _mini(String e, String v, IconData ic) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Icon(ic, color: Colors.white70, size: 14),

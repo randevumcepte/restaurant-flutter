@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
+import '../providers/tema_provider.dart';
 import '../services/api.dart';
+import '../responsive.dart';
+import '../ui/masaustu_kit.dart';
 
 /// Alış Faturaları — liste (aylık, fiyat uyarısı renkli) + yeni fatura girişi.
 /// Kaydedince: stok girişi + ağırlıklı ort. maliyet güncelleme + otomatik gider.
@@ -89,6 +92,7 @@ class _AlisFaturaScreenState extends State<AlisFaturaScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (genisMi(context)) return _masaustu(context);
     return Scaffold(
       backgroundColor: _bg,
       appBar: AppBar(backgroundColor: _bg, elevation: 0, iconTheme: const IconThemeData(color: Colors.white), title: const Text('Alış Faturaları', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold))),
@@ -119,6 +123,91 @@ class _AlisFaturaScreenState extends State<AlisFaturaScreen> {
               ]))),
             ]),
     );
+  }
+
+  // ==========================================================================
+  // MASAÜSTÜ GÖRÜNÜM (tema-duyarlı tablo)
+  // ==========================================================================
+  Widget _masaustu(BuildContext context) {
+    final t = context.watch<TemaProvider>();
+    final ileriKapali = DateTime(_ay.year, _ay.month + 1).isAfter(DateTime(DateTime.now().year, DateTime.now().month));
+    return MasaustuSayfa(
+      baslik: 'Alış Faturaları',
+      ikon: Icons.receipt_long_outlined,
+      altBaslik: _ayMetin,
+      araclar: [
+        MButon('', t.card, () => _ayDegis(-1), dolu: false, ikon: Icons.chevron_left),
+        const SizedBox(width: 6),
+        MButon('', t.card, ileriKapali ? () {} : () => _ayDegis(1), dolu: false, ikon: Icons.chevron_right),
+        if (duzenleyebilir) ...[
+          const SizedBox(width: 10),
+          MButon('Yeni Fatura', t.amber, _yeniFatura, ikon: Icons.add),
+        ],
+      ],
+      govde: loading
+          ? Center(child: CircularProgressIndicator(color: t.mor1))
+          : RefreshIndicator(
+              onRefresh: _yukle,
+              color: t.mor1,
+              backgroundColor: t.card,
+              child: ListView(
+                padding: const EdgeInsets.all(20),
+                children: [
+                  SizedBox(
+                    width: 360,
+                    child: MIstatKart(
+                      baslik: _ayMetin,
+                      renk: t.mor1,
+                      buyukDeger: _tl(toplam),
+                      satirlar: [
+                        MIstatSatir('Bu Ay Alış Toplamı', _tl(toplam)),
+                        MIstatSatir('Fatura Sayısı', '${faturalar.length}'),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  MBolumBaslik('Faturalar', renk: t.mor1, sayi: faturalar.length),
+                  if (faturalar.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 24),
+                      child: Center(child: Text('Bu ay fatura yok.', style: TextStyle(color: t.sub))),
+                    )
+                  else
+                    MTablo(
+                      sutunlar: const [
+                        MSutun('Tarih', flex: 14),
+                        MSutun('Tedarikçi', flex: 30),
+                        MSutun('Tutar', flex: 18, hiza: TextAlign.right),
+                        MSutun('Durum', flex: 20, hiza: TextAlign.center),
+                        MSutun('Detay', flex: 12, hiza: TextAlign.right),
+                      ],
+                      satirlar: [
+                        for (final f0 in faturalar) _masaSatir(context, f0 as Map),
+                      ],
+                    ),
+                  const SizedBox(height: 40),
+                ],
+              ),
+            ),
+    );
+  }
+
+  List<Widget> _masaSatir(BuildContext context, Map f) {
+    final t = context.watch<TemaProvider>();
+    final u = f['uyari'].toString();
+    final durumRenk = _uyariRenk(u);
+    final durumMetin = {'kirmizi': 'Fiyat ↑', 'sari': 'Fiyat ~'}[u] ?? 'Normal';
+    final no = (f['fatura_no']?.toString() ?? '');
+    return [
+      Text(f['tarih'].toString(), style: TextStyle(color: t.sub2, fontSize: 13)),
+      Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+        Text(f['tedarikci'].toString(), style: TextStyle(color: t.ink, fontSize: 13.5, fontWeight: FontWeight.w600)),
+        if (no.isNotEmpty) Text('No: $no', style: TextStyle(color: t.sub, fontSize: 11.5)),
+      ]),
+      Text(_tl(f['toplam']), style: TextStyle(color: t.ink, fontSize: 13.5, fontWeight: FontWeight.bold)),
+      MRozet(durumMetin, durumRenk),
+      MButon('Aç', t.mor1, () => _detay(f), dolu: false, ikon: Icons.open_in_new),
+    ];
   }
 
   Widget _kart(Map f) {

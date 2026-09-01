@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
+import '../providers/tema_provider.dart';
 import '../services/api.dart';
+import '../responsive.dart';
+import '../ui/masaustu_kit.dart';
 
 /// Reçete Yönetimi — ürün listesi (food-cost + reçeteli rozet) → reçete editörü
 /// (malzeme + miktar + birim; canlı maliyet & food-cost). Kaydet = sahip.
@@ -63,6 +66,7 @@ class _ReceteScreenState extends State<ReceteScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (genisMi(context)) return _masaustu(context);
     final filtre = _ara.trim().toLowerCase();
     final liste = filtre.isEmpty ? urunler : urunler.where((u) => (u as Map)['ad'].toString().toLowerCase().contains(filtre)).toList();
     final recetesiz = urunler.where((u) => (u as Map)['receteli'] != true).length;
@@ -87,6 +91,133 @@ class _ReceteScreenState extends State<ReceteScreen> {
                 const SizedBox(height: 30),
               ]))),
             ]),
+    );
+  }
+
+  // ==========================================================================
+  // MASAÜSTÜ (PC/tablet) — kategori tarzı bölümler + ürün reçete kart ızgarası
+  // ==========================================================================
+  Widget _masaustu(BuildContext context) {
+    final t = context.watch<TemaProvider>();
+    final filtre = _ara.trim().toLowerCase();
+    final liste = (filtre.isEmpty
+            ? urunler
+            : urunler.where((u) => (u as Map)['ad'].toString().toLowerCase().contains(filtre)).toList())
+        .cast<Map>();
+    final receteliler = liste.where((u) => u['receteli'] == true).toList();
+    final recetesizler = liste.where((u) => u['receteli'] != true).toList();
+    final recetesizToplam = urunler.where((u) => (u as Map)['receteli'] != true).length;
+
+    return MasaustuSayfa(
+      baslik: 'Reçeteler',
+      ikon: Icons.menu_book_outlined,
+      altBaslik: '${urunler.length} ürün · $recetesizToplam reçetesiz',
+      araclar: [
+        SizedBox(
+          width: 240,
+          child: TextField(
+            onChanged: (v) => setState(() => _ara = v),
+            style: TextStyle(color: t.ink, fontSize: 13),
+            decoration: InputDecoration(
+              hintText: 'Ürün ara',
+              hintStyle: TextStyle(color: t.sub),
+              isDense: true,
+              prefixIcon: Icon(Icons.search, color: t.sub, size: 18),
+              filled: true,
+              fillColor: t.card2,
+              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: t.line)),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: t.mor1)),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        MButon('Yenile', t.mor1, _yukle, dolu: false, ikon: Icons.refresh),
+        const SizedBox(width: 4),
+      ],
+      govde: loading
+          ? Center(child: CircularProgressIndicator(color: t.mor1))
+          : liste.isEmpty
+              ? Center(child: Text(filtre.isEmpty ? 'Ürün yok.' : 'Eşleşen ürün yok.', style: TextStyle(color: t.sub, fontSize: 14)))
+              : ListView(
+                  padding: const EdgeInsets.all(20),
+                  children: [
+                    if (recetesizToplam > 0)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: MKart(
+                          kenar: t.amber.withValues(alpha: 0.5),
+                          padding: const EdgeInsets.all(14),
+                          child: Row(children: [
+                            Icon(Icons.info_outline, color: t.amber, size: 20),
+                            const SizedBox(width: 10),
+                            Expanded(child: Text('$recetesizToplam ürünün reçetesi yok — food-cost hesaplanamıyor.', style: TextStyle(color: t.amber, fontSize: 13, fontWeight: FontWeight.w600))),
+                          ]),
+                        ),
+                      ),
+                    if (receteliler.isNotEmpty) ...[
+                      MBolumBaslik('Reçeteli Ürünler', renk: t.yesil, sayi: receteliler.length),
+                      _izgara(receteliler),
+                      const SizedBox(height: 18),
+                    ],
+                    if (recetesizler.isNotEmpty) ...[
+                      MBolumBaslik('Reçetesiz Ürünler', renk: t.amber, sayi: recetesizler.length),
+                      _izgara(recetesizler),
+                    ],
+                    const SizedBox(height: 30),
+                  ],
+                ),
+    );
+  }
+
+  Widget _izgara(List<Map> urunListe) {
+    return LayoutBuilder(builder: (ctx, c) {
+      final sutun = c.maxWidth >= 1500 ? 4 : (c.maxWidth >= 1150 ? 3 : 2);
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: urunListe.length,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: sutun,
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          mainAxisExtent: 116,
+        ),
+        itemBuilder: (ctx, i) => _masaustuKart(ctx, urunListe[i]),
+      );
+    });
+  }
+
+  Widget _masaustuKart(BuildContext context, Map u) {
+    final t = context.watch<TemaProvider>();
+    final receteli = u['receteli'] == true;
+    final fc = _n(u['food_cost']);
+    return MKart(
+      onTap: () => _editor(u),
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(children: [
+            Expanded(child: Text(u['ad'].toString(), maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.ink, fontSize: 15, fontWeight: FontWeight.bold))),
+            const SizedBox(width: 6),
+            if (receteli && fc > 0)
+              MRozet('%${fc.toStringAsFixed(0)}', _fcRenk(fc))
+            else
+              MRozet('reçetesiz', t.amber),
+          ]),
+          Row(children: [
+            Text('Fiyat ${_tl(u['fiyat'])}', style: TextStyle(color: t.sub2, fontSize: 12.5, fontWeight: FontWeight.w600)),
+            if (receteli) ...[
+              const SizedBox(width: 12),
+              Text('Maliyet ${_tl(u['maliyet'])}', style: TextStyle(color: t.sub, fontSize: 12.5)),
+            ],
+            const Spacer(),
+            Icon(Icons.chevron_right, color: t.sub, size: 20),
+          ]),
+        ],
+      ),
     );
   }
 
@@ -213,6 +344,7 @@ class _ReceteEditorScreenState extends State<ReceteEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (genisMi(context)) return _masaustu(context);
     return Scaffold(
       backgroundColor: _bg,
       appBar: AppBar(backgroundColor: _bg, elevation: 0, iconTheme: const IconThemeData(color: Colors.white), title: Text(widget.urunAd, style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold))),
@@ -234,6 +366,83 @@ class _ReceteEditorScreenState extends State<ReceteEditorScreen> {
               ])),
               if (duzenleyebilir) _altBar(),
             ]),
+    );
+  }
+
+  // ==========================================================================
+  // MASAÜSTÜ EDİTÖR — tema-duyarlı özet + malzeme kartları + kaydet
+  // ==========================================================================
+  Widget _masaustu(BuildContext context) {
+    final t = context.watch<TemaProvider>();
+    return MasaustuSayfa(
+      baslik: widget.urunAd,
+      ikon: Icons.menu_book_outlined,
+      altBaslik: 'Reçete editörü',
+      araclar: [
+        if (duzenleyebilir) ...[
+          MButon('Malzeme Ekle', t.mavi, _kalemEkle, dolu: false, ikon: Icons.add),
+          const SizedBox(width: 8),
+          MButon(kaydediliyor ? 'Kaydediliyor…' : 'Reçeteyi Kaydet', t.mor1, kaydediliyor ? () {} : _kaydet, ikon: Icons.save_outlined),
+          const SizedBox(width: 4),
+        ],
+      ],
+      govde: loading
+          ? Center(child: CircularProgressIndicator(color: t.mor1))
+          : ListView(
+              padding: const EdgeInsets.all(20),
+              children: [
+                _ozetMasaustu(t),
+                const SizedBox(height: 18),
+                MBolumBaslik('Malzemeler', renk: t.mor1, sayi: kalemler.length),
+                if (kalemler.isEmpty)
+                  MKart(child: Text('Bu ürünün reçetesi boş. Malzeme ekleyin.', style: TextStyle(color: t.sub, fontSize: 13)))
+                else
+                  for (int i = 0; i < kalemler.length; i++)
+                    Padding(padding: const EdgeInsets.only(bottom: 10), child: _kalemKartMasaustu(t, i)),
+                const SizedBox(height: 30),
+              ],
+            ),
+    );
+  }
+
+  Widget _ozetMasaustu(TemaProvider t) {
+    final fc = _fc;
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(gradient: LinearGradient(colors: [t.mor1, t.mavi]), borderRadius: BorderRadius.circular(16)),
+      child: Row(children: [
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Tahmini Maliyet', style: TextStyle(color: Colors.white70, fontSize: 13)),
+          const SizedBox(height: 2),
+          Text(_tl(_maliyet), style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
+          Text('Satış ${_tl(fiyat)}', style: const TextStyle(color: Colors.white70, fontSize: 13)),
+        ])),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+          decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(12)),
+          child: Column(children: [
+            Text(fc > 0 ? '%${fc.toStringAsFixed(0)}' : '—', style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
+            const Text('food-cost', style: TextStyle(color: Colors.white70, fontSize: 11)),
+          ]),
+        ),
+      ]),
+    );
+  }
+
+  Widget _kalemKartMasaustu(TemaProvider t, int i) {
+    final k = kalemler[i];
+    final satir = _n(k['miktar']) * _cevrim(k['malzeme_id'], k['birim_id']) * _malzemeMaliyet(k['malzeme_id']);
+    return MKart(
+      padding: const EdgeInsets.all(14),
+      child: Row(children: [
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(k['malzeme'].toString(), style: TextStyle(color: t.ink, fontWeight: FontWeight.w600, fontSize: 14)),
+          Text('${_mik(_n(k['miktar']))} ${k['birim']}', style: TextStyle(color: t.sub, fontSize: 12.5)),
+        ])),
+        Text(_tl(satir), style: TextStyle(color: t.sub2, fontWeight: FontWeight.bold)),
+        if (duzenleyebilir)
+          IconButton(padding: const EdgeInsets.only(left: 10), constraints: const BoxConstraints(minWidth: 36), onPressed: () => setState(() => kalemler.removeAt(i)), icon: Icon(Icons.close, color: t.sub, size: 18)),
+      ]),
     );
   }
 
