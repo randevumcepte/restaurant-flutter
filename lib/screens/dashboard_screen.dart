@@ -407,7 +407,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: child,
           ),
         )),
-        icon: const Icon(Icons.notifications_none_rounded, color: Color(0xFFCBD5E1), size: 25),
+        // AI bildirim -> normal can degil, mor gradientli sparkle (AI icgorusu hissi)
+        icon: ShaderMask(
+          shaderCallback: (r) => const LinearGradient(
+            colors: [Color(0xFFC4B5FD), Color(0xFF7C3AED)],
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
+          ).createShader(r),
+          child: const Icon(Icons.auto_awesome, color: Colors.white, size: 24),
+        ),
       ),
       if (n > 0)
         Positioned(
