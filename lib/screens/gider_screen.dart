@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
+import '../providers/tema_provider.dart';
+import '../responsive.dart';
+import '../ui/masaustu_kit.dart';
 import '../services/api.dart';
 
 /// Giderler — aylık işletme giderleri (kira/fatura/malzeme/maaş/vergi/diğer).
@@ -81,6 +84,7 @@ class _GiderScreenState extends State<GiderScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (genisMi(context)) return _masaustu(context);
     return Scaffold(
       backgroundColor: _bg,
       appBar: AppBar(
@@ -121,6 +125,97 @@ class _GiderScreenState extends State<GiderScreen> {
                 ),
               ),
             ]),
+    );
+  }
+
+  // ================= MASAÜSTÜ (PC/tablet) =================
+  Widget _masaustu(BuildContext context) {
+    final t = context.watch<TemaProvider>();
+    return MasaustuSayfa(
+      baslik: 'Giderler',
+      ikon: Icons.receipt_long_outlined,
+      altBaslik: _ayMetin,
+      araclar: [
+        IconButton(
+          onPressed: () => _ayDegis(-1),
+          icon: Icon(Icons.chevron_left, color: t.sub2, size: 22),
+          tooltip: 'Önceki ay',
+        ),
+        Text(_ayMetin, style: TextStyle(color: t.ink, fontSize: 14, fontWeight: FontWeight.bold)),
+        IconButton(
+          onPressed: () => _ayDegis(1),
+          icon: Icon(Icons.chevron_right, color: t.sub2, size: 22),
+          tooltip: 'Sonraki ay',
+        ),
+        if (duzenleyebilir) ...[
+          const SizedBox(width: 8),
+          MButon('Gider Ekle', t.kirmizi, _ekleDialog, ikon: Icons.add),
+        ],
+      ],
+      govde: loading
+          ? Center(child: CircularProgressIndicator(color: t.kirmizi))
+          : ListView(padding: const EdgeInsets.all(24), children: [
+              _mIstat(t),
+              const SizedBox(height: 20),
+              if (giderler.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 40),
+                  child: Center(child: Text('Bu ay gider kaydı yok.', style: TextStyle(color: t.sub))),
+                )
+              else
+                _mTablo(t),
+            ]),
+    );
+  }
+
+  Widget _mIstat(TemaProvider t) {
+    final kats = kategoriler.entries.toList()..sort((a, b) => _n(b.value).compareTo(_n(a.value)));
+    return MIstatKart(
+      baslik: 'Toplam Gider',
+      renk: t.kirmizi,
+      buyukDeger: _tl(toplam),
+      satirlar: [
+        for (final e in kats)
+          MIstatSatir('${_katAd[e.key] ?? e.key}', _tl(e.value), renk: _katRenk(e.key.toString())),
+      ],
+    );
+  }
+
+  Widget _mTablo(TemaProvider t) {
+    return MTablo(
+      sutunlar: const [
+        MSutun('Kategori', flex: 16),
+        MSutun('Açıklama', flex: 28),
+        MSutun('Tarih', flex: 16),
+        MSutun('Tutar', flex: 14, hiza: TextAlign.right),
+        MSutun('', flex: 6, hiza: TextAlign.right),
+      ],
+      satirlar: [
+        for (final g in giderler)
+          () {
+            final gm = g as Map;
+            final kat = gm['kategori'].toString();
+            final renk = _katRenk(kat);
+            return <Widget>[
+              MRozet(_katAd[kat] ?? kat, renk, ikon: _katIkon[kat] ?? Icons.more_horiz),
+              Text(
+                (gm['aciklama']?.toString().isNotEmpty ?? false) ? gm['aciklama'].toString() : '—',
+                style: TextStyle(color: t.ink, fontSize: 13),
+              ),
+              Text(gm['tarih']?.toString() ?? '', style: TextStyle(color: t.sub, fontSize: 13)),
+              Text(_tl(gm['tutar']), style: TextStyle(color: t.ink, fontSize: 14, fontWeight: FontWeight.bold)),
+              (duzenleyebilir && kat != 'maas')
+                  ? IconButton(
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 32),
+                      onPressed: () => _sil(_n(gm['id']).toInt()),
+                      icon: Icon(Icons.close, color: t.sub, size: 18),
+                      tooltip: 'Sil',
+                    )
+                  : const SizedBox.shrink(),
+            ];
+          }(),
+      ],
     );
   }
 

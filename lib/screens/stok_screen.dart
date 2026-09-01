@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
+import '../providers/tema_provider.dart';
 import '../services/api.dart';
+import '../responsive.dart';
+import '../ui/masaustu_kit.dart';
 
 /// Stok / Malzeme — mevcut stok, değer, kritik uyarı; malzeme ekle/düzenle,
 /// manuel giriş/fire/düzeltme hareketi. Düzenleme = sahip.
@@ -89,6 +92,7 @@ class _StokScreenState extends State<StokScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (genisMi(context)) return _masaustu(context);
     final filtre = _ara.trim().toLowerCase();
     final liste = filtre.isEmpty ? malzemeler : malzemeler.where((m) => (m as Map)['ad'].toString().toLowerCase().contains(filtre)).toList();
     return Scaffold(
@@ -130,6 +134,160 @@ class _StokScreenState extends State<StokScreen> {
             ]),
     );
   }
+
+  // ===================== MASAÜSTÜ (PC/tablet) — renk kodlu kart ızgarası =====================
+
+  static const _mYesil = Color(0xFF16A34A);
+  static const _mTuruncu = Color(0xFFEA580C);
+  static const _mKirmizi = Color(0xFFDC2626);
+
+  /// Bir malzemenin durum rengi: kırmızı=kritik, turuncu=kritiğe yakın (az),
+  /// yeşil=yeterli. Mobil `kritik` bayrağı bozulmadan; turuncu additive olarak
+  /// mevcut ≤ kritik eşiğin 1.5 katı ise türetilir.
+  Color _durumRenk(Map m) {
+    if (m['kritik'] == true) return _mKirmizi;
+    final mevcut = _n(m['mevcut']).toDouble();
+    final esik = _n(m['kritik_stok']).toDouble();
+    if (esik > 0 && mevcut <= esik * 1.5) return _mTuruncu;
+    return _mYesil;
+  }
+
+  String _durumMetin(Color c) => c == _mKirmizi ? 'Kritik' : (c == _mTuruncu ? 'Az' : 'Yeterli');
+
+  Widget _masaustu(BuildContext context) {
+    final t = context.watch<TemaProvider>();
+    final filtre = _ara.trim().toLowerCase();
+    final liste = (filtre.isEmpty
+            ? malzemeler
+            : malzemeler.where((m) => (m as Map)['ad'].toString().toLowerCase().contains(filtre)).toList())
+        .cast<Map>();
+
+    // Kategoriye göre grupla (response'taki `kategori` alanı).
+    final Map<String, List<Map>> gruplar = {};
+    for (final m in liste) {
+      final k = (m['kategori']?.toString().trim().isNotEmpty ?? false) ? m['kategori'].toString() : 'Diğer';
+      (gruplar[k] ??= []).add(m);
+    }
+    final kategoriAdlari = gruplar.keys.toList()..sort();
+
+    return MasaustuSayfa(
+      baslik: 'Stok / Malzeme',
+      ikon: Icons.inventory_2_outlined,
+      altBaslik: 'Toplam değer ${_tl(toplamDeger)}'
+          '${kritikSayi > 0 ? '  ·  $kritikSayi kritik' : ''}',
+      araclar: [
+        SizedBox(
+          width: 240,
+          child: TextField(
+            onChanged: (v) => setState(() => _ara = v),
+            style: TextStyle(color: t.ink, fontSize: 13),
+            decoration: InputDecoration(
+              isDense: true,
+              hintText: 'Malzeme ara',
+              hintStyle: TextStyle(color: t.sub),
+              prefixIcon: Icon(Icons.search, color: t.sub, size: 18),
+              filled: true,
+              fillColor: t.card2,
+              contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: t.line)),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: t.mor1)),
+            ),
+          ),
+        ),
+        if (duzenleyebilir) ...[
+          const SizedBox(width: 10),
+          MButon('Malzeme', t.mor1, () => _malzemeForm(null), ikon: Icons.add),
+        ],
+      ],
+      govde: loading
+          ? Center(child: CircularProgressIndicator(color: t.mor1))
+          : liste.isEmpty
+              ? Center(
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(Icons.inventory_2_outlined, color: t.sub, size: 48),
+                    const SizedBox(height: 10),
+                    Text(
+                      malzemeler.isEmpty ? 'Malzeme yok. Sağ üstten ekleyin.' : 'Aramaya uygun malzeme yok.',
+                      style: TextStyle(color: t.sub, fontSize: 14),
+                    ),
+                  ]),
+                )
+              : RefreshIndicator(
+                  onRefresh: _yukle,
+                  color: t.mor1,
+                  backgroundColor: t.card,
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
+                    children: [
+                      for (final kat in kategoriAdlari) ...[
+                        MBolumBaslik(kat, renk: t.mor1, sayi: gruplar[kat]!.length),
+                        GridView.count(
+                          crossAxisCount: 4,
+                          childAspectRatio: 1.5,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          children: [for (final m in gruplar[kat]!) _mKart(m, t)],
+                        ),
+                        const SizedBox(height: 18),
+                      ],
+                    ],
+                  ),
+                ),
+    );
+  }
+
+  Widget _mKart(Map m, TemaProvider t) {
+    final renk = _durumRenk(m);
+    final kritik = m['kritik'] == true;
+    final mevcut = _n(m['mevcut']);
+    return MKart(
+      padding: EdgeInsets.zero,
+      onTap: () => _detay(m),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        // üst renk şerit
+        Container(height: 5, decoration: BoxDecoration(color: renk, borderRadius: const BorderRadius.vertical(top: Radius.circular(13)))),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 11, 14, 11),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Expanded(
+                  child: Text(
+                    m['ad'].toString(),
+                    style: TextStyle(color: t.ink, fontSize: 15, fontWeight: FontWeight.bold),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (kritik) ...[const SizedBox(width: 6), Icon(Icons.warning_amber_rounded, color: renk, size: 18)],
+              ]),
+              const SizedBox(height: 2),
+              Row(children: [
+                Expanded(
+                  child: Text(m['kategori']?.toString() ?? '', style: TextStyle(color: t.sub, fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis),
+                ),
+                MRozet(_durumMetin(renk), renk),
+              ]),
+              const Spacer(),
+              _mSatir(t, 'Kalan', '${_mik(mevcut)} ${m['birim']}', renk),
+              _mSatir(t, 'Kritik', '${_mik(_n(m['kritik_stok']))} ${m['birim']}', t.sub),
+              _mSatir(t, 'Değer', _tl(m['deger']), t.sub),
+            ]),
+          ),
+        ),
+      ]),
+    );
+  }
+
+  Widget _mSatir(TemaProvider t, String etiket, String deger, Color degerRenk) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 1.5),
+        child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Text(etiket, style: TextStyle(color: t.sub, fontSize: 12)),
+          Text(deger, style: TextStyle(color: degerRenk, fontSize: 12.5, fontWeight: FontWeight.w700)),
+        ]),
+      );
 
   Widget _ozetKart() => Container(
         padding: const EdgeInsets.all(16),

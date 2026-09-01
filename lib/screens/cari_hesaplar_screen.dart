@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
+import '../providers/tema_provider.dart';
 import '../services/api.dart';
+import '../responsive.dart';
+import '../ui/masaustu_kit.dart';
 
 /// Cari / Açık Hesap ("bana yazın") — hesaplar, bakiye, hareketler, tahsilat.
 /// secmeMod=true ise: açık hesapla masa kapatırken cari SEÇİCİ olarak kullanılır (dokununca pop).
@@ -108,6 +111,7 @@ class _CariHesaplarScreenState extends State<CariHesaplarScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (genisMi(context)) return _masaustu(context);
     return Scaffold(
       backgroundColor: _bg,
       appBar: AppBar(
@@ -145,6 +149,91 @@ class _CariHesaplarScreenState extends State<CariHesaplarScreen> {
               ]),
             ),
     );
+  }
+
+  // ---- MASAÜSTÜ (PC/tablet) görünümü: tema-duyarlı gece/gündüz ----
+  Widget _masaustu(BuildContext context) {
+    final t = context.watch<TemaProvider>();
+    return MasaustuSayfa(
+      baslik: widget.secmeMod ? 'Cari Seç' : 'Cari / Açık Hesaplar',
+      ikon: Icons.account_balance_wallet_outlined,
+      altBaslik: '${cariler.length} cari hesap',
+      araclar: [
+        MButon('Yeni Cari', t.mor1, _yeniCari, ikon: Icons.person_add_alt),
+      ],
+      govde: loading
+          ? Center(child: CircularProgressIndicator(color: t.mor1))
+          : RefreshIndicator(
+              onRefresh: _yukle,
+              color: t.mor1,
+              backgroundColor: t.card,
+              child: ListView(padding: const EdgeInsets.all(24), children: [
+                if (!widget.secmeMod) ...[
+                  MIstatKart(
+                    baslik: 'Toplam Açık Alacak',
+                    renk: t.mor1,
+                    buyukDeger: _tl(toplamAlacak),
+                    satirlar: [MIstatSatir('Cari hesap adedi', '${cariler.length}')],
+                  ),
+                  const SizedBox(height: 20),
+                ],
+                cariler.isEmpty
+                    ? MKart(child: Text('Cari hesap yok.', style: TextStyle(color: t.sub)))
+                    : MTablo(
+                        sutunlar: const [
+                          MSutun('Cari', flex: 34),
+                          MSutun('Tip', flex: 16),
+                          MSutun('Bakiye', flex: 22, hiza: TextAlign.right),
+                          MSutun('', flex: 14, hiza: TextAlign.right),
+                        ],
+                        satirlar: [
+                          for (final c in cariler) _masaustuSatir(t, c as Map),
+                        ],
+                      ),
+                const SizedBox(height: 40),
+              ]),
+            ),
+    );
+  }
+
+  List<Widget> _masaustuSatir(TemaProvider t, Map c) {
+    final tip = c['tip'].toString();
+    final renk = _tipRenk(tip);
+    final bakiye = _n(c['bakiye']);
+    final ad = c['ad'].toString();
+    void ac() async {
+      if (widget.secmeMod) {
+        Navigator.of(context).pop({'id': c['id'], 'ad': c['ad']});
+      } else {
+        await Navigator.of(context).push(MaterialPageRoute(builder: (_) => _CariDetayScreen(cariId: _n(c['id']).toInt(), ad: ad)));
+        _yukle();
+      }
+    }
+    return [
+      // Cari: avatar baş harf + ad
+      GestureDetector(
+        onTap: ac,
+        behavior: HitTestBehavior.opaque,
+        child: Row(children: [
+          CircleAvatar(
+            radius: 15,
+            backgroundColor: renk.withValues(alpha: 0.22),
+            child: Text(ad.isNotEmpty ? ad.substring(0, 1).toUpperCase() : '?', style: TextStyle(color: renk, fontWeight: FontWeight.bold, fontSize: 13)),
+          ),
+          const SizedBox(width: 10),
+          Expanded(child: Text(ad, style: TextStyle(color: t.ink, fontSize: 13.5, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
+        ]),
+      ),
+      // Tip rozeti
+      Align(alignment: Alignment.centerLeft, child: MRozet(_tipAd(tip), renk)),
+      // Bakiye (borç kırmızı / temiz yeşil)
+      Text(_tl(bakiye), textAlign: TextAlign.right, style: TextStyle(color: bakiye > 0 ? t.kirmizi : t.yesil, fontSize: 13.5, fontWeight: FontWeight.bold)),
+      // Detay / Seç butonu
+      Align(
+        alignment: Alignment.centerRight,
+        child: MButon(widget.secmeMod ? 'Seç' : 'Detay', t.sub2, ac, dolu: false, ikon: widget.secmeMod ? Icons.check : Icons.chevron_right),
+      ),
+    ];
   }
 
   Widget _cariKart(Map c) {

@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
+import '../providers/tema_provider.dart';
 import '../services/api.dart';
+import '../responsive.dart';
+import '../ui/masaustu_kit.dart';
 import 'z_raporu_screen.dart';
 import 'hareketler_screen.dart';
 
@@ -82,6 +85,8 @@ class _RaporlarScreenState extends State<RaporlarScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (genisMi(context)) return _masaustu(context);
+
     final top = (data?['top'] as List?) ?? [];
     final personel = (data?['personel'] as List?) ?? [];
     final odeme = (data?['odeme'] as List?) ?? [];
@@ -125,6 +130,127 @@ class _RaporlarScreenState extends State<RaporlarScreen> {
                 ],
               ),
             ),
+    );
+  }
+
+  // ===================== MASAÜSTÜ (PC/tablet) görünüm =====================
+
+  Widget _masaustu(BuildContext context) {
+    final t = context.watch<TemaProvider>();
+    final top = (data?['top'] as List?) ?? [];
+    final personel = (data?['personel'] as List?) ?? [];
+    final odeme = (data?['odeme'] as List?) ?? [];
+
+    return MasaustuSayfa(
+      baslik: 'Raporlar',
+      ikon: Icons.bar_chart_outlined,
+      altBaslik: 'Son 30 gün',
+      araclar: [
+        MButon('Gün Sonu Z Raporu', t.mavi,
+            () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ZRaporuScreen())),
+            ikon: Icons.receipt_long),
+        const SizedBox(width: 8),
+        MButon('Aktivite Log', t.mor1,
+            () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const HareketlerScreen())),
+            dolu: false, ikon: Icons.history),
+      ],
+      govde: loading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _yukle,
+              child: ListView(
+                padding: const EdgeInsets.all(24),
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: _mBolum('🔥 En Çok Satan', t.kirmizi, _mEnCokSatan(top))),
+                      const SizedBox(width: 20),
+                      Expanded(child: _mBolum('👤 Personel Satış', t.mavi, _mPersonel(personel))),
+                      const SizedBox(width: 20),
+                      Expanded(child: _mBolum('💳 Ödeme Tipleri', t.yesil, _mOdeme(odeme))),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+    );
+  }
+
+  Widget _mBolum(String baslik, Color renk, Widget icerik) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          MBolumBaslik(baslik, renk: renk),
+          MKart(child: icerik),
+        ],
+      );
+
+  Widget _mBos(BuildContext context) {
+    final t = context.watch<TemaProvider>();
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 18),
+      child: Center(child: Text('Kayıt yok', style: TextStyle(color: t.sub, fontSize: 13))),
+    );
+  }
+
+  Text _mHucre(String s, Color renk, {FontWeight w = FontWeight.w500}) =>
+      Text(s, style: TextStyle(color: renk, fontSize: 13, fontWeight: w), overflow: TextOverflow.ellipsis);
+
+  Widget _mEnCokSatan(List top) {
+    if (top.isEmpty) return _mBos(context);
+    final t = context.read<TemaProvider>();
+    return MTablo(
+      sutunlar: const [
+        MSutun('Ürün', flex: 20),
+        MSutun('Adet', flex: 8, hiza: TextAlign.right),
+        MSutun('Ciro', flex: 12, hiza: TextAlign.right),
+      ],
+      satirlar: [
+        for (int i = 0; i < top.length; i++)
+          [
+            _mHucre('${i + 1}. ${(top[i] as Map)['urun_adi']}', t.ink, w: FontWeight.w600),
+            _mHucre('${_n((top[i] as Map)['adet']).round()}', t.sub2),
+            _mHucre(_p(_n((top[i] as Map)['ciro'])), t.yesil, w: FontWeight.bold),
+          ],
+      ],
+    );
+  }
+
+  Widget _mPersonel(List personel) {
+    if (personel.isEmpty) return _mBos(context);
+    final t = context.read<TemaProvider>();
+    return MTablo(
+      sutunlar: const [
+        MSutun('Personel', flex: 18),
+        MSutun('Adisyon', flex: 10, hiza: TextAlign.right),
+        MSutun('Ciro', flex: 12, hiza: TextAlign.right),
+      ],
+      satirlar: [
+        for (final p in personel)
+          [
+            _mHucre((p as Map)['ad'].toString(), t.ink, w: FontWeight.w600),
+            _mHucre('${_n(p['adisyon']).round()}', t.sub2),
+            _mHucre(_p(_n(p['ciro'])), t.mavi, w: FontWeight.bold),
+          ],
+      ],
+    );
+  }
+
+  Widget _mOdeme(List odeme) {
+    if (odeme.isEmpty) return _mBos(context);
+    final t = context.read<TemaProvider>();
+    return MTablo(
+      sutunlar: const [
+        MSutun('Tip', flex: 16),
+        MSutun('Tutar', flex: 12, hiza: TextAlign.right),
+      ],
+      satirlar: [
+        for (final o in odeme)
+          [
+            _mHucre((o as Map)['tip'].toString().replaceAll('_', ' '), t.ink, w: FontWeight.w600),
+            _mHucre(_p(_n(o['t'])), t.yesil, w: FontWeight.bold),
+          ],
+      ],
     );
   }
 }

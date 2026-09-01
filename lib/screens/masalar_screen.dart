@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
+import '../responsive.dart';
 import '../services/api.dart';
 import 'detay_screen.dart';
 
@@ -205,9 +206,13 @@ class _MasalarScreenState extends State<MasalarScreen> {
                 child: RefreshIndicator(
                   onRefresh: _yukle,
                   child: GridView.builder(
-                    padding: const EdgeInsets.all(16),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3, mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: 1.0),
+                    padding: EdgeInsets.all(genisMi(context) ? 24 : 16),
+                    // Genis ekran: sabit 3 sutun yerine ekrani dolduran ~180px kutular (6-8 sutun)
+                    gridDelegate: genisMi(context)
+                        ? const SliverGridDelegateWithMaxCrossAxisExtent(
+                            maxCrossAxisExtent: 190, mainAxisSpacing: 12, crossAxisSpacing: 12, childAspectRatio: 1.0)
+                        : const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3, mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: 1.0),
                     itemCount: aktifMasalar.length,
                     itemBuilder: (context, i) => _masaHucre(aktifMasalar[i] as Map),
                   ),

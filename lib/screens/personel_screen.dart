@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
+import '../providers/tema_provider.dart';
+import '../responsive.dart';
+import '../ui/masaustu_kit.dart';
 import '../services/api.dart';
 import 'personel_yetki_duzenle_screen.dart';
 
@@ -103,6 +106,7 @@ class _PersonelScreenState extends State<PersonelScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (genisMi(context)) return _masaustu(context);
     final aktifler = personeller.where((p) => _n((p as Map)['aktif']) == 1).toList();
     final pasifler = personeller.where((p) => _n((p as Map)['aktif']) != 1).toList();
     return Scaffold(
@@ -148,6 +152,157 @@ class _PersonelScreenState extends State<PersonelScreen> {
                     ),
                   ),
                 ]),
+    );
+  }
+
+  // ==========================================================================
+  // MASAÜSTÜ (PC/tablet) — role göre gruplu kart ızgarası, gece/gündüz temalı
+  // ==========================================================================
+
+  // rol -> (grup adı, grup sırası)
+  static const Map<String, String> _rolGrup = {
+    'sahip': 'Yöneticiler',
+    'mudur': 'Yöneticiler',
+    'garson': 'Garsonlar',
+    'mutfak': 'Mutfak / Ustalar',
+    'usta': 'Mutfak / Ustalar',
+    'kasa': 'Kasiyerler',
+  };
+  static const List<String> _grupSira = ['Yöneticiler', 'Garsonlar', 'Mutfak / Ustalar', 'Kasiyerler', 'Diğer'];
+
+  String _grupAd(String rol) => _rolGrup[rol] ?? 'Diğer';
+
+  Color _grupRenk(String grup) {
+    switch (grup) {
+      case 'Yöneticiler': return _mor1;
+      case 'Garsonlar': return _yesil;
+      case 'Mutfak / Ustalar': return _turuncu;
+      case 'Kasiyerler': return _mavi;
+      default: return const Color(0xFF64748B);
+    }
+  }
+
+  Widget _masaustu(BuildContext context) {
+    final t = context.watch<TemaProvider>();
+    return MasaustuSayfa(
+      baslik: 'Personel & Maaş',
+      ikon: Icons.badge_outlined,
+      araclar: [
+        IconButton(onPressed: () => _ayDegis(-1), icon: Icon(Icons.chevron_left, color: t.sub2), tooltip: 'Önceki ay'),
+        Text(_ayMetin, style: TextStyle(color: t.ink, fontWeight: FontWeight.bold, fontSize: 14)),
+        IconButton(onPressed: () => _ayDegis(1), icon: Icon(Icons.chevron_right, color: t.sub2), tooltip: 'Sonraki ay'),
+        if (duzenleyebilir) ...[
+          const SizedBox(width: 8),
+          MButon('Personel Ekle', t.mor1, _ekle, ikon: Icons.person_add_alt),
+        ],
+      ],
+      govde: loading
+          ? Center(child: CircularProgressIndicator(color: t.mor1))
+          : hata != null
+              ? Center(child: Text(hata!, style: TextStyle(color: t.kirmizi)))
+              : RefreshIndicator(
+                  onRefresh: _yukle,
+                  color: t.mor1,
+                  backgroundColor: t.card,
+                  child: _masaustuGovde(context, t),
+                ),
+    );
+  }
+
+  Widget _masaustuGovde(BuildContext context, TemaProvider t) {
+    // rol'e göre grupla, grupları sabit sırayla göster
+    final Map<String, List<Map>> gruplar = {};
+    for (final p in personeller) {
+      final m = p as Map;
+      gruplar.putIfAbsent(_grupAd(m['rol'].toString()), () => []).add(m);
+    }
+    final siraliGruplar = _grupSira.where((g) => gruplar.containsKey(g)).toList();
+
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        _masaustuOzet(t),
+        const SizedBox(height: 20),
+        if (personeller.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 40),
+            child: Center(child: Text('Personel yok.', style: TextStyle(color: t.sub, fontSize: 14))),
+          ),
+        for (final g in siraliGruplar) ...[
+          MBolumBaslik(g, renk: _grupRenk(g), sayi: gruplar[g]!.length),
+          const SizedBox(height: 4),
+          LayoutBuilder(builder: (ctx, box) {
+            final sutun = box.maxWidth >= 1400 ? 4 : 3;
+            return GridView.count(
+              crossAxisCount: sutun,
+              childAspectRatio: 2.4,
+              crossAxisSpacing: 14,
+              mainAxisSpacing: 14,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              children: [for (final p in gruplar[g]!) _masaustuKart(t, p)],
+            );
+          }),
+          const SizedBox(height: 20),
+        ],
+      ],
+    );
+  }
+
+  Widget _masaustuOzet(TemaProvider t) => MIstatKart(
+        baslik: 'Bu Ay Personel Gideri',
+        renk: t.mor1,
+        buyukDeger: _tl(_n(ozet['maas']) + _n(ozet['prim'])),
+        satirlar: [
+          MIstatSatir('Maaş', _tl(ozet['maas'])),
+          MIstatSatir('Prim', _tl(ozet['prim']), renk: t.yesil),
+          MIstatSatir('Ödenen', _tl(ozet['odenen'])),
+          MIstatSatir('Kalan', _tl(ozet['net_kalan']), renk: t.amber),
+        ],
+      );
+
+  Widget _masaustuKart(TemaProvider t, Map p) {
+    final rol = p['rol'].toString();
+    final renk = _rolRenk(rol);
+    final net = _n(p['net']);
+    final aktif = _n(p['aktif']) == 1;
+    final ad = p['ad'].toString();
+    return Opacity(
+      opacity: aktif ? 1 : 0.55,
+      child: MKart(
+        onTap: () => _ac(p),
+        child: Row(children: [
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: renk.withValues(alpha: 0.18),
+            child: Text(ad.characters.first.toUpperCase(), style: TextStyle(color: renk, fontWeight: FontWeight.bold, fontSize: 20)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+              Text(ad, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.ink, fontWeight: FontWeight.bold, fontSize: 15)),
+              const SizedBox(height: 6),
+              Row(children: [
+                MRozet(_rolAd(rol), renk),
+                if (!aktif) ...[const SizedBox(width: 6), MRozet('Pasif', t.sub)],
+              ]),
+              const SizedBox(height: 6),
+              Row(children: [
+                Text('Maaş ${_tl(p['maas'])}', style: TextStyle(color: t.sub, fontSize: 12)),
+                if (_n(p['prim_hesap']) > 0) ...[
+                  const SizedBox(width: 8),
+                  Text('+prim ${_tl(p['prim_hesap'])}', style: TextStyle(color: t.yesil, fontSize: 12)),
+                ],
+              ]),
+            ]),
+          ),
+          const SizedBox(width: 8),
+          Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.end, children: [
+            Text(_tl(net), style: TextStyle(color: net > 0 ? t.ink : t.sub, fontWeight: FontWeight.bold, fontSize: 16)),
+            Text('kalan', style: TextStyle(color: t.sub, fontSize: 10)),
+          ]),
+        ]),
+      ),
     );
   }
 
