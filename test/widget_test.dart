@@ -12,7 +12,7 @@ void main() {
         child: const MaterialApp(home: LoginScreen()),
       ),
     );
-    expect(find.text('RestoOS Patron'), findsOneWidget);
+    expect(find.text('ResteOS Patron'), findsOneWidget);
     expect(find.text('Giriş'), findsOneWidget);
   });
 }
