@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
 import '../providers/tema_provider.dart';
+import '../responsive.dart';
 import '../services/api.dart';
 import 'detay_screen.dart';
 import 'asistan_screen.dart';
@@ -242,13 +243,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
             icon: Icon(_t.koyu ? Icons.light_mode : Icons.dark_mode, color: _t.gold, size: 23),
           ),
           _bildirimCani(bildirimler),
-          Builder(
-            builder: (ctx) => IconButton(
-              tooltip: 'Menü',
-              onPressed: () => Scaffold.of(ctx).openDrawer(),
-              icon: Icon(Icons.menu, color: _sub2, size: 24),
+          // Masaustunde navigasyon sol sabit menude; hamburger sadece telefonda.
+          if (!genisMi(context))
+            Builder(
+              builder: (ctx) => IconButton(
+                tooltip: 'Menü',
+                onPressed: () => Scaffold.of(ctx).openDrawer(),
+                icon: Icon(Icons.menu, color: _sub2, size: 24),
+              ),
             ),
-          ),
         ],
       ),
       body: data == null
@@ -295,7 +298,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final maliyet = _n(d['maliyet']);
     final maliyetYuzde = _n(d['maliyetYuzde']).toInt();
 
-    return Center(
+    return LayoutBuilder(builder: (ctx, cons) {
+      // Genis icerik alani -> masaustu cok-sutunlu pano; dar -> telefon kolonu.
+      if (cons.maxWidth >= 900) {
+        return _genisPano(
+          w: cons.maxWidth, d: d, ciro: ciro, ciroYuzde: ciroYuzde,
+          info: info, comp: comp, kayip: kayip, odeme: odeme, servis: servis,
+          gunluk: gunluk, urunler: urunler, maliyet: maliyet, maliyetYuzde: maliyetYuzde,
+        );
+      }
+      return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 600),
         child: ListView(
@@ -371,6 +383,95 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ],
         ),
       ),
+    );
+    });
+  }
+
+  // ===== MASAUSTU: cok sutunlu pano (genis ekran) — ayni kartlar, ekrani dolduran yerlesim =====
+  Widget _genisPano({
+    required double w,
+    required Map d,
+    required num ciro,
+    required double? ciroYuzde,
+    required Map info,
+    required Map comp,
+    required Map kayip,
+    required List odeme,
+    required List servis,
+    required List gunluk,
+    required List urunler,
+    required num maliyet,
+    required int maliyetYuzde,
+  }) {
+    final kayipCols = w >= 1400 ? 6 : 3;
+    final kayipOran = kayipCols == 6 ? 1.55 : 2.6;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(22, 16, 22, 28),
+      children: [
+        // Donem secici (sola yasli, dar)
+        Align(
+          alignment: Alignment.centerLeft,
+          child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 520), child: _donemSecici()),
+        ),
+        const SizedBox(height: 18),
+        // Ust bant: Ciro hero (sol genis) + Acik/Kapanan + Maliyet (sag kolon)
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(flex: 6, child: _ciroHero(ciro, ciroYuzde, info, comp)),
+          const SizedBox(width: 16),
+          Expanded(flex: 4, child: Column(children: [
+            Row(children: [
+              Expanded(child: GestureDetector(
+                onTap: () => _detayAc(tip: 'acik', baslik: 'Açık Adisyonlar'),
+                child: _folioKart('Açık Adisyon', _tam(_n(d['acikTutar'])), '${d['acikAdet'] ?? 0} folyo ›', _mavi, false),
+              )),
+              const SizedBox(width: 12),
+              Expanded(child: GestureDetector(
+                onTap: () => _detayAc(tip: 'kapali', baslik: 'Kapanan Adisyonlar'),
+                child: _folioKart('Kapanan', _k(_n(d['kapaliTutar'])), '${d['kapaliAdet'] ?? 0} folyo ›', _yesil, true),
+              )),
+            ]),
+            const SizedBox(height: 12),
+            GestureDetector(
+              onTap: () => _detayAc(tip: 'maliyet', baslik: 'Food-Cost'),
+              child: _maliyetKart(maliyet, maliyetYuzde, ciro),
+            ),
+          ])),
+        ]),
+        const SizedBox(height: 20),
+        _baslik('🎯 Kayıp Radarı', 'Ciroya oranla — sızıntı takibi'),
+        const SizedBox(height: 10),
+        GridView.count(
+          crossAxisCount: kayipCols,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          childAspectRatio: kayipOran,
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          children: [
+            _kayipTap('iskonto', _kayipKart('İskonto', kayip['iskonto'], Icons.local_offer_outlined)),
+            _kayipTap('ikram', _kayipKart('İkram', kayip['ikram'], Icons.card_giftcard)),
+            _kayipTap('silinen', _kayipKart('Silinen Ürün', kayip['silinen'], Icons.remove_circle_outline)),
+            _kayipTap('iptal', _kayipKart('İptal Adisyon', kayip['iptal'], Icons.delete_outline)),
+            _kayipTap('fire', _kayipKart('Fire / Zayi', kayip['fire'], Icons.delete_sweep_outlined)),
+            _kayipTap('odenmez', _kayipKart('Tahsil Edilemeyen', kayip['odenmez'], Icons.money_off)),
+          ],
+        ),
+        const SizedBox(height: 20),
+        // Grafik (sol genis) + Odeme/Servis (sag kolon)
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(flex: 6, child: _grafikKart(gunluk)),
+          const SizedBox(width: 16),
+          Expanded(flex: 4, child: Column(children: [
+            _dagilimKart('💳 Ödeme Tipi', odeme, 'tip', ciro),
+            const SizedBox(height: 12),
+            _dagilimKart('🍽️ Servis Tipi', servis, 'ad', ciro),
+          ])),
+        ]),
+        const SizedBox(height: 20),
+        _salesCostsKart(urunler),
+        const SizedBox(height: 10),
+        Center(child: Text('Tek bakışta, anlık ve doğru. · ResteOS', style: TextStyle(color: _sub, fontSize: 11))),
+      ],
     );
   }
 

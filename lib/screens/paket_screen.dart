@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
+import '../responsive.dart';
 import '../services/api.dart';
+import 'fis.dart';
 
 class PaketScreen extends StatefulWidget {
   const PaketScreen({super.key});
@@ -110,6 +112,10 @@ class _PaketScreenState extends State<PaketScreen> {
         elevation: 0.5,
         title: Text('Paket Siparişler  (${siparisler.length})',
             style: const TextStyle(color: Color(0xFF0F172A), fontSize: 18, fontWeight: FontWeight.bold)),
+        actions: [
+          IconButton(onPressed: _yukle, tooltip: 'Yenile', icon: const Icon(Icons.refresh, color: Color(0xFF64748B))),
+          const SizedBox(width: 6),
+        ],
       ),
       body: loading
           ? const Center(child: CircularProgressIndicator())
@@ -120,6 +126,8 @@ class _PaketScreenState extends State<PaketScreen> {
                       SizedBox(height: 120),
                       Center(child: Text('Şu an aktif paket sipariş yok.', style: TextStyle(color: Color(0xFF94A3B8)))),
                     ])
+                  : genisMi(context)
+                  ? _masaustuTablo()
                   : ListView.separated(
                       padding: const EdgeInsets.all(16),
                       itemCount: siparisler.length,
@@ -223,6 +231,233 @@ class _PaketScreenState extends State<PaketScreen> {
                     ),
             ),
     );
+  }
+
+  // ===================== MASAUSTU: gruplu sipariş tablosu (SepetTakip tarzı) =====================
+  static const int _fPlat = 20, _fMus = 24, _fAdr = 30, _fTut = 16, _fOde = 26, _fSure = 15, _fIsl = 52;
+
+  Widget _masaustuTablo() {
+    final gruplar = [
+      {'baslik': 'Yeni Sipariş', 'durumlar': const ['hazirlaniyor', '', 'yeni'], 'renk': const Color(0xFF2563EB)},
+      {'baslik': 'Yola Çıkarılması Gereken', 'durumlar': const ['hazir'], 'renk': const Color(0xFFEA580C)},
+      {'baslik': 'Teslim Edilmesi Gereken', 'durumlar': const ['yolda'], 'renk': const Color(0xFF16A34A)},
+    ];
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+      children: [
+        for (final g in gruplar)
+          ..._grupBolum(g['baslik'] as String, g['renk'] as Color, (g['durumlar'] as List).cast<String>()),
+      ],
+    );
+  }
+
+  List<Widget> _grupBolum(String baslik, Color renk, List<String> durumlar) {
+    final list = siparisler.where((s) {
+      final d = (s['teslimat_durumu'] ?? '').toString();
+      return durumlar.contains(d);
+    }).toList();
+    if (list.isEmpty) return [];
+    return [
+      Padding(
+        padding: const EdgeInsets.only(top: 4, bottom: 8),
+        child: Row(children: [
+          Container(width: 4, height: 18, decoration: BoxDecoration(color: renk, borderRadius: BorderRadius.circular(2))),
+          const SizedBox(width: 8),
+          Text(baslik, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(color: renk.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
+            child: Text('${list.length}', style: TextStyle(color: renk, fontSize: 12, fontWeight: FontWeight.bold)),
+          ),
+        ]),
+      ),
+      Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Column(children: [
+          _baslikSatiri(),
+          for (int i = 0; i < list.length; i++) _dataSatiri(list[i], i == list.length - 1),
+        ]),
+      ),
+      const SizedBox(height: 18),
+    ];
+  }
+
+  Widget _baslikSatiri() {
+    Widget h(String t, int flex, {TextAlign a = TextAlign.left}) =>
+        Expanded(flex: flex, child: Text(t, textAlign: a, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF64748B))));
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      decoration: const BoxDecoration(color: Color(0xFFF8FAFC), borderRadius: BorderRadius.vertical(top: Radius.circular(12))),
+      child: Row(children: [
+        h('Platform', _fPlat),
+        h('Müşteri', _fMus),
+        h('Adres', _fAdr),
+        h('Tutar', _fTut, a: TextAlign.right),
+        h('Ödeme', _fOde),
+        h('Süre', _fSure),
+        h('İşlemler', _fIsl, a: TextAlign.right),
+      ]),
+    );
+  }
+
+  Widget _dataSatiri(dynamic s, bool son) {
+    final plat = (s['platform'] ?? '-').toString();
+    final dk = _n(s['gecen_dk']).toInt();
+    final durum = (s['teslimat_durumu'] ?? '').toString();
+    final id = _n(s['id']).toInt();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(border: son ? null : const Border(bottom: BorderSide(color: Color(0xFFEEF2F7)))),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+        Expanded(
+          flex: _fPlat,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(color: _platRenk(plat), borderRadius: BorderRadius.circular(6)),
+              child: Text(plat.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ),
+        Expanded(
+          flex: _fMus,
+          child: Text(s['musteri']?.toString() ?? 'Müşteri', overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF0F172A))),
+        ),
+        Expanded(
+          flex: _fAdr,
+          child: Text((s['teslimat_adres'] ?? '-').toString(), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+        ),
+        Expanded(
+          flex: _fTut,
+          child: Text('${_f.format(_n(s['toplam']).round())}TL', textAlign: TextAlign.right, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+        ),
+        Expanded(
+          flex: _fOde,
+          child: Align(alignment: Alignment.centerLeft, child: _odemeRozet(s['odeme_yontemi']?.toString())),
+        ),
+        Expanded(
+          flex: _fSure,
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(Icons.schedule, size: 12, color: _sureRenk(dk)),
+            const SizedBox(width: 3),
+            Flexible(child: Text(s['gecen_metin']?.toString() ?? '$dk dk', overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _sureRenk(dk)))),
+          ]),
+        ),
+        Expanded(
+          flex: _fIsl,
+          child: Wrap(alignment: WrapAlignment.end, spacing: 6, runSpacing: 6, children: _aksiyonButonlari(id, durum)),
+        ),
+      ]),
+    );
+  }
+
+  List<Widget> _aksiyonButonlari(int id, String durum) {
+    final btns = <Widget>[];
+    if (durum == 'hazirlaniyor' || durum == '' || durum == 'yeni') {
+      btns.add(_btn('Kabul Et', const Color(0xFF16A34A), () => _aksiyon(id, 'kabul')));
+      btns.add(_btn('İptal', const Color(0xFFDC2626), () => _aksiyonOnay(id), dolu: false));
+    } else if (durum == 'hazir') {
+      btns.add(_btn('Yola Çıkar', const Color(0xFFEA580C), () => _aksiyon(id, 'yola')));
+      btns.add(_btn('İptal', const Color(0xFFDC2626), () => _aksiyonOnay(id), dolu: false));
+    } else if (durum == 'yolda') {
+      btns.add(_btn('Teslim Et', const Color(0xFF16A34A), () => _aksiyon(id, 'teslim')));
+    }
+    btns.add(_btn('Detay', const Color(0xFF64748B), () => _detayAc(id), dolu: false));
+    btns.add(_btn('Yazdır', const Color(0xFF64748B), () => _yazdir(id), dolu: false));
+    return btns;
+  }
+
+  Widget _btn(String label, Color renk, VoidCallback onTap, {bool dolu = true}) {
+    return Material(
+      color: dolu ? renk : Colors.white,
+      borderRadius: BorderRadius.circular(7),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(7),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(7), border: dolu ? null : Border.all(color: const Color(0xFFCBD5E1))),
+          child: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: dolu ? Colors.white : const Color(0xFF475569))),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _aksiyon(int id, String aksiyon) async {
+    final auth = context.read<AuthProvider>();
+    try {
+      final res = await Api.paketDurum(auth.token!, id, aksiyon);
+      if (!mounted) return;
+      if (res['ok'] == 1) {
+        const adlar = {'kabul': 'Sipariş kabul edildi', 'yola': 'Yola çıkarıldı', 'teslim': 'Teslim edildi', 'iptal': 'Sipariş iptal edildi'};
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(adlar[aksiyon] ?? 'Güncellendi'),
+          backgroundColor: aksiyon == 'iptal' ? const Color(0xFFDC2626) : const Color(0xFF16A34A),
+          duration: const Duration(seconds: 2),
+        ));
+        _yukle();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('İşlem başarısız'), backgroundColor: Color(0xFFDC2626)));
+      }
+    } on ApiYetkiHatasi {
+      if (mounted) context.read<AuthProvider>().cikis();
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bağlantı hatası'), backgroundColor: Color(0xFFDC2626)));
+    }
+  }
+
+  Future<void> _aksiyonOnay(int id) async {
+    final onay = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('Siparişi iptal et'),
+        content: const Text('Bu paket siparişi iptal edilecek. Emin misiniz?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Vazgeç')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFDC2626)),
+            onPressed: () => Navigator.pop(c, true),
+            child: const Text('İptal Et'),
+          ),
+        ],
+      ),
+    );
+    if (onay == true) _aksiyon(id, 'iptal');
+  }
+
+  Future<void> _yazdir(int id) async {
+    final auth = context.read<AuthProvider>();
+    try {
+      final res = await Api.paketDetay(auth.token!, id);
+      final d = (res['siparis'] as Map?)?.cast<String, dynamic>();
+      if (d == null || !mounted) return;
+      final kalemler = ((d['kalemler'] as List?) ?? [])
+          .map((k) => {'adet': _n((k as Map)['adet']), 'ad': k['urun_adi'], 'tutar': _n(k['tutar'])})
+          .toList();
+      final no = d['platform_siparis_no']?.toString() ?? '';
+      await fisYazdir(context, {
+        'isletme': auth.sube ?? 'ResteOS',
+        'masa': 'PAKET · ${d['platform'] ?? ''}',
+        'adisyon_no': no.isNotEmpty ? no : id,
+        'garson': d['kurye'] ?? d['platform'] ?? '',
+        'tarih': d['acilis'] ?? '',
+        'telefon': d['telefon'] ?? '',
+        'adres': d['teslimat_adres'] ?? '',
+        'kalemler': kalemler,
+        'ara_toplam': _n(d['ara_toplam']),
+        'indirim': _n(d['indirim']),
+        'ikram': _n(d['ikram']),
+        'toplam': _n(d['toplam']),
+      });
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Yazdırma hatası')));
+    }
   }
 }
 
