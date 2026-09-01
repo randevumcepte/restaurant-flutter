@@ -42,10 +42,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
   static const _yesil = Color(0xFF10B981);
   static const _kirmizi = Color(0xFFF43F5E);
 
+  String? _qrMod;      // musteri QR menu varsayilan modu (koyu/acik)
+  bool _qrModMesgul = false;
+
   @override
   void initState() {
     super.initState();
     _yukle();
+    _qrModYukle();
+  }
+
+  Future<void> _qrModYukle() async {
+    final auth = context.read<AuthProvider>();
+    if (auth.token == null) return;
+    try {
+      final res = await Api.temaGetir(auth.token!);
+      if (mounted && res['ok'] == 1) setState(() => _qrMod = res['mod']?.toString() ?? 'koyu');
+    } catch (_) {}
+  }
+
+  Future<void> _qrModCevir() async {
+    if (_qrModMesgul) return;
+    final auth = context.read<AuthProvider>();
+    final yeni = _qrMod == 'acik' ? 'koyu' : 'acik';
+    setState(() { _qrMod = yeni; _qrModMesgul = true; });
+    try {
+      final res = await Api.temaMod(auth.token!, yeni);
+      if (!mounted) return;
+      setState(() => _qrModMesgul = false);
+      if (res['ok'] == 1) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(yeni == 'acik' ? '☀️ QR menü varsayılanı: Açık' : '🌙 QR menü varsayılanı: Koyu'),
+          backgroundColor: const Color(0xFF16A34A), duration: const Duration(seconds: 2)));
+      } else {
+        setState(() => _qrMod = yeni == 'acik' ? 'koyu' : 'acik');
+      }
+    } catch (_) {
+      if (mounted) setState(() { _qrModMesgul = false; _qrMod = yeni == 'acik' ? 'koyu' : 'acik'; });
+    }
   }
 
   num _n(dynamic v) => v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0);
@@ -228,6 +262,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
         actions: [
+          if ((auth.rol == 'sahip' || auth.rol == 'mudur') && _qrMod != null)
+            IconButton(
+              tooltip: _qrMod == 'acik' ? 'QR menü: Açık (koyuya çevir)' : 'QR menü: Koyu (açığa çevir)',
+              onPressed: _qrModMesgul ? null : _qrModCevir,
+              icon: Icon(_qrMod == 'acik' ? Icons.light_mode : Icons.dark_mode,
+                  color: const Color(0xFFF6CE63), size: 23),
+            ),
           _bildirimCani(bildirimler),
           Builder(
             builder: (ctx) => IconButton(
