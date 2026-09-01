@@ -218,7 +218,12 @@ class Api {
 
   // QR menu renk temasi (kartela)
   static Future<Map<String, dynamic>> temaGetir(String token) => _get('/api/patron/tema', token);
-  static Future<Map<String, dynamic>> temaKaydet(String token, String key) => _post('/api/patron/tema-kaydet', token, {'tema': key});
+  static Future<Map<String, dynamic>> temaKaydet(String token, String key, {String? renk, String? renk2}) {
+    final body = {'tema': key};
+    if (renk != null) body['renk'] = renk;
+    if (renk2 != null) body['renk2'] = renk2;
+    return _post('/api/patron/tema-kaydet', token, body);
+  }
 
   static Future<Map<String, dynamic>> urunKaydet(String token,
       {int? id, required String ad, String aciklama = '', required double fiyat, int kategoriId = 0, bool tukendi = false, bool aktif = true}) {
