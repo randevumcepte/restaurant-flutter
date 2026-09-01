@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
+import '../providers/tema_provider.dart';
 import '../services/api.dart';
 import 'detay_screen.dart';
 import 'asistan_screen.dart';
@@ -34,52 +35,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String period = 'haftalik';
   final _f = NumberFormat.decimalPattern('tr');
 
-  static const _bg = Color(0xFF0B1020); // koyu lacivert zemin (Kerzz BOSS gibi)
-  static const _card = Color(0xFF161C2E);
+  TemaProvider get _t => context.watch<TemaProvider>();
+  Color get _bg => _t.bg;
+  Color get _card => _t.card;
+  Color get _ink => _t.ink;
+  Color get _sub => _t.sub;
+  Color get _sub2 => _t.sub2;
+  Color get _line => _t.line;
+
   static const _mor1 = Color(0xFF7C3AED);
   static const _mor2 = Color(0xFF9D5DC8);
   static const _mavi = Color(0xFF4F46E5);
   static const _yesil = Color(0xFF10B981);
   static const _kirmizi = Color(0xFFF43F5E);
 
-  String? _qrMod;      // musteri QR menu varsayilan modu (koyu/acik)
-  bool _qrModMesgul = false;
-
   @override
   void initState() {
     super.initState();
     _yukle();
-    _qrModYukle();
-  }
-
-  Future<void> _qrModYukle() async {
-    final auth = context.read<AuthProvider>();
-    if (auth.token == null) return;
-    try {
-      final res = await Api.temaGetir(auth.token!);
-      if (mounted && res['ok'] == 1) setState(() => _qrMod = res['mod']?.toString() ?? 'koyu');
-    } catch (_) {}
-  }
-
-  Future<void> _qrModCevir() async {
-    if (_qrModMesgul) return;
-    final auth = context.read<AuthProvider>();
-    final yeni = _qrMod == 'acik' ? 'koyu' : 'acik';
-    setState(() { _qrMod = yeni; _qrModMesgul = true; });
-    try {
-      final res = await Api.temaMod(auth.token!, yeni);
-      if (!mounted) return;
-      setState(() => _qrModMesgul = false);
-      if (res['ok'] == 1) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(yeni == 'acik' ? '☀️ QR menü varsayılanı: Açık' : '🌙 QR menü varsayılanı: Koyu'),
-          backgroundColor: const Color(0xFF16A34A), duration: const Duration(seconds: 2)));
-      } else {
-        setState(() => _qrMod = yeni == 'acik' ? 'koyu' : 'acik');
-      }
-    } catch (_) {
-      if (mounted) setState(() { _qrModMesgul = false; _qrMod = yeni == 'acik' ? 'koyu' : 'acik'; });
-    }
   }
 
   num _n(dynamic v) => v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0);
@@ -175,10 +148,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
       Navigator.of(context).push(MaterialPageRoute(builder: (_) => ekran));
     }
 
-    Widget oge(IconData ikon, String baslik, VoidCallback onTap, {Color renk = const Color(0xFFE2E8F0)}) {
+    Widget oge(IconData ikon, String baslik, VoidCallback onTap, {Color? renk}) {
+      final r = renk ?? _ink;
       return ListTile(
-        leading: Icon(ikon, color: renk, size: 22),
-        title: Text(baslik, style: TextStyle(color: renk, fontSize: 15, fontWeight: FontWeight.w600)),
+        leading: Icon(ikon, color: r, size: 22),
+        title: Text(baslik, style: TextStyle(color: r, fontSize: 15, fontWeight: FontWeight.w600)),
         onTap: onTap,
         dense: true,
         visualDensity: const VisualDensity(vertical: -1),
@@ -216,7 +190,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               oge(Icons.auto_awesome, 'Patron Asistan', () => git(const AsistanScreen()), renk: const Color(0xFFC4B5FD)),
             ]),
           ),
-          const Divider(height: 1, color: Color(0xFF2D3752)),
+          Divider(height: 1, color: _line),
           oge(Icons.logout, 'Çıkış', () { Navigator.of(context).pop(); context.read<AuthProvider>().cikis(); }, renk: const Color(0xFFF87171)),
           const SizedBox(height: 8),
         ]),
@@ -245,7 +219,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       appBar: AppBar(
         backgroundColor: _bg,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Color(0xFF94A3B8)),
+        iconTheme: IconThemeData(color: _sub),
         automaticallyImplyLeading: false,
         title: Row(
           children: [
@@ -258,23 +232,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: const Text('ResteOS', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
             ),
             const SizedBox(width: 8),
-            Text(auth.sube ?? '', style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+            Text(auth.sube ?? '', style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.bold)),
           ],
         ),
         actions: [
-          if ((auth.rol == 'sahip' || auth.rol == 'mudur') && _qrMod != null)
-            IconButton(
-              tooltip: _qrMod == 'acik' ? 'QR menü: Açık (koyuya çevir)' : 'QR menü: Koyu (açığa çevir)',
-              onPressed: _qrModMesgul ? null : _qrModCevir,
-              icon: Icon(_qrMod == 'acik' ? Icons.light_mode : Icons.dark_mode,
-                  color: const Color(0xFFF6CE63), size: 23),
-            ),
+          IconButton(
+            tooltip: _t.koyu ? 'Açık moda geç' : 'Koyu moda geç',
+            onPressed: () => context.read<TemaProvider>().cevir(),
+            icon: Icon(_t.koyu ? Icons.light_mode : Icons.dark_mode, color: _t.gold, size: 23),
+          ),
           _bildirimCani(bildirimler),
           Builder(
             builder: (ctx) => IconButton(
               tooltip: 'Menü',
               onPressed: () => Scaffold.of(ctx).openDrawer(),
-              icon: const Icon(Icons.menu, color: Color(0xFFCBD5E1), size: 24),
+              icon: Icon(Icons.menu, color: _sub2, size: 24),
             ),
           ),
         ],
@@ -323,7 +295,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final maliyet = _n(d['maliyet']);
     final maliyetYuzde = _n(d['maliyetYuzde']).toInt();
 
-    return ListView(
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 600),
+        child: ListView(
       padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
       children: [
         _donemSecici(),
@@ -392,8 +367,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         // Sales & Costs (urun bazinda satis + maliyet)
         _salesCostsKart(urunler),
         const SizedBox(height: 8),
-        const Center(child: Text('Tek bakışta, anlık ve doğru. · AI çok yakında', style: TextStyle(color: Color(0xFF475569), fontSize: 11))),
+        Center(child: Text('Tek bakışta, anlık ve doğru. · AI çok yakında', style: TextStyle(color: _sub, fontSize: 11))),
       ],
+        ),
+      ),
     );
   }
 
@@ -419,7 +396,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Text(e.value,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                        color: aktif ? Colors.white : const Color(0xFF94A3B8),
+                        color: aktif ? Colors.white : _sub,
                         fontSize: 13,
                         fontWeight: aktif ? FontWeight.bold : FontWeight.w500)),
               ),
@@ -548,11 +525,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Row(children: [
           Container(width: 8, height: 8, decoration: BoxDecoration(color: renk, shape: BoxShape.circle)),
           const SizedBox(width: 6),
-          Text(baslik, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11, fontWeight: FontWeight.w600)),
+          Text(baslik, style: TextStyle(color: _sub, fontSize: 11, fontWeight: FontWeight.w600)),
         ]),
         const SizedBox(height: 8),
-        Text(deger, style: const TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.bold)),
-        Text(alt, style: const TextStyle(color: Color(0xFF64748B), fontSize: 11)),
+        Text(deger, style: TextStyle(color: _ink, fontSize: 19, fontWeight: FontWeight.bold)),
+        Text(alt, style: TextStyle(color: _sub, fontSize: 11)),
       ]),
     );
   }
@@ -565,10 +542,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Row(children: [
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('Toplam Maliyet (Food-Cost)', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11, fontWeight: FontWeight.w600)),
+            Text('Toplam Maliyet (Food-Cost)', style: TextStyle(color: _sub, fontSize: 11, fontWeight: FontWeight.w600)),
             const SizedBox(height: 6),
-            Text(_tam(maliyet), style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-            Text('Brüt kâr: ${_tam(ciro - maliyet)}', style: const TextStyle(color: Color(0xFF64748B), fontSize: 11)),
+            Text(_tam(maliyet), style: TextStyle(color: _ink, fontSize: 20, fontWeight: FontWeight.bold)),
+            Text('Brüt kâr: ${_tam(ciro - maliyet)}', style: TextStyle(color: _sub, fontSize: 11)),
           ]),
         ),
         SizedBox(
@@ -601,8 +578,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _baslik(String t, String alt) => Padding(
         padding: const EdgeInsets.only(left: 4),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(t, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
-          Text(alt, style: const TextStyle(color: Color(0xFF64748B), fontSize: 11)),
+          Text(t, style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.bold)),
+          Text(alt, style: TextStyle(color: _sub, fontSize: 11)),
         ]),
       );
 
@@ -625,19 +602,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Icon(ikon, size: 16, color: vurgu ? const Color(0xFFFCA5A5) : const Color(0xFF64748B)),
+          Icon(ikon, size: 16, color: vurgu ? const Color(0xFFFCA5A5) : _sub),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
                 color: (vurgu ? _kirmizi : const Color(0xFF334155)).withValues(alpha: 0.3), borderRadius: BorderRadius.circular(8)),
             child: Text('%${yuzde % 1 == 0 ? yuzde.toInt() : yuzde}',
-                style: TextStyle(color: vurgu ? const Color(0xFFFCA5A5) : const Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.bold)),
+                style: TextStyle(color: vurgu ? const Color(0xFFFCA5A5) : _sub, fontSize: 10, fontWeight: FontWeight.bold)),
           ),
         ]),
         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(_tam(tutar), style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(_tam(tutar), style: TextStyle(color: vurgu ? Colors.white : _ink, fontSize: 16, fontWeight: FontWeight.bold)),
           Text(adet != null ? '$baslik · ${_n(adet).toInt()} adet' : baslik,
-              style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
+              style: TextStyle(color: vurgu ? const Color(0xFFFCA5A5) : _sub, fontSize: 11)),
         ]),
       ]),
     );
@@ -649,10 +626,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(18)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(baslik, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+        Text(baslik, style: TextStyle(color: _ink, fontSize: 13, fontWeight: FontWeight.bold)),
         const SizedBox(height: 10),
         if (liste.isEmpty)
-          const Text('Kayıt yok', style: TextStyle(color: Color(0xFF64748B), fontSize: 12))
+          Text('Kayıt yok', style: TextStyle(color: _sub, fontSize: 12))
         else
           for (final e in liste.take(4)) _dagilimSatir((e as Map)[adKey]?.toString() ?? '-', _n(e['tutar']), _n(e['adet']).toInt(), toplam),
       ]),
@@ -665,8 +642,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       padding: const EdgeInsets.only(bottom: 9),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Flexible(child: Text(ad.toUpperCase(), overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 11, fontWeight: FontWeight.w600))),
-          Text(_k(tutar), style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+          Flexible(child: Text(ad.toUpperCase(), overflow: TextOverflow.ellipsis, style: TextStyle(color: _sub2, fontSize: 11, fontWeight: FontWeight.w600))),
+          Text(_k(tutar), style: TextStyle(color: _ink, fontSize: 11, fontWeight: FontWeight.bold)),
         ]),
         const SizedBox(height: 4),
         ClipRRect(
@@ -679,7 +656,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
         const SizedBox(height: 2),
-        Text('$adet işlem', style: const TextStyle(color: Color(0xFF64748B), fontSize: 9)),
+        Text('$adet işlem', style: TextStyle(color: _sub, fontSize: 9)),
       ]),
     );
   }
@@ -690,7 +667,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
       decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(18)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('📈 Son 10 Gün', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+        Text('📈 Son 10 Gün', style: TextStyle(color: _ink, fontSize: 13, fontWeight: FontWeight.bold)),
         const SizedBox(height: 14),
         SizedBox(
           height: 120,
@@ -706,7 +683,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 3),
                   child: Column(mainAxisAlignment: MainAxisAlignment.end, children: [
                     Text(v >= 1000 ? '${(v / 1000).toStringAsFixed(0)}K' : '${v.toInt()}',
-                        style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 8)),
+                        style: TextStyle(color: _sub, fontSize: 8)),
                     const SizedBox(height: 2),
                     // Asagidan yukselen animasyon (donem degisince/ilk yuklemede sifirdan)
                     TweenAnimationBuilder<double>(
@@ -723,7 +700,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(m['gun'].toString(), style: const TextStyle(color: Color(0xFF64748B), fontSize: 8)),
+                    Text(m['gun'].toString(), style: TextStyle(color: _sub, fontSize: 8)),
                   ]),
                 ),
               );
@@ -740,12 +717,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
       decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(18)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          const Text('🧾 Ürün Satış & Maliyet', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
-          const Text('maliyet %', style: TextStyle(color: Color(0xFF64748B), fontSize: 10)),
+          Text('🧾 Ürün Satış & Maliyet', style: TextStyle(color: _ink, fontSize: 13, fontWeight: FontWeight.bold)),
+          Text('maliyet %', style: TextStyle(color: _sub, fontSize: 10)),
         ]),
         const SizedBox(height: 10),
         if (urunler.isEmpty)
-          const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Text('Bu dönemde satış yok.', style: TextStyle(color: Color(0xFF64748B))))
+          Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Text('Bu dönemde satış yok.', style: TextStyle(color: _sub)))
         else
           for (final u in urunler.take(15))
             GestureDetector(
@@ -767,14 +744,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
           width: 40,
           padding: const EdgeInsets.symmetric(vertical: 2),
           decoration: BoxDecoration(color: const Color(0xFF243049), borderRadius: BorderRadius.circular(6)),
-          child: Text('${_n(u['adet']).toInt()}×', textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11, fontWeight: FontWeight.bold)),
+          child: Text('${_n(u['adet']).toInt()}×', textAlign: TextAlign.center, style: TextStyle(color: _sub, fontSize: 11, fontWeight: FontWeight.bold)),
         ),
         const SizedBox(width: 10),
-        Expanded(child: Text(u['ad'].toString(), overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 12))),
+        Expanded(child: Text(u['ad'].toString(), overflow: TextOverflow.ellipsis, style: TextStyle(color: _sub2, fontSize: 12))),
         const SizedBox(width: 8),
         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          Text(_k(_n(u['satis'])), style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-          Text('mlt ${_k(_n(u['maliyet']))}', style: const TextStyle(color: Color(0xFF64748B), fontSize: 9)),
+          Text(_k(_n(u['satis'])), style: TextStyle(color: _ink, fontSize: 12, fontWeight: FontWeight.bold)),
+          Text('mlt ${_k(_n(u['maliyet']))}', style: TextStyle(color: _sub, fontSize: 9)),
         ]),
         const SizedBox(width: 8),
         Container(
