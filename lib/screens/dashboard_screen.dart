@@ -15,6 +15,7 @@ import 'sebep_yonetimi_screen.dart';
 import 'menu_yonetimi_screen.dart';
 import 'ai_bildirim_screen.dart';
 import 'raporlar_screen.dart';
+import 'rezervasyon_screen.dart';
 
 /// Patron ana paneli — Kerzz BOSS yogunlugunda: tek ekranda her sey.
 /// Donem secici + karsilastirma + kayip radari + food-cost + odeme/servis dagilimi + 10 gunluk grafik.
@@ -171,6 +172,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               if (patron) oge(Icons.inventory_2_outlined, 'Stok & Satın Alma', () => git(const IsletmeHubScreen())),
               if (patron) oge(Icons.restaurant_menu, 'Menü Yönetimi', () => git(const MenuYonetimiScreen())),
               oge(Icons.account_balance_wallet_outlined, 'Cari / Açık Hesaplar', () => git(const CariHesaplarScreen())),
+              oge(Icons.event_available_outlined, 'Rezervasyonlar', () => git(const RezervasyonScreen())),
               if (patron) oge(Icons.badge_outlined, 'Personel & Maaş', () => git(const PersonelScreen())),
               if (patron) oge(Icons.receipt_long_outlined, 'Giderler', () => git(const GiderScreen())),
               if (patron) oge(Icons.bar_chart_outlined, 'Raporlar', () => git(const RaporlarScreen())),

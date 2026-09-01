@@ -160,6 +160,23 @@ class Api {
   // Mutfak analitigi
   static Future<Map<String, dynamic>> mutfakAnaliz(String token) => _get('/api/mutfak/analiz', token);
 
+  // Rezervasyon
+  static Future<Map<String, dynamic>> rezervasyonlar(String token, {String? tarih}) =>
+      _get('/api/patron/rezervasyonlar${tarih != null ? '?tarih=$tarih' : ''}', token);
+  static Future<Map<String, dynamic>> rezervasyonEkle(String token,
+      {required String ad, String? telefon, required int kisi, required String tarih, required String saat, int? masaId, String? not}) {
+    final body = <String, String>{'ad': ad, 'kisi': '$kisi', 'tarih': tarih, 'saat': saat};
+    if (telefon != null && telefon.isNotEmpty) body['telefon'] = telefon;
+    if (masaId != null) body['masa_id'] = '$masaId';
+    if (not != null && not.isNotEmpty) body['not'] = not;
+    return _post('/api/patron/rezervasyon-ekle', token, body);
+  }
+  static Future<Map<String, dynamic>> rezervasyonDurum(String token, int id, String durum, {int? masaId}) {
+    final body = <String, String>{'id': '$id', 'durum': durum};
+    if (masaId != null) body['masa_id'] = '$masaId';
+    return _post('/api/patron/rezervasyon-durum', token, body);
+  }
+
   static Future<Map<String, dynamic>> sebepler(String token, {String? tur}) =>
       _get('/api/patron/sebepler${tur != null ? '?tur=$tur' : ''}', token);
 
