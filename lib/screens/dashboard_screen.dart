@@ -13,6 +13,7 @@ import 'kasa_screen.dart';
 import 'cari_hesaplar_screen.dart';
 import 'sebep_yonetimi_screen.dart';
 import 'menu_yonetimi_screen.dart';
+import 'tema_secim_screen.dart';
 import 'ai_bildirim_screen.dart';
 import 'raporlar_screen.dart';
 import 'rezervasyon_screen.dart';
@@ -171,6 +172,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               if (patron) oge(Icons.analytics_outlined, 'Finans / Kâr-Zarar', () => git(const FinansScreen())),
               if (patron) oge(Icons.inventory_2_outlined, 'Stok & Satın Alma', () => git(const IsletmeHubScreen())),
               if (patron) oge(Icons.restaurant_menu, 'Menü Yönetimi', () => git(const MenuYonetimiScreen())),
+              if (patron) oge(Icons.palette_outlined, 'QR Menü Rengi', () => git(const TemaSecimScreen()), renk: const Color(0xFFF6CE63)),
               oge(Icons.account_balance_wallet_outlined, 'Cari / Açık Hesaplar', () => git(const CariHesaplarScreen())),
               oge(Icons.event_available_outlined, 'Rezervasyonlar', () => git(const RezervasyonScreen())),
               if (patron) oge(Icons.badge_outlined, 'Personel & Maaş', () => git(const PersonelScreen())),

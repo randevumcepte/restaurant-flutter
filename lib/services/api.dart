@@ -216,6 +216,10 @@ class Api {
   // ---- MENU YONETIMI (sahip/mudur) ----
   static Future<Map<String, dynamic>> menuYonetim(String token) => _get('/api/patron/menu-yonetim', token);
 
+  // QR menu renk temasi (kartela)
+  static Future<Map<String, dynamic>> temaGetir(String token) => _get('/api/patron/tema', token);
+  static Future<Map<String, dynamic>> temaKaydet(String token, String key) => _post('/api/patron/tema-kaydet', token, {'tema': key});
+
   static Future<Map<String, dynamic>> urunKaydet(String token,
       {int? id, required String ad, String aciklama = '', required double fiyat, int kategoriId = 0, bool tukendi = false, bool aktif = true}) {
     final body = {
