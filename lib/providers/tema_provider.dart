@@ -1,17 +1,24 @@
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Uygulama geneli KOYU/ACIK tema. Vurgu renkleri (mor/mavi/yesil...) iki modda ayni;
 /// zemin/kart/yazi/cizgi renkleri moda gore degisir. Tercih SharedPreferences'ta saklanir.
 class TemaProvider extends ChangeNotifier {
-  bool koyu = true;
+  // Masaustunde (Windows/PC) varsayilan AYDINLIK (SepetTakip havasi), mobilde KOYU.
+  // Kayitli kullanici tercihi ikisini de ezer.
+  static bool get _masaustu {
+    try { return Platform.isWindows || Platform.isLinux || Platform.isMacOS; } catch (_) { return false; }
+  }
+
+  bool koyu = !_masaustu;
 
   TemaProvider() { _yukle(); }
 
   Future<void> _yukle() async {
     try {
       final sp = await SharedPreferences.getInstance();
-      koyu = sp.getBool('app_koyu') ?? true;
+      koyu = sp.getBool('app_koyu') ?? !_masaustu;
       notifyListeners();
     } catch (_) {}
   }

@@ -9,13 +9,15 @@ Telefon düzeni her ekranda korunur; masaüstü = sol sabit menü + ekranı dold
 |---|---------|-------|-----|
 | 1 | Özet / Dashboard (masaüstü çok-sütunlu pano) | ✅ Bitti | Genişlik >=1000 → pano |
 | 2 | Sol sabit menü (shell) | ✅ Bitti | Panel + Yönetim + Asistan + tema/çıkış |
-| 3 | **Paket sipariş tablosu + durum akışı + otomatik onay** | 🟡 Yapılıyor | Backend `adisyonlar` + `/paket/durum` var; API+tablo yapılacak |
-| 4 | Masalar + fotoğraflı menü adisyon + bölge ızgara | 🟡 | Masalar var, foto-menü + masaüstü ızgara yapılacak |
-| 5 | Stok + reçete + renk kodlu kart + otomatik düşüm | 🟡 | Backend + otomatik düşüm VAR; masaüstü görsel yapılacak |
-| 6 | Satın Alma / Alış Faturası | ✅ Var | |
-| 7 | Personel + gruplu kart + gelişmiş yetki | ✅/🟡 | Yetki var; modül-bazlı genişletilecek (sipariş/yazıcı/iade/iskonto) |
-| 8 | Cari + Gider + Avans + Nakit akış | ✅ Var | |
-| 9 | Raporlar (Ciro, Grafikler, Yoğunluk, Isı) | 🟡 | Var; SepetTakip görseline çekilecek |
+| 3 | **Paket sipariş tablosu + durum akışı** | ✅ Bitti | Gruplu tablo + Kabul/Yola/Teslim/İptal + `/api/paket/durum` (otomatik onay otomasyonu sonra) |
+| 4 | Masalar bölge ızgara (masaüstü) | ✅ Bitti | Geniş ekranda ekranı dolduran ızgara (foto-menü adisyon sonra) |
+| 5 | Stok + reçete + renk kodlu kart | ✅ Bitti | Masaüstü renk kodlu kart ızgara + reçete kart/editör (otomatik düşüm zaten VAR) |
+| 6 | Satın Alma / Alış Faturası | ✅ Bitti | Masaüstü tablo + özet |
+| 7 | Personel (role gruplu kart) + yetki | ✅ Bitti | Gruplu kart ızgara; modül-bazlı yetki genişletme sonra |
+| 8 | Cari + Gider + Avans + Nakit akış | ✅ Bitti | Masaüstü tablo + KPI |
+| 9 | Raporlar (KPI + döküm) | ✅ Bitti | Masaüstü KPI + 3 sütun tablo (grafik/ısı görselleri sonra) |
+| — | Kasa (vardiya) · Finans (Kâr-Zarar) · Tedarikçi · Menü Yönetimi · Rezervasyon | ✅ Bitti | Tümü masaüstü + gece/gündüz temalı |
+| — | Gece/gündüz teması (kullanıcı özelleştirir) | ✅ Bitti | `masaustu_kit.dart` tema-duyarlı; masaüstü varsayılan AYDINLIK, mobil KOYU |
 | 10 | Çevre Raporları (pazar/rakip kıyas) | ❌ Büyük | Ağ verisi gerekir (çok restoran) |
 | 11 | Kurye Takip harita + GPS + atama | 🟡 | Backend kurye GPS altyapısı VAR (OSM/Leaflet); masaüstü ekran yapılacak |
 | 12 | Platform Yönetimi + Çalışma Saatleri (aç/kapa) | 🟡 | Menü/tabela/ödeme/saat tek ekran; yeni modül |
