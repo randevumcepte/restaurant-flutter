@@ -23,7 +23,9 @@ class MasaustuSayfa extends StatelessWidget {
     required this.govde,
     this.altBaslik,
     this.araclar = const [],
-    this.geri = true,
+    // Varsayilan: geri oku YOK — masaustunde sol sabit menu ile gezilir.
+    // Alt-ekran/editor (ustune push edilen) geri:true gecerek ok gosterir.
+    this.geri = false,
   });
 
   @override

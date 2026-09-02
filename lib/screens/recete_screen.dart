@@ -378,6 +378,7 @@ class _ReceteEditorScreenState extends State<ReceteEditorScreen> {
       baslik: widget.urunAd,
       ikon: Icons.menu_book_outlined,
       altBaslik: 'Reçete editörü',
+      geri: true, // reçete listesinin üstüne açılan alt-ekran → geri gerekli
       araclar: [
         if (duzenleyebilir) ...[
           MButon('Malzeme Ekle', t.mavi, _kalemEkle, dolu: false, ikon: Icons.add),
