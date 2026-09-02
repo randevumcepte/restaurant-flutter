@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
+import '../providers/tema_provider.dart';
 import '../services/api.dart';
 import 'ai_analiz_sheet.dart';
 import 'cari_hesaplar_screen.dart';
@@ -29,8 +30,17 @@ class _DetayScreenState extends State<DetayScreen> {
   String? hata;
   final _f = NumberFormat.decimalPattern('tr');
 
-  static const _bg = Color(0xFF0B1020);
-  static const _card = Color(0xFF161C2E);
+  // Tema-duyarli yuzey/yazi renkleri
+  TemaProvider get _t => context.watch<TemaProvider>();
+  Color get _bg => _t.bg;
+  Color get _card => _t.card;
+  Color get _card2 => _t.card2;
+  Color get _ink => _t.ink;
+  Color get _sub => _t.sub;
+  Color get _sub2 => _t.sub2;
+  Color get _line => _t.line;
+
+  // Vurgu renkleri (iki modda ayni)
   static const _mor1 = Color(0xFF7C3AED);
   static const _mor2 = Color(0xFF9D5DC8);
   static const _mavi = Color(0xFF4F46E5);
@@ -102,8 +112,8 @@ class _DetayScreenState extends State<DetayScreen> {
       appBar: AppBar(
         backgroundColor: _bg,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: Text(baslik, style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
+        iconTheme: IconThemeData(color: _ink),
+        title: Text(baslik, style: TextStyle(color: _ink, fontSize: 17, fontWeight: FontWeight.bold)),
       ),
       body: loading
           ? const Center(child: CircularProgressIndicator(color: _mor2))
@@ -137,7 +147,10 @@ class _DetayScreenState extends State<DetayScreen> {
         width: double.infinity,
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [Color(0xFF241B4D), Color(0xFF1E2647)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+          gradient: LinearGradient(
+            colors: _t.koyu ? const [Color(0xFF241B4D), Color(0xFF1E2647)] : const [Color(0xFFEDE9FE), Color(0xFFEEF2FF)],
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
+          ),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: _mor2.withValues(alpha: 0.45)),
         ),
@@ -145,11 +158,11 @@ class _DetayScreenState extends State<DetayScreen> {
           Row(children: [
             const Text('✨', style: TextStyle(fontSize: 15)),
             const SizedBox(width: 6),
-            const Text('AI Yorumu', style: TextStyle(color: Color(0xFFC4B5FD), fontSize: 13, fontWeight: FontWeight.bold)),
+            Text('AI Yorumu', style: TextStyle(color: _t.koyu ? const Color(0xFFC4B5FD) : _mor1, fontSize: 13, fontWeight: FontWeight.bold)),
             if (tiklanabilir) ...[
               const Spacer(),
-              const Text('detay', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
-              const Icon(Icons.chevron_right, size: 16, color: Color(0xFF94A3B8)),
+              Text('detay', style: TextStyle(color: _sub, fontSize: 11)),
+              Icon(Icons.chevron_right, size: 16, color: _sub),
             ],
           ]),
           const SizedBox(height: 10),
@@ -164,7 +177,7 @@ class _DetayScreenState extends State<DetayScreen> {
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Container(margin: const EdgeInsets.only(top: 5, right: 8), width: 7, height: 7, decoration: BoxDecoration(color: renk, shape: BoxShape.circle)),
-        Expanded(child: Text(a['mesaj'].toString(), style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 13, height: 1.35))),
+        Expanded(child: Text(a['mesaj'].toString(), style: TextStyle(color: _ink, fontSize: 13, height: 1.35))),
       ]),
     );
   }
@@ -186,7 +199,7 @@ class _DetayScreenState extends State<DetayScreen> {
       case 'musteri':
         return _musteri();
       default:
-        return [const Text('—', style: TextStyle(color: Colors.white))];
+        return [Text('—', style: TextStyle(color: _ink))];
     }
   }
 
@@ -201,7 +214,7 @@ class _DetayScreenState extends State<DetayScreen> {
     final yapilabilir = d!['yapilabilirPorsiyon'];         // int? — kalan stokla kaç porsiyon
     final darbogaz = d!['darbogazMalzeme']?.toString();
     final int? yapInt = yapilabilir is num ? yapilabilir.toInt() : null;
-    final stokRenk = yapInt == null ? const Color(0xFF94A3B8) : (yapInt < 10 ? _kirmizi : (yapInt < 30 ? const Color(0xFFF59E0B) : _yesil));
+    final stokRenk = yapInt == null ? _sub : (yapInt < 10 ? _kirmizi : (yapInt < 30 ? const Color(0xFFF59E0B) : _yesil));
 
     return [
       // Ozet chip grid
@@ -214,23 +227,23 @@ class _DetayScreenState extends State<DetayScreen> {
       // Recete maliyet
       _kutu('🧾 Reçete & Maliyet', [
         if (recete.isEmpty)
-          const Text('Bu ürün için reçete tanımlı değil (tahmini maliyet kullanıldı).', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12))
+          Text('Bu ürün için reçete tanımlı değil (tahmini maliyet kullanıldı).', style: TextStyle(color: _sub, fontSize: 12))
         else
           for (final r in recete)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 5),
               child: Row(children: [
-                Expanded(child: Text((r as Map)['malzeme'].toString(), style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 13))),
+                Expanded(child: Text((r as Map)['malzeme'].toString(), style: TextStyle(color: _ink, fontSize: 13))),
                 Text('${_n(r['miktar']) % 1 == 0 ? _n(r['miktar']).toInt() : _n(r['miktar'])} ${r['birim']}',
-                    style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                    style: TextStyle(color: _sub, fontSize: 12)),
                 const SizedBox(width: 12),
-                SizedBox(width: 70, child: Text(_tam(_n(r['maliyet'])), textAlign: TextAlign.right, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600))),
+                SizedBox(width: 70, child: Text(_tam(_n(r['maliyet'])), textAlign: TextAlign.right, style: TextStyle(color: _ink, fontSize: 13, fontWeight: FontWeight.w600))),
               ]),
             ),
-        const Divider(color: Color(0xFF243049), height: 20),
+        Divider(color: _line, height: 20),
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          const Text('1 porsiyon birim maliyet', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
-          Text(_tam(_n(d!['receteBirimMaliyet'])), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          Text('1 porsiyon birim maliyet', style: TextStyle(color: _sub, fontSize: 12)),
+          Text(_tam(_n(d!['receteBirimMaliyet'])), style: TextStyle(color: _ink, fontWeight: FontWeight.bold)),
         ]),
         const SizedBox(height: 8),
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
@@ -250,10 +263,10 @@ class _DetayScreenState extends State<DetayScreen> {
       // Kalan stokla uretilebilir porsiyon (darbogaz malzeme)
       _kutu('🍳 Kalan Stokla Üretilebilir', [
         if (yapInt == null)
-          const Text('Reçete ya da stok bilgisi tanımlı değil.', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12))
+          Text('Reçete ya da stok bilgisi tanımlı değil.', style: TextStyle(color: _sub, fontSize: 12))
         else ...[
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, crossAxisAlignment: CrossAxisAlignment.center, children: [
-            const Expanded(child: Text('Şu anki stokla yapılabilir', style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 13))),
+            Expanded(child: Text('Şu anki stokla yapılabilir', style: TextStyle(color: _sub2, fontSize: 13))),
             Text('$yapInt', style: TextStyle(color: stokRenk, fontSize: 26, fontWeight: FontWeight.w800)),
             const SizedBox(width: 4),
             Padding(padding: const EdgeInsets.only(top: 8), child: Text('porsiyon', style: TextStyle(color: stokRenk, fontSize: 12, fontWeight: FontWeight.w600))),
@@ -261,19 +274,19 @@ class _DetayScreenState extends State<DetayScreen> {
           if (darbogaz != null && darbogaz.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 4),
-              child: Text('⚠️ İlk biten malzeme: $darbogaz', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+              child: Text('⚠️ İlk biten malzeme: $darbogaz', style: TextStyle(color: _sub, fontSize: 12)),
             ),
-          const Divider(color: Color(0xFF243049), height: 20),
+          Divider(color: _line, height: 20),
           for (final r in recete)
             if ((r as Map)['porsiyon'] != null)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Row(children: [
-                  Expanded(child: Text(r['malzeme'].toString(), style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 13))),
-                  Text('stok: ${_n(r['stok']) % 1 == 0 ? _n(r['stok']).toInt() : _n(r['stok'])}', style: const TextStyle(color: Color(0xFF64748B), fontSize: 11.5)),
+                  Expanded(child: Text(r['malzeme'].toString(), style: TextStyle(color: _ink, fontSize: 13))),
+                  Text('stok: ${_n(r['stok']) % 1 == 0 ? _n(r['stok']).toInt() : _n(r['stok'])}', style: TextStyle(color: _sub, fontSize: 11.5)),
                   const SizedBox(width: 12),
                   Text('${_n(r['porsiyon']).toInt()} porsiyon',
-                      style: TextStyle(color: r['malzeme'].toString() == darbogaz ? _kirmizi : const Color(0xFF94A3B8), fontSize: 12, fontWeight: FontWeight.w600)),
+                      style: TextStyle(color: r['malzeme'].toString() == darbogaz ? _kirmizi : _sub, fontSize: 12, fontWeight: FontWeight.w600)),
                 ]),
               ),
         ],
@@ -282,18 +295,18 @@ class _DetayScreenState extends State<DetayScreen> {
       // En cok satan garson
       _kutu('🏆 En Çok Satan Personel', [
         if (garsonlar.isEmpty)
-          const Text('Kayıt yok', style: TextStyle(color: Color(0xFF64748B), fontSize: 12))
+          Text('Kayıt yok', style: TextStyle(color: _sub, fontSize: 12))
         else
           for (int i = 0; i < garsonlar.length; i++)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 5),
               child: Row(children: [
-                Text('${i + 1}.', style: const TextStyle(color: Color(0xFF64748B), fontSize: 12)),
+                Text('${i + 1}.', style: TextStyle(color: _sub, fontSize: 12)),
                 const SizedBox(width: 8),
-                Expanded(child: Text((garsonlar[i] as Map)['ad'].toString(), style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 13))),
-                Text('${_n((garsonlar[i] as Map)['adet']).toInt()} adet', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                Expanded(child: Text((garsonlar[i] as Map)['ad'].toString(), style: TextStyle(color: _ink, fontSize: 13))),
+                Text('${_n((garsonlar[i] as Map)['adet']).toInt()} adet', style: TextStyle(color: _sub, fontSize: 12)),
                 const SizedBox(width: 12),
-                Text(_k(_n((garsonlar[i] as Map)['ciro'])), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                Text(_k(_n((garsonlar[i] as Map)['ciro'])), style: TextStyle(color: _ink, fontSize: 13, fontWeight: FontWeight.bold)),
               ]),
             ),
       ]),
@@ -316,10 +329,10 @@ class _DetayScreenState extends State<DetayScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 5),
               child: Row(children: [
-                Expanded(child: Text((s as Map)['sebep'].toString(), style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 13))),
-                Text('${_n(s['adet']).toInt()}×', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                Expanded(child: Text((s as Map)['sebep'].toString(), style: TextStyle(color: _ink, fontSize: 13))),
+                Text('${_n(s['adet']).toInt()}×', style: TextStyle(color: _sub, fontSize: 12)),
                 const SizedBox(width: 12),
-                Text(_tam(_n(s['tutar'])), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                Text(_tam(_n(s['tutar'])), style: TextStyle(color: _ink, fontSize: 13, fontWeight: FontWeight.bold)),
               ]),
             ),
         ]),
@@ -327,7 +340,7 @@ class _DetayScreenState extends State<DetayScreen> {
       ],
       _kutu('Kayıtlar', [
         if (kayitlar.isEmpty)
-          const Text('Bu dönemde kayıt yok.', style: TextStyle(color: Color(0xFF64748B), fontSize: 12))
+          Text('Bu dönemde kayıt yok.', style: TextStyle(color: _sub, fontSize: 12))
         else
           for (final k in kayitlar) _kayipKayitSatir(k as Map),
       ]),
@@ -351,26 +364,26 @@ class _DetayScreenState extends State<DetayScreen> {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E263B),
+        color: _card2,
         borderRadius: BorderRadius.circular(12),
-        border: tiklanabilir ? Border.all(color: const Color(0xFF2D3752)) : null,
+        border: tiklanabilir ? Border.all(color: _line) : null,
       ),
       child: Row(children: [
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(k['garson'].toString(), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+            Text(k['garson'].toString(), style: TextStyle(color: _ink, fontSize: 13, fontWeight: FontWeight.w600)),
             const SizedBox(height: 2),
             Text(parcalar.join(' · '), maxLines: 2, overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
+                style: TextStyle(color: _sub, fontSize: 11)),
           ]),
         ),
         const SizedBox(width: 8),
         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
           Text(_tam(_n(k['tutar'])), style: const TextStyle(color: _kirmizi, fontSize: 14, fontWeight: FontWeight.bold)),
           if (tiklanabilir)
-            const Padding(
-              padding: EdgeInsets.only(top: 2),
-              child: Icon(Icons.chevron_right, size: 16, color: Color(0xFF64748B)),
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Icon(Icons.chevron_right, size: 16, color: _sub),
             ),
         ]),
       ]),
@@ -391,7 +404,7 @@ class _DetayScreenState extends State<DetayScreen> {
       const SizedBox(height: 14),
       _kutu('Açık Masalar', [
         if (kayitlar.isEmpty)
-          const Text('Şu an açık adisyon yok.', style: TextStyle(color: Color(0xFF64748B), fontSize: 12))
+          Text('Şu an açık adisyon yok.', style: TextStyle(color: _sub, fontSize: 12))
         else
           for (final k in kayitlar)
             _adisyonRow(k as Map, _mavi.withValues(alpha: 0.2), const Color(0xFFC4B5FD),
@@ -416,7 +429,7 @@ class _DetayScreenState extends State<DetayScreen> {
       const SizedBox(height: 14),
       _kutu('🧾 Ürün Bazında Maliyet (dokunun → reçete)', [
         if (urunler.isEmpty)
-          const Text('Bu dönemde satış yok.', style: TextStyle(color: Color(0xFF64748B), fontSize: 12))
+          Text('Bu dönemde satış yok.', style: TextStyle(color: _sub, fontSize: 12))
         else
           for (final u in urunler)
             GestureDetector(
@@ -436,15 +449,15 @@ class _DetayScreenState extends State<DetayScreen> {
       child: Row(children: [
         Container(
           width: 40, padding: const EdgeInsets.symmetric(vertical: 2),
-          decoration: BoxDecoration(color: const Color(0xFF243049), borderRadius: BorderRadius.circular(6)),
-          child: Text('${_n(u['adet']).toInt()}×', textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11, fontWeight: FontWeight.bold)),
+          decoration: BoxDecoration(color: _line, borderRadius: BorderRadius.circular(6)),
+          child: Text('${_n(u['adet']).toInt()}×', textAlign: TextAlign.center, style: TextStyle(color: _sub, fontSize: 11, fontWeight: FontWeight.bold)),
         ),
         const SizedBox(width: 10),
-        Expanded(child: Text(u['ad'].toString(), overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 13))),
+        Expanded(child: Text(u['ad'].toString(), overflow: TextOverflow.ellipsis, style: TextStyle(color: _ink, fontSize: 13))),
         const SizedBox(width: 8),
         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          Text(_tam(_n(u['maliyet'])), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
-          Text('satış ${_k(_n(u['satis']))}', style: const TextStyle(color: Color(0xFF64748B), fontSize: 9)),
+          Text(_tam(_n(u['maliyet'])), style: TextStyle(color: _ink, fontSize: 13, fontWeight: FontWeight.bold)),
+          Text('satış ${_k(_n(u['satis']))}', style: TextStyle(color: _sub, fontSize: 9)),
         ]),
         const SizedBox(width: 8),
         Container(
@@ -469,10 +482,10 @@ class _DetayScreenState extends State<DetayScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 5),
               child: Row(children: [
-                Expanded(child: Text((o as Map)['tip'].toString().toUpperCase(), style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 13))),
-                Text('${_n(o['adet']).toInt()} işlem', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                Expanded(child: Text((o as Map)['tip'].toString().toUpperCase(), style: TextStyle(color: _ink, fontSize: 13))),
+                Text('${_n(o['adet']).toInt()} işlem', style: TextStyle(color: _sub, fontSize: 12)),
                 const SizedBox(width: 12),
-                Text(_k(_n(o['tutar'])), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                Text(_k(_n(o['tutar'])), style: TextStyle(color: _ink, fontSize: 13, fontWeight: FontWeight.bold)),
               ]),
             ),
         ]),
@@ -480,7 +493,7 @@ class _DetayScreenState extends State<DetayScreen> {
       ],
       _kutu('Kapanan Adisyonlar', [
         if (kayitlar.isEmpty)
-          const Text('Bu dönemde kapanan adisyon yok.', style: TextStyle(color: Color(0xFF64748B), fontSize: 12))
+          Text('Bu dönemde kapanan adisyon yok.', style: TextStyle(color: _sub, fontSize: 12))
         else
           for (final k in kayitlar)
             _adisyonRow(k as Map, _yesil.withValues(alpha: 0.18), const Color(0xFF6EE7B7),
@@ -534,11 +547,11 @@ class _DetayScreenState extends State<DetayScreen> {
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 11),
-          decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFF243049))),
+          decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(12), border: Border.all(color: _line)),
           child: Column(children: [
-            Icon(ikon, color: const Color(0xFFC4B5FD), size: 20),
+            Icon(ikon, color: _t.koyu ? const Color(0xFFC4B5FD) : _mor1, size: 20),
             const SizedBox(height: 3),
-            Text(etiket, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
+            Text(etiket, style: TextStyle(color: _sub, fontSize: 11)),
           ]),
         ),
       );
@@ -547,11 +560,11 @@ class _DetayScreenState extends State<DetayScreen> {
         onTap: _fisYazdir,
         child: Container(
           width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFF243049))),
-          child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Icon(Icons.receipt_long, color: Color(0xFFC4B5FD), size: 18),
-            SizedBox(width: 8),
-            Text('Fiş Yazdır', style: TextStyle(color: Color(0xFFC4B5FD), fontWeight: FontWeight.bold, fontSize: 13)),
+          decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(12), border: Border.all(color: _line)),
+          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Icon(Icons.receipt_long, color: _t.koyu ? const Color(0xFFC4B5FD) : _mor1, size: 18),
+            const SizedBox(width: 8),
+            Text('Fiş Yazdır', style: TextStyle(color: _t.koyu ? const Color(0xFFC4B5FD) : _mor1, fontWeight: FontWeight.bold, fontSize: 13)),
           ]),
         ),
       );
@@ -579,18 +592,18 @@ class _DetayScreenState extends State<DetayScreen> {
       builder: (ctx) => SafeArea(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           const SizedBox(height: 12),
-          Container(width: 40, height: 4, decoration: BoxDecoration(color: const Color(0xFF334155), borderRadius: BorderRadius.circular(4))),
+          Container(width: 40, height: 4, decoration: BoxDecoration(color: _line, borderRadius: BorderRadius.circular(4))),
           const SizedBox(height: 12),
-          Padding(padding: const EdgeInsets.symmetric(horizontal: 18), child: Align(alignment: Alignment.centerLeft, child: Text(baslik, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)))),
+          Padding(padding: const EdgeInsets.symmetric(horizontal: 18), child: Align(alignment: Alignment.centerLeft, child: Text(baslik, style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.bold)))),
           const SizedBox(height: 6),
           Flexible(
             child: ListView(shrinkWrap: true, children: [
               for (final m in masalar)
                 ListTile(
                   dense: true,
-                  leading: const Icon(Icons.table_bar, color: Color(0xFFC4B5FD), size: 18),
-                  title: Text(m['ad'].toString(), style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 14)),
-                  trailing: adisyonDon ? Text(_tam(_n(m['tutar'])), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)) : Text('${m['bolge'] ?? ''}', style: const TextStyle(color: Color(0xFF64748B), fontSize: 11)),
+                  leading: Icon(Icons.table_bar, color: _t.koyu ? const Color(0xFFC4B5FD) : _mor1, size: 18),
+                  title: Text(m['ad'].toString(), style: TextStyle(color: _ink, fontSize: 14)),
+                  trailing: adisyonDon ? Text(_tam(_n(m['tutar'])), style: TextStyle(color: _ink, fontSize: 13, fontWeight: FontWeight.bold)) : Text('${m['bolge'] ?? ''}', style: TextStyle(color: _sub, fontSize: 11)),
                   onTap: () => Navigator.pop(ctx, adisyonDon ? _n(m['adisyon_id']).toInt() : _n(m['id']).toInt()),
                 ),
             ]),
@@ -650,8 +663,8 @@ class _DetayScreenState extends State<DetayScreen> {
         builder: (ctx, setS) => SafeArea(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             const SizedBox(height: 12),
-            Container(width: 40, height: 4, decoration: BoxDecoration(color: const Color(0xFF334155), borderRadius: BorderRadius.circular(4))),
-            const Padding(padding: EdgeInsets.all(14), child: Text('Yeni adisyona taşınacak ürünler', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold))),
+            Container(width: 40, height: 4, decoration: BoxDecoration(color: _line, borderRadius: BorderRadius.circular(4))),
+            Padding(padding: const EdgeInsets.all(14), child: Text('Yeni adisyona taşınacak ürünler', style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.bold))),
             Flexible(
               child: ListView(shrinkWrap: true, children: [
                 for (final k in aktif)
@@ -663,8 +676,8 @@ class _DetayScreenState extends State<DetayScreen> {
                       final id = _n(k['id']).toInt();
                       v == true ? secili.add(id) : secili.remove(id);
                     }),
-                    title: Text('${_n(k['adet']).toInt()}× ${k['ad']}', style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 14)),
-                    secondary: Text(_tam(_n(k['tutar'])), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                    title: Text('${_n(k['adet']).toInt()}× ${k['ad']}', style: TextStyle(color: _ink, fontSize: 14)),
+                    secondary: Text(_tam(_n(k['tutar'])), style: TextStyle(color: _ink, fontSize: 13, fontWeight: FontWeight.bold)),
                   ),
               ]),
             ),
@@ -708,13 +721,13 @@ class _DetayScreenState extends State<DetayScreen> {
       builder: (ctx) => SafeArea(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           const SizedBox(height: 12),
-          Container(width: 40, height: 4, decoration: BoxDecoration(color: const Color(0xFF334155), borderRadius: BorderRadius.circular(4))),
-          const Padding(padding: EdgeInsets.all(14), child: Text('Hangi masa ayrılsın?', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold))),
+          Container(width: 40, height: 4, decoration: BoxDecoration(color: _line, borderRadius: BorderRadius.circular(4))),
+          Padding(padding: const EdgeInsets.all(14), child: Text('Hangi masa ayrılsın?', style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.bold))),
           for (final m in ayrilabilir)
             ListTile(
-              leading: const Icon(Icons.table_bar, color: Color(0xFFC4B5FD)),
-              title: Text((m as Map)['ad'].toString(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-              trailing: const Icon(Icons.chevron_right, color: Color(0xFF64748B)),
+              leading: Icon(Icons.table_bar, color: _t.koyu ? const Color(0xFFC4B5FD) : _mor1),
+              title: Text((m as Map)['ad'].toString(), style: TextStyle(color: _ink, fontWeight: FontWeight.w600)),
+              trailing: Icon(Icons.chevron_right, color: _sub),
               onTap: () => Navigator.pop(ctx, m),
             ),
           const SizedBox(height: 8),
@@ -736,9 +749,9 @@ class _DetayScreenState extends State<DetayScreen> {
         builder: (ctx, setS) => SafeArea(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             const SizedBox(height: 12),
-            Container(width: 40, height: 4, decoration: BoxDecoration(color: const Color(0xFF334155), borderRadius: BorderRadius.circular(4))),
-            Padding(padding: const EdgeInsets.all(14), child: Text('$masaAd\'e taşınacak ürünler', style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold))),
-            const Padding(padding: EdgeInsets.symmetric(horizontal: 14), child: Text('Ürün seçmezsen masa boş açılır.', style: TextStyle(color: Color(0xFF64748B), fontSize: 12))),
+            Container(width: 40, height: 4, decoration: BoxDecoration(color: _line, borderRadius: BorderRadius.circular(4))),
+            Padding(padding: const EdgeInsets.all(14), child: Text('$masaAd\'e taşınacak ürünler', style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.bold))),
+            Padding(padding: const EdgeInsets.symmetric(horizontal: 14), child: Text('Ürün seçmezsen masa boş açılır.', style: TextStyle(color: _sub, fontSize: 12))),
             const SizedBox(height: 6),
             Flexible(
               child: ListView(shrinkWrap: true, children: [
@@ -751,8 +764,8 @@ class _DetayScreenState extends State<DetayScreen> {
                       final id = _n(k['id']).toInt();
                       v == true ? secili.add(id) : secili.remove(id);
                     }),
-                    title: Text('${_n(k['adet']).toInt()}× ${k['ad']}', style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 14)),
-                    secondary: Text(_tam(_n(k['tutar'])), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                    title: Text('${_n(k['adet']).toInt()}× ${k['ad']}', style: TextStyle(color: _ink, fontSize: 14)),
+                    secondary: Text(_tam(_n(k['tutar'])), style: TextStyle(color: _ink, fontSize: 13, fontWeight: FontWeight.bold)),
                   ),
               ]),
             ),
@@ -795,23 +808,23 @@ class _DetayScreenState extends State<DetayScreen> {
       decoration: BoxDecoration(
         color: _card,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: coklu ? _mor2 : const Color(0xFF243049), width: coklu ? 1.5 : 1),
+        border: Border.all(color: coklu ? _mor2 : _line, width: coklu ? 1.5 : 1),
       ),
       child: Row(children: [
         Container(
           width: 46, height: 46,
           decoration: BoxDecoration(color: _mavi.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(12)),
-          child: Icon(coklu ? Icons.merge_type : Icons.table_restaurant, color: const Color(0xFFC4B5FD), size: 24),
+          child: Icon(coklu ? Icons.merge_type : Icons.table_restaurant, color: _t.koyu ? const Color(0xFFC4B5FD) : _mor1, size: 24),
         ),
         const SizedBox(width: 14),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(coklu ? 'BİRLEŞİK MASA' : 'MASA',
-                style: const TextStyle(color: Color(0xFF64748B), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.6)),
+                style: TextStyle(color: _sub, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.6)),
             const SizedBox(height: 2),
             Text(baslik,
                 maxLines: 2, overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+                style: TextStyle(color: _ink, fontSize: 22, fontWeight: FontWeight.bold)),
           ]),
         ),
         if (coklu) ...[
@@ -820,7 +833,7 @@ class _DetayScreenState extends State<DetayScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(color: _mor1.withValues(alpha: 0.25), borderRadius: BorderRadius.circular(20)),
             child: Text('${birlesik.length} masa',
-                style: const TextStyle(color: Color(0xFFC4B5FD), fontSize: 12, fontWeight: FontWeight.bold)),
+                style: TextStyle(color: _t.koyu ? const Color(0xFFC4B5FD) : _mor1, fontSize: 12, fontWeight: FontWeight.bold)),
           ),
         ],
       ]),
@@ -907,13 +920,13 @@ class _DetayScreenState extends State<DetayScreen> {
       const SizedBox(height: 14),
       // Musteri degerlendirmesi (patron ONCE bunu gorsun)
       if (deg != null) _degerlendirmeKart(deg) else _kutu('💬 Müşteri Değerlendirmesi', [
-        const Text('Bu adisyon için müşteri anketi doldurulmamış.', style: TextStyle(color: Color(0xFF64748B), fontSize: 12)),
+        Text('Bu adisyon için müşteri anketi doldurulmamış.', style: TextStyle(color: _sub, fontSize: 12)),
       ]),
       const SizedBox(height: 14),
       // Siparis icerigi
       _kutu('🍽️ Sipariş İçeriği', [
         if (kalemler.isEmpty)
-          const Text('Ürün yok', style: TextStyle(color: Color(0xFF64748B), fontSize: 12))
+          Text('Ürün yok', style: TextStyle(color: _sub, fontSize: 12))
         else
           for (final k in kalemler) _kalemSatir(k as Map, d!['durum'] == 'acik'),
       ]),
@@ -923,7 +936,7 @@ class _DetayScreenState extends State<DetayScreen> {
         _hesapSatir('Ara Toplam', _tam(_n(d!['araToplam'])), false),
         if (indirim > 0) _hesapSatir('İskonto${_n(d!['araToplam']) > 0 ? ' (%${(indirim / _n(d!['araToplam']) * 100).round()})' : ''}', '- ${_tam(indirim)}', true),
         if (ikram > 0) _hesapSatir('İkram', '- ${_tam(ikram)}', true),
-        const Divider(color: Color(0xFF243049), height: 18),
+        Divider(color: _line, height: 18),
         _hesapSatir('TOPLAM', _tam(_n(d!['toplam'])), false, kalin: true),
       ]),
       if (odemeler.isNotEmpty) ...[
@@ -968,12 +981,12 @@ class _DetayScreenState extends State<DetayScreen> {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: const Color(0xFF1E263B), borderRadius: BorderRadius.circular(12)),
-            child: Text('“${deg['yorum']}”', style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 13, fontStyle: FontStyle.italic)),
+            decoration: BoxDecoration(color: _card2, borderRadius: BorderRadius.circular(12)),
+            child: Text('“${deg['yorum']}”', style: TextStyle(color: _ink, fontSize: 13, fontStyle: FontStyle.italic)),
           ),
         ],
         const SizedBox(height: 6),
-        Text(deg['zaman']?.toString() ?? '', style: const TextStyle(color: Color(0xFF64748B), fontSize: 10)),
+        Text(deg['zaman']?.toString() ?? '', style: TextStyle(color: _sub, fontSize: 10)),
       ]),
     );
   }
@@ -982,7 +995,7 @@ class _DetayScreenState extends State<DetayScreen> {
       children: List.generate(5, (i) => Icon(i < p ? Icons.star : Icons.star_border, size: 18, color: const Color(0xFFF59E0B))));
 
   Widget _altPuan(String ad, int p) => Column(children: [
-        Text(ad, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
+        Text(ad, style: TextStyle(color: _sub, fontSize: 11)),
         const SizedBox(height: 3),
         Row(mainAxisSize: MainAxisSize.min,
             children: List.generate(5, (i) => Icon(i < p ? Icons.star : Icons.star_border, size: 11, color: const Color(0xFFF59E0B)))),
@@ -993,22 +1006,22 @@ class _DetayScreenState extends State<DetayScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(children: [
-        Text('${_n(k['adet']).toInt()}×', style: TextStyle(color: iptal ? _kirmizi : const Color(0xFF94A3B8), fontSize: 13, fontWeight: FontWeight.bold)),
+        Text('${_n(k['adet']).toInt()}×', style: TextStyle(color: iptal ? _kirmizi : _sub, fontSize: 13, fontWeight: FontWeight.bold)),
         const SizedBox(width: 10),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(k['ad'].toString(),
                 style: TextStyle(
-                    color: iptal ? const Color(0xFF64748B) : const Color(0xFFE2E8F0), fontSize: 13,
+                    color: iptal ? _sub : _ink, fontSize: 13,
                     decoration: iptal ? TextDecoration.lineThrough : null)),
             if ((k['not']?.toString() ?? '').isNotEmpty)
-              Text('not: ${k['not']}', style: const TextStyle(color: Color(0xFF64748B), fontSize: 10)),
+              Text('not: ${k['not']}', style: TextStyle(color: _sub, fontSize: 10)),
             if (iptal) const Text('İPTAL / SİLİNDİ', style: TextStyle(color: _kirmizi, fontSize: 9, fontWeight: FontWeight.bold)),
           ]),
         ),
         Text(_tam(_n(k['tutar'])),
             style: TextStyle(
-                color: iptal ? const Color(0xFF64748B) : Colors.white, fontSize: 13, fontWeight: FontWeight.bold,
+                color: iptal ? _sub : _ink, fontSize: 13, fontWeight: FontWeight.bold,
                 decoration: iptal ? TextDecoration.lineThrough : null)),
         if (acik && !iptal)
           GestureDetector(
@@ -1036,14 +1049,14 @@ class _DetayScreenState extends State<DetayScreen> {
       builder: (ctx) => SafeArea(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           const SizedBox(height: 12),
-          Container(width: 40, height: 4, decoration: BoxDecoration(color: const Color(0xFF334155), borderRadius: BorderRadius.circular(4))),
+          Container(width: 40, height: 4, decoration: BoxDecoration(color: _line, borderRadius: BorderRadius.circular(4))),
           const SizedBox(height: 12),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 18),
             child: Row(children: [
               const Icon(Icons.remove_circle_outline, color: _kirmizi, size: 18),
               const SizedBox(width: 8),
-              Expanded(child: Text('${k['ad']} — silme sebebi', style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold))),
+              Expanded(child: Text('${k['ad']} — silme sebebi', style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.bold))),
             ]),
           ),
           const SizedBox(height: 6),
@@ -1052,15 +1065,15 @@ class _DetayScreenState extends State<DetayScreen> {
               for (final s in metinler)
                 ListTile(
                   dense: true,
-                  leading: const Icon(Icons.chevron_right, color: Color(0xFF64748B), size: 20),
-                  title: Text(s.toString(), style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 14)),
+                  leading: Icon(Icons.chevron_right, color: _sub, size: 20),
+                  title: Text(s.toString(), style: TextStyle(color: _ink, fontSize: 14)),
                   onTap: () => Navigator.pop(ctx, s.toString()),
                 ),
-              const Divider(color: Color(0xFF243049), height: 1),
+              Divider(color: _line, height: 1),
               ListTile(
                 dense: true,
-                leading: const Icon(Icons.settings_outlined, color: Color(0xFF94A3B8), size: 18),
-                title: const Text('Sebepleri düzenle', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
+                leading: Icon(Icons.settings_outlined, color: _sub, size: 18),
+                title: Text('Sebepleri düzenle', style: TextStyle(color: _sub, fontSize: 13)),
                 onTap: () {
                   Navigator.pop(ctx);
                   rootNav.push(MaterialPageRoute(builder: (_) => const SebepYonetimiScreen()));
@@ -1098,8 +1111,8 @@ class _DetayScreenState extends State<DetayScreen> {
   Widget _hesapSatir(String sol, String sag, bool eksi, {bool kalin = false}) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text(sol, style: TextStyle(color: kalin ? Colors.white : const Color(0xFF94A3B8), fontSize: kalin ? 14 : 13, fontWeight: kalin ? FontWeight.bold : FontWeight.normal)),
-          Text(sag, style: TextStyle(color: eksi ? _kirmizi : (kalin ? Colors.white : const Color(0xFFE2E8F0)), fontSize: kalin ? 15 : 13, fontWeight: FontWeight.bold)),
+          Text(sol, style: TextStyle(color: kalin ? _ink : _sub, fontSize: kalin ? 14 : 13, fontWeight: kalin ? FontWeight.bold : FontWeight.normal)),
+          Text(sag, style: TextStyle(color: eksi ? _kirmizi : _ink, fontSize: kalin ? 15 : 13, fontWeight: FontWeight.bold)),
         ]),
       );
 
@@ -1143,12 +1156,16 @@ class _DetayScreenState extends State<DetayScreen> {
         Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-          decoration: BoxDecoration(color: const Color(0xFF3B2F14), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFF854D0E))),
-          child: const Row(children: [
-            Icon(Icons.lock_outline, size: 15, color: Color(0xFFFCD34D)),
-            SizedBox(width: 8),
+          decoration: BoxDecoration(
+            color: _t.koyu ? const Color(0xFF3B2F14) : const Color(0xFFFEF3C7),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: _t.koyu ? const Color(0xFF854D0E) : const Color(0xFFFCD34D)),
+          ),
+          child: Row(children: [
+            Icon(Icons.lock_outline, size: 15, color: _t.koyu ? const Color(0xFFFCD34D) : const Color(0xFF92400E)),
+            const SizedBox(width: 8),
             Expanded(child: Text('KVKK: İsim/telefon maskeli. Tam bilgiyi yalnızca patron (sahip) görebilir.',
-                style: TextStyle(color: Color(0xFFFCD34D), fontSize: 11))),
+                style: TextStyle(color: _t.koyu ? const Color(0xFFFCD34D) : const Color(0xFF92400E), fontSize: 11))),
           ]),
         ),
       ],
@@ -1167,8 +1184,8 @@ class _DetayScreenState extends State<DetayScreen> {
             for (final u in favori)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(color: const Color(0xFF1E263B), borderRadius: BorderRadius.circular(20)),
-                child: Text('${(u as Map)['urun_adi']} · ${_n(u['adet']).toInt()}×', style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 12)),
+                decoration: BoxDecoration(color: _card2, borderRadius: BorderRadius.circular(20)),
+                child: Text('${(u as Map)['urun_adi']} · ${_n(u['adet']).toInt()}×', style: TextStyle(color: _ink, fontSize: 12)),
               ),
           ]),
         ]),
@@ -1181,10 +1198,10 @@ class _DetayScreenState extends State<DetayScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 5),
               child: Row(children: [
-                Expanded(child: Text((o as Map)['tip'].toString().toUpperCase(), style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 13))),
-                Text('${_n(o['adet']).toInt()} işlem', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                Expanded(child: Text((o as Map)['tip'].toString().toUpperCase(), style: TextStyle(color: _ink, fontSize: 13))),
+                Text('${_n(o['adet']).toInt()} işlem', style: TextStyle(color: _sub, fontSize: 12)),
                 const SizedBox(width: 12),
-                Text(_k(_n(o['tutar'])), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                Text(_k(_n(o['tutar'])), style: TextStyle(color: _ink, fontSize: 13, fontWeight: FontWeight.bold)),
               ]),
             ),
         ]),
@@ -1193,7 +1210,7 @@ class _DetayScreenState extends State<DetayScreen> {
       // Gecmis siparisler
       _kutu('🧾 Geçmiş Siparişler', [
         if (siparisler.isEmpty)
-          const Text('Kayıtlı sipariş yok.', style: TextStyle(color: Color(0xFF64748B), fontSize: 12))
+          Text('Kayıtlı sipariş yok.', style: TextStyle(color: _sub, fontSize: 12))
         else
           for (final s in siparisler)
             GestureDetector(
@@ -1202,11 +1219,11 @@ class _DetayScreenState extends State<DetayScreen> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 7),
                 child: Row(children: [
-                  Text(s['zaman'].toString(), style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                  Text(s['zaman'].toString(), style: TextStyle(color: _sub, fontSize: 12)),
                   const SizedBox(width: 12),
-                  Expanded(child: Text('${s['masa']} · ${s['kanal']}', style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 13), overflow: TextOverflow.ellipsis)),
-                  Text(_tam(_n(s['tutar'])), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
-                  const Icon(Icons.chevron_right, size: 16, color: Color(0xFF475569)),
+                  Expanded(child: Text('${s['masa']} · ${s['kanal']}', style: TextStyle(color: _ink, fontSize: 13), overflow: TextOverflow.ellipsis)),
+                  Text(_tam(_n(s['tutar'])), style: TextStyle(color: _ink, fontSize: 13, fontWeight: FontWeight.bold)),
+                  Icon(Icons.chevron_right, size: 16, color: _sub),
                 ]),
               ),
             ),
@@ -1215,22 +1232,22 @@ class _DetayScreenState extends State<DetayScreen> {
       // Yorumlar
       _kutu('💬 Müşteri Yorumları', [
         if (yorumlar.isEmpty)
-          const Text('Henüz yorum yok.', style: TextStyle(color: Color(0xFF64748B), fontSize: 12))
+          Text('Henüz yorum yok.', style: TextStyle(color: _sub, fontSize: 12))
         else
           for (final y in yorumlar)
             Container(
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: const Color(0xFF1E263B), borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(color: _card2, borderRadius: BorderRadius.circular(12)),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
                   _yildizlar(_n((y as Map)['puan']).toInt()),
                   const Spacer(),
-                  Text(y['zaman'].toString(), style: const TextStyle(color: Color(0xFF64748B), fontSize: 10)),
+                  Text(y['zaman'].toString(), style: TextStyle(color: _sub, fontSize: 10)),
                 ]),
                 if ((y['yorum']?.toString() ?? '').isNotEmpty) ...[
                   const SizedBox(height: 6),
-                  Text('“${y['yorum']}”', style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 12, fontStyle: FontStyle.italic)),
+                  Text('“${y['yorum']}”', style: TextStyle(color: _ink, fontSize: 12, fontStyle: FontStyle.italic)),
                 ],
               ]),
             ),
@@ -1263,18 +1280,18 @@ class _DetayScreenState extends State<DetayScreen> {
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 11),
-          decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFF2D3752))),
+          decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(12), border: Border.all(color: _line)),
           child: Column(children: [
-            Icon(ikon, size: 18, color: const Color(0xFFC4B5FD)),
+            Icon(ikon, size: 18, color: _t.koyu ? const Color(0xFFC4B5FD) : _mor1),
             const SizedBox(height: 3),
-            Text(metin, style: const TextStyle(color: Color(0xFFC4B5FD), fontSize: 11, fontWeight: FontWeight.w600)),
+            Text(metin, style: TextStyle(color: _t.koyu ? const Color(0xFFC4B5FD) : _mor1, fontSize: 11, fontWeight: FontWeight.w600)),
           ]),
         ),
       );
 
   InputDecoration _dlgInput(String hint) => InputDecoration(
-        hintText: hint, hintStyle: const TextStyle(color: Color(0xFF64748B)),
-        filled: true, fillColor: const Color(0xFF0F1526),
+        hintText: hint, hintStyle: TextStyle(color: _sub),
+        filled: true, fillColor: _card2,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
       );
 
@@ -1306,15 +1323,15 @@ class _DetayScreenState extends State<DetayScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: _card,
-        title: const Text('🔒 Yetkili Onayı', style: TextStyle(color: Colors.white, fontSize: 16)),
+        title: Text('🔒 Yetkili Onayı', style: TextStyle(color: _ink, fontSize: 16)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          Text(mesaj, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
+          Text(mesaj, style: TextStyle(color: _sub, fontSize: 13)),
           const SizedBox(height: 12),
           TextField(controller: c, keyboardType: TextInputType.number, obscureText: true, autofocus: true,
-              style: const TextStyle(color: Colors.white, letterSpacing: 6), textAlign: TextAlign.center, decoration: _dlgInput('Müdür/Sahip PIN')),
+              style: TextStyle(color: _ink, letterSpacing: 6), textAlign: TextAlign.center, decoration: _dlgInput('Müdür/Sahip PIN')),
         ]),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Vazgeç', style: TextStyle(color: Color(0xFF94A3B8)))),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Vazgeç', style: TextStyle(color: _sub))),
           FilledButton(onPressed: () => Navigator.pop(ctx, c.text), style: FilledButton.styleFrom(backgroundColor: _mor1), child: const Text('Onayla')),
         ],
       ),
@@ -1326,14 +1343,14 @@ class _DetayScreenState extends State<DetayScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: _card,
-        title: const Text('Ödeme Al & Kapat', style: TextStyle(color: Colors.white, fontSize: 16)),
+        title: Text('Ödeme Al & Kapat', style: TextStyle(color: _ink, fontSize: 16)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           _odemeSecenek(ctx, 'nakit', '💵 Nakit'),
           _odemeSecenek(ctx, 'kredi', '💳 Kredi Kartı'),
           _odemeSecenek(ctx, 'yemek_karti', '🍽️ Yemek Kartı'),
           _odemeSecenek(ctx, 'acik_hesap', '🧾 Açık Hesap (Bana Yaz)'),
         ]),
-        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Vazgeç', style: TextStyle(color: Color(0xFF94A3B8))))],
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Vazgeç', style: TextStyle(color: _sub)))],
       ),
     );
     if (secim == 'acik_hesap') {
@@ -1351,8 +1368,8 @@ class _DetayScreenState extends State<DetayScreen> {
           width: double.infinity,
           child: FilledButton(
             onPressed: () => Navigator.pop(ctx, tip),
-            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF1E263B), padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-            child: Text(metin, style: const TextStyle(color: Colors.white, fontSize: 14)),
+            style: FilledButton.styleFrom(backgroundColor: _card2, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+            child: Text(metin, style: TextStyle(color: _ink, fontSize: 14)),
           ),
         ),
       );
@@ -1364,16 +1381,16 @@ class _DetayScreenState extends State<DetayScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: _card,
-        title: const Text('İskonto Uygula', style: TextStyle(color: Colors.white, fontSize: 16)),
+        title: Text('İskonto Uygula', style: TextStyle(color: _ink, fontSize: 16)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          TextField(controller: oranC, keyboardType: TextInputType.number, autofocus: true, style: const TextStyle(color: Colors.white), decoration: _dlgInput('Oran %  (örn. 10)')),
+          TextField(controller: oranC, keyboardType: TextInputType.number, autofocus: true, style: TextStyle(color: _ink), decoration: _dlgInput('Oran %  (örn. 10)')),
           const SizedBox(height: 10),
-          TextField(controller: sebepC, style: const TextStyle(color: Colors.white), decoration: _dlgInput('Sebep (opsiyonel)')),
+          TextField(controller: sebepC, style: TextStyle(color: _ink), decoration: _dlgInput('Sebep (opsiyonel)')),
           const SizedBox(height: 6),
-          const Text('Limitinizi aşarsa yetkili PIN onayı istenir.', style: TextStyle(color: Color(0xFF64748B), fontSize: 11)),
+          Text('Limitinizi aşarsa yetkili PIN onayı istenir.', style: TextStyle(color: _sub, fontSize: 11)),
         ]),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Vazgeç', style: TextStyle(color: Color(0xFF94A3B8)))),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Vazgeç', style: TextStyle(color: _sub))),
           FilledButton(onPressed: () => Navigator.pop(ctx, true), style: FilledButton.styleFrom(backgroundColor: _mor1), child: const Text('Uygula')),
         ],
       ),
@@ -1388,7 +1405,7 @@ class _DetayScreenState extends State<DetayScreen> {
   Future<void> _ikramDialog() async {
     final kalemler = ((d!['kalemler'] as List?) ?? []).where((k) => (k as Map)['durum'] != 'iptal').toList();
     if (kalemler.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('İkram edilecek ürün yok.'), backgroundColor: _card));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('İkram edilecek ürün yok.'), backgroundColor: _card));
       return;
     }
     final secili = <int>{};
@@ -1398,7 +1415,7 @@ class _DetayScreenState extends State<DetayScreen> {
         final toplam = kalemler.where((k) => secili.contains(_n((k as Map)['id']).toInt())).fold<num>(0, (a, k) => a + _n((k as Map)['tutar']));
         return AlertDialog(
           backgroundColor: _card,
-          title: const Text('İkram Edilecek Ürünler', style: TextStyle(color: Colors.white, fontSize: 16)),
+          title: Text('İkram Edilecek Ürünler', style: TextStyle(color: _ink, fontSize: 16)),
           content: SizedBox(
             width: double.maxFinite,
             child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -1415,20 +1432,20 @@ class _DetayScreenState extends State<DetayScreen> {
                       checkColor: Colors.white,
                       dense: true,
                       contentPadding: EdgeInsets.zero,
-                      title: Text('${_n(k['adet']).toInt()}× ${k['ad']}', style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 14)),
-                      secondary: Text(_tam(_n(k['tutar'])), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      title: Text('${_n(k['adet']).toInt()}× ${k['ad']}', style: TextStyle(color: _ink, fontSize: 14)),
+                      secondary: Text(_tam(_n(k['tutar'])), style: TextStyle(color: _ink, fontWeight: FontWeight.bold)),
                     ),
                 ]),
               ),
-              const Divider(color: Color(0xFF243049)),
+              Divider(color: _line),
               Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                const Text('İkram toplamı', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
+                Text('İkram toplamı', style: TextStyle(color: _sub, fontSize: 13)),
                 Text(_tam(toplam), style: const TextStyle(color: _yesil, fontWeight: FontWeight.bold, fontSize: 15)),
               ]),
             ]),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Vazgeç', style: TextStyle(color: Color(0xFF94A3B8)))),
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Vazgeç', style: TextStyle(color: _sub))),
             FilledButton(onPressed: secili.isEmpty ? null : () => Navigator.pop(ctx, true), style: FilledButton.styleFrom(backgroundColor: _mor1), child: const Text('İkram Et')),
           ],
         );
@@ -1445,12 +1462,12 @@ class _DetayScreenState extends State<DetayScreen> {
         backgroundColor: _card,
         title: const Text('Adisyon İptal', style: TextStyle(color: _kirmizi, fontSize: 16)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Text('Bu adisyon iptal edilecek ve masa boşaltılacak.', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
+          Text('Bu adisyon iptal edilecek ve masa boşaltılacak.', style: TextStyle(color: _sub, fontSize: 13)),
           const SizedBox(height: 10),
-          TextField(controller: sebepC, autofocus: true, style: const TextStyle(color: Colors.white), decoration: _dlgInput('İptal sebebi (opsiyonel)')),
+          TextField(controller: sebepC, autofocus: true, style: TextStyle(color: _ink), decoration: _dlgInput('İptal sebebi (opsiyonel)')),
         ]),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Vazgeç', style: TextStyle(color: Color(0xFF94A3B8)))),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Vazgeç', style: TextStyle(color: _sub))),
           FilledButton(onPressed: () => Navigator.pop(ctx, true), style: FilledButton.styleFrom(backgroundColor: _kirmizi), child: const Text('İptal Et')),
         ],
       ),
@@ -1466,7 +1483,7 @@ class _DetayScreenState extends State<DetayScreen> {
         child: Container(
           margin: const EdgeInsets.only(bottom: 8),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(color: const Color(0xFF1E263B), borderRadius: BorderRadius.circular(12)),
+          decoration: BoxDecoration(color: _card2, borderRadius: BorderRadius.circular(12)),
           child: Row(children: [
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -1476,23 +1493,23 @@ class _DetayScreenState extends State<DetayScreen> {
             const SizedBox(width: 10),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(k['garson'].toString(), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
-                Text(altSatir, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
+                Text(k['garson'].toString(), style: TextStyle(color: _ink, fontSize: 13, fontWeight: FontWeight.w600)),
+                Text(altSatir, style: TextStyle(color: _sub, fontSize: 11)),
               ]),
             ),
-            Text(_tam(_n(k['tutar'])), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
-            const Icon(Icons.chevron_right, size: 18, color: Color(0xFF475569)),
+            Text(_tam(_n(k['tutar'])), style: TextStyle(color: _ink, fontSize: 14, fontWeight: FontWeight.bold)),
+            Icon(Icons.chevron_right, size: 18, color: _sub),
           ]),
         ),
       );
 
   Widget _statKart(String baslik, String deger) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(14)),
+        decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(14), boxShadow: _t.golge),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-          Text(baslik, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
+          Text(baslik, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: _sub, fontSize: 11)),
           const SizedBox(height: 2),
-          FittedBox(fit: BoxFit.scaleDown, child: Text(deger, maxLines: 1, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold))),
+          FittedBox(fit: BoxFit.scaleDown, child: Text(deger, maxLines: 1, style: TextStyle(color: _ink, fontSize: 16, fontWeight: FontWeight.bold))),
         ]),
       );
 
@@ -1512,9 +1529,9 @@ class _DetayScreenState extends State<DetayScreen> {
   Widget _kutu(String baslik, List<Widget> cocuklar) => Container(
         width: double.infinity,
         padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(18)),
+        decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(18), boxShadow: _t.golge),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(baslik, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+          Text(baslik, style: TextStyle(color: _ink, fontSize: 14, fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
           ...cocuklar,
         ]),
@@ -1535,7 +1552,7 @@ class _DetayScreenState extends State<DetayScreen> {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 3),
               child: Column(mainAxisAlignment: MainAxisAlignment.end, children: [
-                Text('${v % 1 == 0 ? v.toInt() : v}', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 8)),
+                Text('${v % 1 == 0 ? v.toInt() : v}', style: TextStyle(color: _sub, fontSize: 8)),
                 const SizedBox(height: 2),
                 TweenAnimationBuilder<double>(
                   tween: Tween(begin: 0, end: h),
@@ -1550,7 +1567,7 @@ class _DetayScreenState extends State<DetayScreen> {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(m['gun'].toString(), style: const TextStyle(color: Color(0xFF64748B), fontSize: 8)),
+                Text(m['gun'].toString(), style: TextStyle(color: _sub, fontSize: 8)),
               ]),
             ),
           );

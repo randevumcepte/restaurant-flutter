@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/tema_provider.dart';
 import '../services/api.dart';
 
 /// Personel Yetkileri — Kerzz tarzi granular yetki yonetimi (SADECE sahip duzenler).
@@ -31,8 +32,6 @@ const _gruplar = {
   '📊 Yönetim': ['geri_islem', 'maliyet_gor', 'rapor_gor'],
 };
 
-const _bg = Color(0xFF0B1020);
-const _card = Color(0xFF161C2E);
 const _mor1 = Color(0xFF7C3AED);
 const _mavi = Color(0xFF4F46E5);
 
@@ -54,6 +53,12 @@ Color _rolRenk(String rol) {
 String _rolAd(String rol) => {'sahip': 'Sahip', 'mudur': 'Müdür', 'kasa': 'Kasa', 'garson': 'Garson', 'mutfak': 'Mutfak'}[rol] ?? rol;
 
 class _PersonelYetkileriScreenState extends State<PersonelYetkileriScreen> {
+  TemaProvider get _t => context.watch<TemaProvider>();
+  Color get _bg => _t.bg;
+  Color get _card => _t.card;
+  Color get _ink => _t.ink;
+  Color get _sub => _t.sub;
+
   List personeller = [];
   bool loading = true;
   bool duzenleyebilir = false;
@@ -105,8 +110,8 @@ class _PersonelYetkileriScreenState extends State<PersonelYetkileriScreen> {
       appBar: AppBar(
         backgroundColor: _bg,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text('Personel Yetkileri', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
+        iconTheme: IconThemeData(color: _ink),
+        title: Text('Personel Yetkileri', style: TextStyle(color: _ink, fontSize: 17, fontWeight: FontWeight.bold)),
       ),
       body: loading
           ? const Center(child: CircularProgressIndicator(color: _mor1))
@@ -156,7 +161,7 @@ class _PersonelYetkileriScreenState extends State<PersonelYetkileriScreen> {
           const SizedBox(width: 12),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(p['ad'].toString(), style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+              Text(p['ad'].toString(), style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.bold)),
               const SizedBox(height: 2),
               Row(children: [
                 Container(
@@ -165,13 +170,13 @@ class _PersonelYetkileriScreenState extends State<PersonelYetkileriScreen> {
                   child: Text(_rolAd(rol), style: TextStyle(color: renk, fontSize: 10, fontWeight: FontWeight.bold)),
                 ),
                 const SizedBox(width: 8),
-                Text('${_acikSayi(p)} yetki', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                Text('${_acikSayi(p)} yetki', style: TextStyle(color: _sub, fontSize: 12)),
                 if ((p['yetkiler']?['iskonto'] == true))
-                  Text('  ·  iskonto %${(p['iskonto_limit'] ?? 0).round()}', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                  Text('  ·  iskonto %${(p['iskonto_limit'] ?? 0).round()}', style: TextStyle(color: _sub, fontSize: 12)),
               ]),
             ]),
           ),
-          const Icon(Icons.chevron_right, color: Color(0xFF64748B)),
+          Icon(Icons.chevron_right, color: _sub),
         ]),
       ),
     );
@@ -188,6 +193,13 @@ class _YetkiDuzenle extends StatefulWidget {
 }
 
 class _YetkiDuzenleState extends State<_YetkiDuzenle> {
+  TemaProvider get _t => context.watch<TemaProvider>();
+  Color get _bg => _t.bg;
+  Color get _card => _t.card;
+  Color get _card2 => _t.card2;
+  Color get _ink => _t.ink;
+  Color get _sub => _t.sub;
+
   late Map<String, bool> yetkiler;
   late double iskontoLimit;
   late double ikramLimit;
@@ -232,8 +244,8 @@ class _YetkiDuzenleState extends State<_YetkiDuzenle> {
       appBar: AppBar(
         backgroundColor: _bg,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: Text(widget.personel['ad'].toString(), style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
+        iconTheme: IconThemeData(color: _ink),
+        title: Text(widget.personel['ad'].toString(), style: TextStyle(color: _ink, fontSize: 17, fontWeight: FontWeight.bold)),
       ),
       body: ListView(
         padding: const EdgeInsets.all(14),
@@ -261,7 +273,7 @@ class _YetkiDuzenleState extends State<_YetkiDuzenle> {
                     value: yetkiler[k] ?? false,
                     onChanged: duzen ? (v) => setState(() => yetkiler[k] = v) : null,
                     activeThumbColor: renk,
-                    title: Text(_etiketler[k]!, style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 14)),
+                    title: Text(_etiketler[k]!, style: TextStyle(color: _ink, fontSize: 14)),
                     dense: true,
                   ),
                   // Iskonto limiti (iskonto acikken)
@@ -269,7 +281,7 @@ class _YetkiDuzenleState extends State<_YetkiDuzenle> {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
                       child: Row(children: [
-                        const Text('Limit', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                        Text('Limit', style: TextStyle(color: _sub, fontSize: 12)),
                         Expanded(
                           child: Slider(
                             value: iskontoLimit.clamp(0, 100),
@@ -279,7 +291,7 @@ class _YetkiDuzenleState extends State<_YetkiDuzenle> {
                             onChanged: duzen ? (v) => setState(() => iskontoLimit = v) : null,
                           ),
                         ),
-                        SizedBox(width: 44, child: Text('%${iskontoLimit.round()}', textAlign: TextAlign.right, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                        SizedBox(width: 44, child: Text('%${iskontoLimit.round()}', textAlign: TextAlign.right, style: TextStyle(color: _ink, fontWeight: FontWeight.bold))),
                       ]),
                     ),
                   // Ikram limiti (TL) — ikram acikken
@@ -287,25 +299,25 @@ class _YetkiDuzenleState extends State<_YetkiDuzenle> {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                       child: Row(children: [
-                        const Text('Limit TL', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                        Text('Limit TL', style: TextStyle(color: _sub, fontSize: 12)),
                         const SizedBox(width: 12),
                         Expanded(
                           child: TextFormField(
                             initialValue: ikramLimit.round().toString(),
                             enabled: duzen,
                             keyboardType: TextInputType.number,
-                            style: const TextStyle(color: Colors.white, fontSize: 14),
+                            style: TextStyle(color: _ink, fontSize: 14),
                             decoration: InputDecoration(
-                              isDense: true, filled: true, fillColor: const Color(0xFF0F1526),
+                              isDense: true, filled: true, fillColor: _card2,
                               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-                              hintText: 'örn. 100', hintStyle: const TextStyle(color: Color(0xFF64748B)),
+                              hintText: 'örn. 100', hintStyle: TextStyle(color: _sub),
                             ),
                             onChanged: (v) => ikramLimit = double.tryParse(v) ?? 0,
                           ),
                         ),
                         const SizedBox(width: 8),
-                        const Flexible(child: Text('üstü müdür onayı', style: TextStyle(color: Color(0xFF64748B), fontSize: 10))),
+                        Flexible(child: Text('üstü müdür onayı', style: TextStyle(color: _sub, fontSize: 10))),
                       ]),
                     ),
                 ],
@@ -325,9 +337,9 @@ class _YetkiDuzenleState extends State<_YetkiDuzenle> {
               ),
             )
           else
-            const Padding(
-              padding: EdgeInsets.only(top: 4),
-              child: Text('Düzenleme yetkisi yalnızca işletme sahibinde.', style: TextStyle(color: Color(0xFF64748B), fontSize: 12), textAlign: TextAlign.center),
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text('Düzenleme yetkisi yalnızca işletme sahibinde.', style: TextStyle(color: _sub, fontSize: 12), textAlign: TextAlign.center),
             ),
         ],
       ),

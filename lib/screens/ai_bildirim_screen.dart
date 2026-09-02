@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/tema_provider.dart';
 import 'detay_screen.dart';
 import 'ai_analiz_sheet.dart';
 
@@ -9,8 +11,6 @@ class AiBildirimScreen extends StatelessWidget {
   final String period;
   const AiBildirimScreen({super.key, required this.bildirimler, this.period = 'haftalik'});
 
-  static const _bg = Color(0xFF0B1020);
-  static const _card = Color(0xFF161C2E);
   static const _mor1 = Color(0xFF7C3AED);
   static const _mavi = Color(0xFF4F46E5);
 
@@ -36,7 +36,7 @@ class AiBildirimScreen extends StatelessWidget {
     Navigator.of(context).push(PageRouteBuilder(
       transitionDuration: const Duration(milliseconds: 220),
       opaque: true,
-      barrierColor: _bg,
+      barrierColor: context.read<TemaProvider>().bg,
       pageBuilder: (_, _, _) => DetayScreen(
         tip: aksiyon['tip'].toString(),
         alt: aksiyon['alt']?.toString(),
@@ -52,12 +52,13 @@ class AiBildirimScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.watch<TemaProvider>();
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: t.bg,
       appBar: AppBar(
-        backgroundColor: _bg,
+        backgroundColor: t.bg,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Color(0xFF94A3B8)),
+        iconTheme: IconThemeData(color: t.ink),
         title: Row(children: [
           Container(
             padding: const EdgeInsets.all(6),
@@ -65,18 +66,18 @@ class AiBildirimScreen extends StatelessWidget {
             child: const Text('✨', style: TextStyle(fontSize: 14)),
           ),
           const SizedBox(width: 10),
-          const Text('AI Bildirimleri', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
+          Text('AI Bildirimleri', style: TextStyle(color: t.ink, fontSize: 17, fontWeight: FontWeight.bold)),
         ]),
       ),
       body: bildirimler.isEmpty
-          ? _bos()
+          ? _bos(t)
           : ListView(
               padding: const EdgeInsets.fromLTRB(14, 8, 14, 24),
               children: [
                 Text('Restoranında yakaladıklarım · ${bildirimler.length} durum',
-                    style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
+                    style: TextStyle(color: t.sub, fontSize: 13)),
                 const SizedBox(height: 14),
-                for (final b in bildirimler) _kart(context, b as Map),
+                for (final b in bildirimler) _kart(context, t, b as Map),
                 const SizedBox(height: 6),
                 _derinAiButon(context),
               ],
@@ -84,16 +85,17 @@ class AiBildirimScreen extends StatelessWidget {
     );
   }
 
-  Widget _kart(BuildContext context, Map b) {
+  Widget _kart(BuildContext context, TemaProvider t, Map b) {
     final seviye = b['seviye']?.toString() ?? 'bilgi';
     final renk = _renk(seviye);
     final aksiyon = b['aksiyon'] is Map ? b['aksiyon'] as Map : null;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: _card,
+        color: t.card,
         borderRadius: BorderRadius.circular(16),
         border: Border(left: BorderSide(color: renk, width: 4)),
+        boxShadow: t.golge,
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Padding(
@@ -103,7 +105,7 @@ class AiBildirimScreen extends StatelessWidget {
               Text(b['ikon']?.toString() ?? '•', style: const TextStyle(fontSize: 20)),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(b['baslik']?.toString() ?? '', style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                child: Text(b['baslik']?.toString() ?? '', style: TextStyle(color: t.ink, fontSize: 16, fontWeight: FontWeight.bold)),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -116,7 +118,7 @@ class AiBildirimScreen extends StatelessWidget {
             Text(b['mesaj']?.toString() ?? '', style: TextStyle(color: renk, fontSize: 14, fontWeight: FontWeight.w600, height: 1.35)),
             const SizedBox(height: 8),
             // Detaylı açıklama (AI okuması)
-            Text(b['detay']?.toString() ?? '', style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 13.5, height: 1.5)),
+            Text(b['detay']?.toString() ?? '', style: TextStyle(color: t.sub2, fontSize: 13.5, height: 1.5)),
           ]),
         ),
         if (aksiyon != null)
@@ -170,16 +172,16 @@ class AiBildirimScreen extends StatelessWidget {
         ),
       );
 
-  Widget _bos() => Center(
+  Widget _bos(TemaProvider t) => Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
-          child: Column(mainAxisSize: MainAxisSize.min, children: const [
-            Icon(Icons.check_circle_outline, size: 64, color: Color(0xFF10B981)),
-            SizedBox(height: 16),
-            Text('Her şey yolunda 👌', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-            SizedBox(height: 8),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(Icons.check_circle_outline, size: 64, color: Color(0xFF10B981)),
+            const SizedBox(height: 16),
+            Text('Her şey yolunda 👌', style: TextStyle(color: t.ink, fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
             Text('Şu an dikkat çeken bir durum yakalamadım. Yeni bir şey fark edersem burada göreceksin.',
-                textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13.5, height: 1.5)),
+                textAlign: TextAlign.center, style: TextStyle(color: t.sub, fontSize: 13.5, height: 1.5)),
           ]),
         ),
       );

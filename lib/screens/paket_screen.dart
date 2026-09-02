@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
+import '../providers/tema_provider.dart';
 import '../responsive.dart';
 import '../services/api.dart';
 import 'fis.dart';
@@ -17,6 +18,15 @@ class _PaketScreenState extends State<PaketScreen> {
   List siparisler = [];
   bool loading = true;
   final _f = NumberFormat.decimalPattern('tr');
+
+  TemaProvider get _t => context.watch<TemaProvider>();
+  Color get _bg => _t.bg;
+  Color get _card => _t.card;
+  Color get _card2 => _t.card2;
+  Color get _ink => _t.ink;
+  Color get _sub => _t.sub;
+  Color get _sub2 => _t.sub2;
+  Color get _line => _t.line;
 
   num _n(dynamic v) => v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0);
 
@@ -107,13 +117,14 @@ class _PaketScreenState extends State<PaketScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: _bg,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: _card,
         elevation: 0.5,
         title: Text('Paket Siparişler  (${siparisler.length})',
-            style: const TextStyle(color: Color(0xFF0F172A), fontSize: 18, fontWeight: FontWeight.bold)),
+            style: TextStyle(color: _ink, fontSize: 18, fontWeight: FontWeight.bold)),
         actions: [
-          IconButton(onPressed: _yukle, tooltip: 'Yenile', icon: const Icon(Icons.refresh, color: Color(0xFF64748B))),
+          IconButton(onPressed: _yukle, tooltip: 'Yenile', icon: Icon(Icons.refresh, color: _sub)),
           const SizedBox(width: 6),
         ],
       ),
@@ -122,9 +133,9 @@ class _PaketScreenState extends State<PaketScreen> {
           : RefreshIndicator(
               onRefresh: _yukle,
               child: siparisler.isEmpty
-                  ? ListView(children: const [
-                      SizedBox(height: 120),
-                      Center(child: Text('Şu an aktif paket sipariş yok.', style: TextStyle(color: Color(0xFF94A3B8)))),
+                  ? ListView(children: [
+                      const SizedBox(height: 120),
+                      Center(child: Text('Şu an aktif paket sipariş yok.', style: TextStyle(color: _sub))),
                     ])
                   : genisMi(context)
                   ? _masaustuTablo()
@@ -138,7 +149,7 @@ class _PaketScreenState extends State<PaketScreen> {
                         final dk = _n(s['gecen_dk']).toInt();
                         final adet = _n(s['urun_adet']).toInt();
                         return Material(
-                          color: Colors.white,
+                          color: _card,
                           borderRadius: BorderRadius.circular(16),
                           child: InkWell(
                             borderRadius: BorderRadius.circular(16),
@@ -146,9 +157,9 @@ class _PaketScreenState extends State<PaketScreen> {
                             child: Container(
                               padding: const EdgeInsets.all(14),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: _card,
                                 borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                                border: Border.all(color: _line),
                               ),
                               child: Row(
                                 children: [
@@ -167,7 +178,7 @@ class _PaketScreenState extends State<PaketScreen> {
                                           ),
                                           const SizedBox(width: 8),
                                           Text('● ${s['teslimat_durumu'] ?? ''}',
-                                              style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                                              style: TextStyle(fontSize: 12, color: _sub)),
                                           const Spacer(),
                                           // Süre rozeti
                                           Container(
@@ -186,19 +197,19 @@ class _PaketScreenState extends State<PaketScreen> {
                                         ]),
                                         const SizedBox(height: 6),
                                         Text(s['musteri']?.toString() ?? 'Müşteri',
-                                            style: const TextStyle(
-                                                fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                                            style: TextStyle(
+                                                fontWeight: FontWeight.bold, color: _ink)),
                                         const SizedBox(height: 5),
                                         // Ödeme yöntemi — paket çalışanı buna göre hazırlanır
                                         _odemeRozet(s['odeme_yontemi']?.toString()),
                                         const SizedBox(height: 5),
                                         Row(children: [
                                           if (adet > 0) ...[
-                                            const Icon(Icons.shopping_bag_outlined,
-                                                size: 12, color: Color(0xFF94A3B8)),
+                                            Icon(Icons.shopping_bag_outlined,
+                                                size: 12, color: _sub),
                                             const SizedBox(width: 3),
                                             Text('$adet ürün',
-                                                style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                                                style: TextStyle(fontSize: 12, color: _sub)),
                                             const SizedBox(width: 10),
                                           ],
                                           if (s['kurye'] != null)
@@ -216,10 +227,10 @@ class _PaketScreenState extends State<PaketScreen> {
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
                                       Text('${_f.format(_n(s['toplam']).round())}TL',
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.bold, color: Color(0xFF0F172A), fontSize: 15)),
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold, color: _ink, fontSize: 15)),
                                       const SizedBox(height: 4),
-                                      const Icon(Icons.chevron_right, size: 18, color: Color(0xFFCBD5E1)),
+                                      Icon(Icons.chevron_right, size: 18, color: _sub),
                                     ],
                                   ),
                                 ],
@@ -263,7 +274,7 @@ class _PaketScreenState extends State<PaketScreen> {
         child: Row(children: [
           Container(width: 4, height: 18, decoration: BoxDecoration(color: renk, borderRadius: BorderRadius.circular(2))),
           const SizedBox(width: 8),
-          Text(baslik, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+          Text(baslik, style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: _ink)),
           const SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -274,9 +285,9 @@ class _PaketScreenState extends State<PaketScreen> {
       ),
       Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: _card,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
+          border: Border.all(color: _line),
         ),
         child: Column(children: [
           _baslikSatiri(),
@@ -289,10 +300,10 @@ class _PaketScreenState extends State<PaketScreen> {
 
   Widget _baslikSatiri() {
     Widget h(String t, int flex, {TextAlign a = TextAlign.left}) =>
-        Expanded(flex: flex, child: Text(t, textAlign: a, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF64748B))));
+        Expanded(flex: flex, child: Text(t, textAlign: a, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _sub)));
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-      decoration: const BoxDecoration(color: Color(0xFFF8FAFC), borderRadius: BorderRadius.vertical(top: Radius.circular(12))),
+      decoration: BoxDecoration(color: _card2, borderRadius: const BorderRadius.vertical(top: Radius.circular(12))),
       child: Row(children: [
         h('Platform', _fPlat),
         h('Müşteri', _fMus),
@@ -312,7 +323,7 @@ class _PaketScreenState extends State<PaketScreen> {
     final id = _n(s['id']).toInt();
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(border: son ? null : const Border(bottom: BorderSide(color: Color(0xFFEEF2F7)))),
+      decoration: BoxDecoration(border: son ? null : Border(bottom: BorderSide(color: _line))),
       child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
         Expanded(
           flex: _fPlat,
@@ -327,15 +338,15 @@ class _PaketScreenState extends State<PaketScreen> {
         ),
         Expanded(
           flex: _fMus,
-          child: Text(s['musteri']?.toString() ?? 'Müşteri', overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF0F172A))),
+          child: Text(s['musteri']?.toString() ?? 'Müşteri', overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _ink)),
         ),
         Expanded(
           flex: _fAdr,
-          child: Text((s['teslimat_adres'] ?? '-').toString(), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+          child: Text((s['teslimat_adres'] ?? '-').toString(), maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: _sub)),
         ),
         Expanded(
           flex: _fTut,
-          child: Text('${_f.format(_n(s['toplam']).round())}TL', textAlign: TextAlign.right, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+          child: Text('${_f.format(_n(s['toplam']).round())}TL', textAlign: TextAlign.right, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: _ink)),
         ),
         Expanded(
           flex: _fOde,
@@ -375,15 +386,15 @@ class _PaketScreenState extends State<PaketScreen> {
 
   Widget _btn(String label, Color renk, VoidCallback onTap, {bool dolu = true}) {
     return Material(
-      color: dolu ? renk : Colors.white,
+      color: dolu ? renk : _card,
       borderRadius: BorderRadius.circular(7),
       child: InkWell(
         borderRadius: BorderRadius.circular(7),
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(7), border: dolu ? null : Border.all(color: const Color(0xFFCBD5E1))),
-          child: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: dolu ? Colors.white : const Color(0xFF475569))),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(7), border: dolu ? null : Border.all(color: _line)),
+          child: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: dolu ? Colors.white : _sub2)),
         ),
       ),
     );
@@ -475,6 +486,15 @@ class _PaketDetayScreenState extends State<PaketDetayScreen> {
   bool loading = true;
   final _f = NumberFormat.decimalPattern('tr');
 
+  TemaProvider get _t => context.watch<TemaProvider>();
+  Color get _bg => _t.bg;
+  Color get _card => _t.card;
+  Color get _card2 => _t.card2;
+  Color get _ink => _t.ink;
+  Color get _sub => _t.sub;
+  Color get _sub2 => _t.sub2;
+  Color get _line => _t.line;
+
   num _n(dynamic v) => v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0);
   String _para(dynamic v) => '${_f.format(_n(v).round())}TL';
 
@@ -528,9 +548,9 @@ class _PaketDetayScreenState extends State<PaketDetayScreen> {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: _card,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
+          border: Border.all(color: _line),
         ),
         child: child,
       );
@@ -538,15 +558,15 @@ class _PaketDetayScreenState extends State<PaketDetayScreen> {
   Widget _satir(IconData ic, String etiket, String deger) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 5),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Icon(ic, size: 16, color: const Color(0xFF94A3B8)),
+          Icon(ic, size: 16, color: _sub),
           const SizedBox(width: 10),
-          Text(etiket, style: const TextStyle(fontSize: 13, color: Color(0xFF64748B))),
+          Text(etiket, style: TextStyle(fontSize: 13, color: _sub)),
           const SizedBox(width: 10),
           Expanded(
             child: Text(deger,
                 textAlign: TextAlign.right,
-                style: const TextStyle(
-                    fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF0F172A))),
+                style: TextStyle(
+                    fontSize: 13, fontWeight: FontWeight.w600, color: _ink)),
           ),
         ]),
       );
@@ -557,18 +577,18 @@ class _PaketDetayScreenState extends State<PaketDetayScreen> {
     final dk = _n(d?['gecen_dk']).toInt();
     final kalemler = (d?['kalemler'] as List?) ?? [];
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F5F9),
+      backgroundColor: _bg,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: _card,
         elevation: 0.5,
-        iconTheme: const IconThemeData(color: Color(0xFF0F172A)),
-        title: const Text('Sipariş Detayı',
-            style: TextStyle(color: Color(0xFF0F172A), fontSize: 18, fontWeight: FontWeight.bold)),
+        iconTheme: IconThemeData(color: _ink),
+        title: Text('Sipariş Detayı',
+            style: TextStyle(color: _ink, fontSize: 18, fontWeight: FontWeight.bold)),
       ),
       body: loading
           ? const Center(child: CircularProgressIndicator())
           : d == null
-              ? const Center(child: Text('Sipariş bulunamadı.', style: TextStyle(color: Color(0xFF94A3B8))))
+              ? Center(child: Text('Sipariş bulunamadı.', style: TextStyle(color: _sub)))
               : ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
@@ -588,7 +608,7 @@ class _PaketDetayScreenState extends State<PaketDetayScreen> {
                             ),
                             const SizedBox(width: 8),
                             Text('● ${d?['teslimat_durumu'] ?? ''}',
-                                style: const TextStyle(fontSize: 13, color: Color(0xFF64748B))),
+                                style: TextStyle(fontSize: 13, color: _sub)),
                             const Spacer(),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -606,13 +626,13 @@ class _PaketDetayScreenState extends State<PaketDetayScreen> {
                           ]),
                           const SizedBox(height: 12),
                           Text(d?['musteri']?.toString() ?? 'Müşteri',
-                              style: const TextStyle(
-                                  fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                              style: TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.bold, color: _ink)),
                           if ((d?['platform_siparis_no'] ?? '').toString().isNotEmpty)
                             Padding(
                               padding: const EdgeInsets.only(top: 2),
                               child: Text('Sipariş No: ${d?['platform_siparis_no']}',
-                                  style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
+                                  style: TextStyle(fontSize: 12, color: _sub)),
                             ),
                         ],
                       ),
@@ -644,7 +664,7 @@ class _PaketDetayScreenState extends State<PaketDetayScreen> {
                               Text(st['ad'] as String, style: TextStyle(color: renk, fontSize: 16, fontWeight: FontWeight.bold)),
                               const SizedBox(height: 2),
                               Text(tahsilat ? 'Kapıda tahsil edilecek' : 'Ödeme alındı — tahsilat yok',
-                                  style: const TextStyle(color: Color(0xFF64748B), fontSize: 12)),
+                                  style: TextStyle(color: _sub, fontSize: 12)),
                             ]),
                           ),
                           if (tahsilat)
@@ -658,9 +678,9 @@ class _PaketDetayScreenState extends State<PaketDetayScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Teslimat Bilgileri',
+                          Text('Teslimat Bilgileri',
                               style: TextStyle(
-                                  fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF94A3B8))),
+                                  fontSize: 12, fontWeight: FontWeight.bold, color: _sub)),
                           const SizedBox(height: 6),
                           if ((d?['telefon'] ?? '').toString().isNotEmpty)
                             _satir(Icons.phone, 'Telefon', d?['telefon'].toString() ?? '-'),
@@ -680,12 +700,12 @@ class _PaketDetayScreenState extends State<PaketDetayScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('Ürünler (${kalemler.length})',
-                              style: const TextStyle(
-                                  fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF94A3B8))),
+                              style: TextStyle(
+                                  fontSize: 12, fontWeight: FontWeight.bold, color: _sub)),
                           const SizedBox(height: 8),
                           if (kalemler.isEmpty)
-                            const Text('Ürün bilgisi yok.',
-                                style: TextStyle(fontSize: 13, color: Color(0xFF94A3B8)))
+                            Text('Ürün bilgisi yok.',
+                                style: TextStyle(fontSize: 13, color: _sub))
                           else
                             ...kalemler.map((k) => Padding(
                                   padding: const EdgeInsets.symmetric(vertical: 6),
@@ -710,10 +730,10 @@ class _PaketDetayScreenState extends State<PaketDetayScreen> {
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
                                             Text(k['urun_adi']?.toString() ?? 'Ürün',
-                                                style: const TextStyle(
+                                                style: TextStyle(
                                                     fontSize: 14,
                                                     fontWeight: FontWeight.w600,
-                                                    color: Color(0xFF0F172A))),
+                                                    color: _ink)),
                                             if ((k['not'] ?? '').toString().isNotEmpty)
                                               Text('Not: ${k['not']}',
                                                   style: const TextStyle(

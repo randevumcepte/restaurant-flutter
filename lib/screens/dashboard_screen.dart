@@ -845,8 +845,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Container(
           width: 40,
           padding: const EdgeInsets.symmetric(vertical: 2),
-          decoration: BoxDecoration(color: _t.card2, borderRadius: BorderRadius.circular(6)),
-          child: Text('${_n(u['adet']).toInt()}×', textAlign: TextAlign.center, style: TextStyle(color: _sub, fontSize: 11, fontWeight: FontWeight.bold)),
+          decoration: BoxDecoration(color: const Color(0xFF334155), borderRadius: BorderRadius.circular(6)),
+          child: Text('${_n(u['adet']).toInt()}×', textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.bold)),
         ),
         const SizedBox(width: 10),
         Expanded(child: Text(u['ad'].toString(), overflow: TextOverflow.ellipsis, style: TextStyle(color: _sub2, fontSize: 12))),

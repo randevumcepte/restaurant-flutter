@@ -16,8 +16,6 @@ class PersonelScreen extends StatefulWidget {
   State<PersonelScreen> createState() => _PersonelScreenState();
 }
 
-const _bg = Color(0xFF0B1020);
-const _card = Color(0xFF161C2E);
 const _mor1 = Color(0xFF7C3AED);
 const _mavi = Color(0xFF4F46E5);
 const _yesil = Color(0xFF10B981);
@@ -50,6 +48,15 @@ class _PersonelScreenState extends State<PersonelScreen> {
   bool duzenleyebilir = false;
   String? hata;
   DateTime _ay = DateTime.now();
+
+  TemaProvider get _t => context.watch<TemaProvider>();
+  Color get _bg => _t.bg;
+  Color get _card => _t.card;
+  Color get _card2 => _t.card2;
+  Color get _ink => _t.ink;
+  Color get _sub => _t.sub;
+  Color get _sub2 => _t.sub2;
+  Color get _line => _t.line;
 
   String get _ayParam => '${_ay.year}-${_ay.month.toString().padLeft(2, '0')}';
   String get _ayMetin => '${_aylar[_ay.month]} ${_ay.year}';
@@ -401,6 +408,15 @@ class _PersonelDetayScreenState extends State<PersonelDetayScreen> {
   bool loading = true;
   bool duzenleyebilir = false;
   bool _degisti = false;
+
+  TemaProvider get _t => context.watch<TemaProvider>();
+  Color get _bg => _t.bg;
+  Color get _card => _t.card;
+  Color get _card2 => _t.card2;
+  Color get _ink => _t.ink;
+  Color get _sub => _t.sub;
+  Color get _sub2 => _t.sub2;
+  Color get _line => _t.line;
 
   bool get _yeni => widget.id == 0;
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import '../providers/auth_provider.dart';
+import '../providers/tema_provider.dart';
 import '../services/api.dart';
 
 /// QR Menü Rengi — hazir lüks paletler + KENDI RENGINI OLUSTUR (genel renk + detay/cizgi rengi).
@@ -13,9 +14,17 @@ class TemaSecimScreen extends StatefulWidget {
 }
 
 class _TemaSecimScreenState extends State<TemaSecimScreen> {
-  static const _bg = Color(0xFF0B1020);
-  static const _card = Color(0xFF161C2E);
   static const _gold = Color(0xFFF6CE63);
+
+  // Ekranin kendi arayuz zemini/karti/yazisi tema-duyarli (mobil koyu / masaustu aydinlik).
+  // QR onizleme renkleri (ozelAna/ozelDetay/hazir palet) is mantigidir; degismez.
+  TemaProvider get _t => context.watch<TemaProvider>();
+  Color get _bg => _t.bg;
+  Color get _card => _t.card;
+  Color get _ink => _t.ink;
+  Color get _sub => _t.sub;
+  Color get _sub2 => _t.sub2;
+  Color get _line => _t.line;
 
   bool loading = true;
   String? hata;
@@ -36,7 +45,7 @@ class _TemaSecimScreenState extends State<TemaSecimScreen> {
     if (s.length == 6) s = 'FF$s';
     return Color(int.tryParse(s, radix: 16) ?? 0xFF999999);
   }
-  String _str(Color c) => '#${c.value.toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
+  String _str(Color c) => '#${c.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
 
   Future<void> _yukle() async {
     final auth = context.read<AuthProvider>();
@@ -116,15 +125,15 @@ class _TemaSecimScreenState extends State<TemaSecimScreen> {
           decoration: BoxDecoration(
             color: aktif ? _gold : Colors.transparent, borderRadius: BorderRadius.circular(12)),
           child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Icon(ik, size: 18, color: aktif ? const Color(0xFF3A2600) : Colors.white70),
+            Icon(ik, size: 18, color: aktif ? const Color(0xFF3A2600) : _sub),
             const SizedBox(width: 7),
-            Text(etiket, style: TextStyle(color: aktif ? const Color(0xFF3A2600) : Colors.white70, fontSize: 14, fontWeight: FontWeight.w800)),
+            Text(etiket, style: TextStyle(color: aktif ? const Color(0xFF3A2600) : _sub, fontSize: 14, fontWeight: FontWeight.w800)),
           ]),
         ),
       ));
     }
     return Container(
-      decoration: BoxDecoration(color: _bg, borderRadius: BorderRadius.circular(15), border: Border.all(color: const Color(0xFF2D3752))),
+      decoration: BoxDecoration(color: _bg, borderRadius: BorderRadius.circular(15), border: Border.all(color: _line)),
       child: Row(children: [seg('koyu', Icons.dark_mode, 'Koyu'), seg('acik', Icons.light_mode, 'Açık')]),
     );
   }
@@ -141,25 +150,25 @@ class _TemaSecimScreenState extends State<TemaSecimScreen> {
             controller: sc,
             padding: const EdgeInsets.fromLTRB(18, 14, 18, 28),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              Center(child: Container(width: 44, height: 5, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(3)))),
+              Center(child: Container(width: 44, height: 5, decoration: BoxDecoration(color: _line, borderRadius: BorderRadius.circular(3)))),
               const SizedBox(height: 14),
               const Text('Kendi Rengini Oluştur', style: TextStyle(color: _gold, fontSize: 18, fontWeight: FontWeight.w800)),
               const SizedBox(height: 4),
-              const Text('Genel renk butonları; detay rengi fiyat/çizgi/logoyu belirler.', style: TextStyle(color: Colors.white54, fontSize: 12.5)),
+              Text('Genel renk butonları; detay rengi fiyat/çizgi/logoyu belirler.', style: TextStyle(color: _sub, fontSize: 12.5)),
               const SizedBox(height: 16),
-              const Text('Genel Renk (butonlar, vurgular)', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700)),
+              Text('Genel Renk (butonlar, vurgular)', style: TextStyle(color: _ink, fontSize: 14, fontWeight: FontWeight.w700)),
               const SizedBox(height: 8),
               ColorPicker(pickerColor: ana, onColorChanged: (c) => ana = c, enableAlpha: false, displayThumbColor: true,
                   paletteType: PaletteType.hueWheel, labelTypes: const [], pickerAreaHeightPercent: .65),
-              const Divider(color: Color(0xFF2D3752), height: 26),
+              Divider(color: _line, height: 26),
               SwitchListTile(
-                contentPadding: EdgeInsets.zero, activeColor: _gold,
-                title: const Text('Detay/çizgi rengi ayrı olsun', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700)),
-                subtitle: const Text('Kapalıysa fiyat/çizgiler de genel renk olur', style: TextStyle(color: Colors.white38, fontSize: 11.5)),
+                contentPadding: EdgeInsets.zero, activeThumbColor: _gold,
+                title: Text('Detay/çizgi rengi ayrı olsun', style: TextStyle(color: _ink, fontSize: 14, fontWeight: FontWeight.w700)),
+                subtitle: Text('Kapalıysa fiyat/çizgiler de genel renk olur', style: TextStyle(color: _sub, fontSize: 11.5)),
                 value: ayri, onChanged: (v) => setLocal(() => ayri = v)),
               if (ayri) ...[
                 const SizedBox(height: 6),
-                const Text('Detay Rengi (fiyatlar, çizgiler, logo)', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700)),
+                Text('Detay Rengi (fiyatlar, çizgiler, logo)', style: TextStyle(color: _ink, fontSize: 14, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 8),
                 ColorPicker(pickerColor: detay, onColorChanged: (c) => detay = c, enableAlpha: false, displayThumbColor: true,
                     paletteType: PaletteType.hueWheel, labelTypes: const [], pickerAreaHeightPercent: .6),
@@ -186,36 +195,36 @@ class _TemaSecimScreenState extends State<TemaSecimScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _bg,
-      appBar: AppBar(backgroundColor: _bg, iconTheme: const IconThemeData(color: Colors.white),
-          title: const Text('QR Menü Rengi', style: TextStyle(fontWeight: FontWeight.bold))),
+      appBar: AppBar(backgroundColor: _bg, iconTheme: IconThemeData(color: _ink),
+          title: Text('QR Menü Rengi', style: TextStyle(color: _ink, fontWeight: FontWeight.bold))),
       body: loading
           ? const Center(child: CircularProgressIndicator(color: _gold))
           : hata != null
-              ? Center(child: Text(hata!, style: const TextStyle(color: Colors.white70)))
+              ? Center(child: Text(hata!, style: TextStyle(color: _sub)))
               : ListView(padding: const EdgeInsets.fromLTRB(16, 14, 16, 28), children: [
                   Container(
                     padding: const EdgeInsets.all(15),
-                    decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(16), border: Border.all(color: _gold.withOpacity(.25))),
-                    child: const Text('🎨 Müşterilerin masadaki QR ile açtığı menünün rengini seçin. Dokununca anında kaydedilir.',
-                        style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 13, height: 1.45)),
+                    decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(16), border: Border.all(color: _gold.withValues(alpha: .25))),
+                    child: Text('🎨 Müşterilerin masadaki QR ile açtığı menünün rengini seçin. Dokununca anında kaydedilir.',
+                        style: TextStyle(color: _sub2, fontSize: 13, height: 1.45)),
                   ),
                   if (!duzenleyebilir) const Padding(padding: EdgeInsets.only(top: 12),
                       child: Text('Bu ayarı yalnızca Sahip/Müdür değiştirebilir.', style: TextStyle(color: Color(0xFFF87171), fontSize: 12.5))),
 
                   const SizedBox(height: 18),
-                  const Text('Menü Modu', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
+                  Text('Menü Modu', style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.w800)),
                   const SizedBox(height: 4),
-                  const Text('QR menünün açılış modu. Müşteri sol üstteki ☀️/🌙 ile kendi de değiştirebilir.', style: TextStyle(color: Colors.white38, fontSize: 11.5)),
+                  Text('QR menünün açılış modu. Müşteri sol üstteki ☀️/🌙 ile kendi de değiştirebilir.', style: TextStyle(color: _sub, fontSize: 11.5)),
                   const SizedBox(height: 8),
                   _modSecici(),
 
                   const SizedBox(height: 22),
-                  const Text('Kendi Rengin', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
+                  Text('Kendi Rengin', style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.w800)),
                   const SizedBox(height: 8),
                   _ozelKart(),
 
                   const SizedBox(height: 22),
-                  const Text('Hazır Lüks Paletler', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
+                  Text('Hazır Lüks Paletler', style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.w800)),
                   const SizedBox(height: 10),
                   GridView.count(
                     shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
@@ -234,8 +243,8 @@ class _TemaSecimScreenState extends State<TemaSecimScreen> {
       child: Container(
         decoration: BoxDecoration(
           color: _card, borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: aktif ? _gold : const Color(0xFF2D3752), width: aktif ? 2 : 1),
-          boxShadow: aktif ? [BoxShadow(color: _gold.withOpacity(.35), blurRadius: 16, spreadRadius: 1)] : null,
+          border: Border.all(color: aktif ? _gold : _line, width: aktif ? 2 : 1),
+          boxShadow: aktif ? [BoxShadow(color: _gold.withValues(alpha: .35), blurRadius: 16, spreadRadius: 1)] : null,
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(children: [
@@ -247,11 +256,11 @@ class _TemaSecimScreenState extends State<TemaSecimScreen> {
             const Icon(Icons.palette, color: _gold, size: 20), const SizedBox(width: 9),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(aktif ? 'Özel renginiz (seçili)' : 'Kendi rengini oluştur',
-                  style: TextStyle(color: aktif ? _gold : Colors.white, fontSize: 14.5, fontWeight: FontWeight.w800)),
-              const Text('Dokunup renk seç', style: TextStyle(color: Colors.white38, fontSize: 11.5)),
+                  style: TextStyle(color: aktif ? _gold : _ink, fontSize: 14.5, fontWeight: FontWeight.w800)),
+              Text('Dokunup renk seç', style: TextStyle(color: _sub, fontSize: 11.5)),
             ])),
             if (kaydediliyor == 'ozel') const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.2, color: _gold))
-            else const Icon(Icons.chevron_right, color: Colors.white38),
+            else Icon(Icons.chevron_right, color: _sub),
           ])),
         ]),
       ),
@@ -269,8 +278,8 @@ class _TemaSecimScreenState extends State<TemaSecimScreen> {
       child: Container(
         decoration: BoxDecoration(
           color: _card, borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: aktif ? _gold : const Color(0xFF2D3752), width: aktif ? 2 : 1),
-          boxShadow: aktif ? [BoxShadow(color: _gold.withOpacity(.35), blurRadius: 16, spreadRadius: 1)] : null,
+          border: Border.all(color: aktif ? _gold : _line, width: aktif ? 2 : 1),
+          boxShadow: aktif ? [BoxShadow(color: _gold.withValues(alpha: .35), blurRadius: 16, spreadRadius: 1)] : null,
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -288,7 +297,7 @@ class _TemaSecimScreenState extends State<TemaSecimScreen> {
                 child: Center(child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white))))),
           ])),
           Padding(padding: const EdgeInsets.fromLTRB(12, 10, 12, 12), child: Row(children: [
-            Expanded(child: Text(t['ad']?.toString() ?? '', style: TextStyle(color: aktif ? _gold : Colors.white, fontSize: 14, fontWeight: FontWeight.w800))),
+            Expanded(child: Text(t['ad']?.toString() ?? '', style: TextStyle(color: aktif ? _gold : _ink, fontSize: 14, fontWeight: FontWeight.w800))),
             if (aktif) const Text('Seçili', style: TextStyle(color: _gold, fontSize: 11, fontWeight: FontWeight.w700)),
           ])),
         ]),

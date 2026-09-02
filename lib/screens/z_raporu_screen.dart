@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
+import '../providers/tema_provider.dart';
 import '../services/api.dart';
 import 'fis.dart';
 
@@ -19,8 +20,15 @@ class _ZRaporuScreenState extends State<ZRaporuScreen> {
   DateTime _tarih = DateTime.now();
   final _f = NumberFormat.decimalPattern('tr');
 
-  static const _bg = Color(0xFFF1F5F9);
   static const _mavi = Color(0xFF4F46E5);
+
+  TemaProvider get _t => context.watch<TemaProvider>();
+  Color get _bg => _t.bg;
+  Color get _card => _t.card;
+  Color get _ink => _t.ink;
+  Color get _sub => _t.sub;
+  Color get _sub2 => _t.sub2;
+  Color get _line => _t.line;
 
   static const _aylar = ['', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
 
@@ -73,14 +81,14 @@ class _ZRaporuScreenState extends State<ZRaporuScreen> {
     return Scaffold(
       backgroundColor: _bg,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: _card,
         elevation: 0.5,
-        iconTheme: const IconThemeData(color: Color(0xFF0F172A)),
+        iconTheme: IconThemeData(color: _ink),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF0F172A)),
+          icon: Icon(Icons.arrow_back, color: _ink),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
-        title: const Text('Gün Sonu (Z Raporu)', style: TextStyle(color: Color(0xFF0F172A), fontSize: 18, fontWeight: FontWeight.bold)),
+        title: Text('Gün Sonu (Z Raporu)', style: TextStyle(color: _ink, fontSize: 18, fontWeight: FontWeight.bold)),
         actions: [
           if (d != null)
             IconButton(onPressed: () => _yazdir(), icon: const Icon(Icons.print, color: _mavi)),
@@ -89,11 +97,11 @@ class _ZRaporuScreenState extends State<ZRaporuScreen> {
       body: Column(children: [
         // Tarih secici
         Container(
-          color: Colors.white,
+          color: _card,
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
             IconButton(onPressed: () => _gunDegis(-1), icon: const Icon(Icons.chevron_left, color: _mavi)),
-            Text(_tarihMetin, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A), fontSize: 15)),
+            Text(_tarihMetin, style: TextStyle(fontWeight: FontWeight.bold, color: _ink, fontSize: 15)),
             IconButton(onPressed: () => _gunDegis(1), icon: const Icon(Icons.chevron_right, color: _mavi)),
           ]),
         ),
@@ -101,7 +109,7 @@ class _ZRaporuScreenState extends State<ZRaporuScreen> {
           child: loading
               ? const Center(child: CircularProgressIndicator())
               : d == null
-                  ? const Center(child: Text('Veri alınamadı', style: TextStyle(color: Color(0xFF94A3B8))))
+                  ? Center(child: Text('Veri alınamadı', style: TextStyle(color: _sub)))
                   : RefreshIndicator(onRefresh: _yukle, child: _icerik()),
         ),
       ]),
@@ -182,9 +190,9 @@ class _ZRaporuScreenState extends State<ZRaporuScreen> {
   Widget _kutu(String baslik, List<Widget> c) => Container(
         margin: const EdgeInsets.only(bottom: 14),
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFE2E8F0))),
+        decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(18), border: Border.all(color: _line)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(baslik, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+          Text(baslik, style: TextStyle(fontWeight: FontWeight.bold, color: _ink)),
           const SizedBox(height: 8),
           ...c,
         ]),
@@ -193,8 +201,8 @@ class _ZRaporuScreenState extends State<ZRaporuScreen> {
   Widget _satir(String s, String v, {Color? renk, bool kalin = false}) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 5),
         child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Expanded(child: Text(s, style: const TextStyle(color: Color(0xFF334155)))),
-          Text(v, style: TextStyle(fontWeight: kalin ? FontWeight.bold : FontWeight.w600, color: renk ?? const Color(0xFF0F172A))),
+          Expanded(child: Text(s, style: TextStyle(color: _sub2))),
+          Text(v, style: TextStyle(fontWeight: kalin ? FontWeight.bold : FontWeight.w600, color: renk ?? _ink)),
         ]),
       );
 

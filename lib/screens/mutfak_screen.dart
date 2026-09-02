@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/tema_provider.dart';
 import '../services/api.dart';
 
 /// Mutfak (KDS) hub — 4 sekme:
@@ -42,8 +43,14 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
   Map<String, dynamic>? analiz;
   bool loading4 = true;
 
-  static const _bg = Color(0xFF0B1020);
-  static const _card = Color(0xFF161C2E);
+  TemaProvider get _t => context.watch<TemaProvider>();
+  Color get _bg => _t.bg;
+  Color get _card => _t.card;
+  Color get _card2 => _t.card2;
+  Color get _ink => _t.ink;
+  Color get _sub => _t.sub;
+  Color get _sub2 => _t.sub2;
+  Color get _line => _t.line;
   static const _mor = Color(0xFF9D5DC8);
   static const _yesil = Color(0xFF10B981);
   static const _amber = Color(0xFFF59E0B);
@@ -193,9 +200,9 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
       appBar: AppBar(
         backgroundColor: _bg,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Color(0xFF94A3B8)),
+        iconTheme: IconThemeData(color: _sub),
         title: Text('👨‍🍳 Mutfak · ${basliklar[_tab.index]}',
-            style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
+            style: TextStyle(color: _ink, fontSize: 17, fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
             onPressed: () {
@@ -212,8 +219,8 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
           isScrollable: true,
           tabAlignment: TabAlignment.start,
           indicatorColor: _mor,
-          labelColor: Colors.white,
-          unselectedLabelColor: const Color(0xFF64748B),
+          labelColor: _ink,
+          unselectedLabelColor: _sub,
           labelStyle: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold),
           tabs: [
             for (int i = 0; i < basliklar.length; i++)
@@ -272,12 +279,12 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
               decoration: BoxDecoration(
                 color: topluMod ? _mor : _card,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: topluMod ? _mor : const Color(0xFF2D3752)),
+                border: Border.all(color: topluMod ? _mor : _line),
               ),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Icon(Icons.dashboard_customize, size: 15, color: topluMod ? Colors.white : const Color(0xFF94A3B8)),
+                Icon(Icons.dashboard_customize, size: 15, color: topluMod ? Colors.white : _sub),
                 const SizedBox(width: 5),
-                Text('Toplu', style: TextStyle(color: topluMod ? Colors.white : const Color(0xFF94A3B8), fontSize: 12.5, fontWeight: FontWeight.bold)),
+                Text('Toplu', style: TextStyle(color: topluMod ? Colors.white : _sub, fontSize: 12.5, fontWeight: FontWeight.bold)),
               ]),
             ),
           ),
@@ -321,15 +328,15 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
           decoration: BoxDecoration(
             color: aktif ? _mor : _card,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: aktif ? _mor : const Color(0xFF2D3752)),
+            border: Border.all(color: aktif ? _mor : _line),
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Text(ad, style: TextStyle(color: aktif ? Colors.white : const Color(0xFFCBD5E1), fontSize: 12.5, fontWeight: FontWeight.w600)),
+            Text(ad, style: TextStyle(color: aktif ? Colors.white : _sub2, fontSize: 12.5, fontWeight: FontWeight.w600)),
             if (adet > 0) ...[
               const SizedBox(width: 5),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 0.5),
-                decoration: BoxDecoration(color: aktif ? Colors.white24 : const Color(0xFF243049), borderRadius: BorderRadius.circular(20)),
+                decoration: BoxDecoration(color: aktif ? Colors.white24 : _card2, borderRadius: BorderRadius.circular(20)),
                 child: Text('$adet', style: TextStyle(color: aktif ? Colors.white : _mor, fontSize: 11, fontWeight: FontWeight.bold)),
               ),
             ],
@@ -353,10 +360,10 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
             margin: const EdgeInsets.only(bottom: 8),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(color: _mor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
-            child: Row(children: const [
-              Icon(Icons.info_outline, size: 15, color: _mor),
-              SizedBox(width: 7),
-              Expanded(child: Text('Tüm masalardaki aynı ürünler toplandı — toplu hazırla.', style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 12))),
+            child: Row(children: [
+              const Icon(Icons.info_outline, size: 15, color: _mor),
+              const SizedBox(width: 7),
+              Expanded(child: Text('Tüm masalardaki aynı ürünler toplandı — toplu hazırla.', style: TextStyle(color: _sub2, fontSize: 12))),
             ]),
           ),
           for (final t in toplu) _topluSatir(t as Map),
@@ -386,9 +393,9 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
         const SizedBox(width: 12),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(t['ad'].toString(), style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
+            Text(t['ad'].toString(), style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.w700)),
             const SizedBox(height: 2),
-            Text(t['istasyon_ad']?.toString() ?? '', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+            Text(t['istasyon_ad']?.toString() ?? '', style: TextStyle(color: _sub, fontSize: 12)),
           ]),
         ),
         Row(mainAxisSize: MainAxisSize.min, children: [
@@ -419,10 +426,10 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
             Flexible(
               child: Text(s['masa'].toString(),
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+                  style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.bold)),
             ),
             const SizedBox(width: 6),
-            Text('· ${_adet(toplamAdet)} ürün', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+            Text('· ${_adet(toplamAdet)} ürün', style: TextStyle(color: _sub, fontSize: 12)),
             const Spacer(),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -470,14 +477,14 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Container(
           margin: const EdgeInsets.only(top: 1), padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-          decoration: BoxDecoration(color: const Color(0xFF243049), borderRadius: BorderRadius.circular(6)),
+          decoration: BoxDecoration(color: _card2, borderRadius: BorderRadius.circular(6)),
           child: Text('${_adet(_n(k['adet']))}×', style: const TextStyle(color: Color(0xFFC4B5FD), fontSize: 12, fontWeight: FontWeight.bold)),
         ),
         const SizedBox(width: 9),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              Flexible(child: Text(k['ad'].toString(), style: const TextStyle(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.w600))),
+              Flexible(child: Text(k['ad'].toString(), style: TextStyle(color: _ink, fontSize: 13.5, fontWeight: FontWeight.w600))),
               if (kur.isNotEmpty && kur != 'null') ...[
                 const SizedBox(width: 6),
                 Container(
@@ -538,9 +545,9 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(color: renk.withValues(alpha: 0.12), borderRadius: const BorderRadius.vertical(top: Radius.circular(13))),
           child: Row(children: [
-            const Icon(Icons.room_service, size: 15, color: Colors.white70),
+            Icon(Icons.room_service, size: 15, color: _sub),
             const SizedBox(width: 6),
-            Flexible(child: Text(s['masa'].toString(), overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold))),
+            Flexible(child: Text(s['masa'].toString(), overflow: TextOverflow.ellipsis, style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.bold))),
             const Spacer(),
             Text('✓ hazır ${_sure(dk)} önce', style: TextStyle(color: renk, fontSize: 11.5, fontWeight: FontWeight.bold)),
           ]),
@@ -551,7 +558,7 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
             for (final k in kalemler)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 2),
-                child: Text('${_adet(_n((k as Map)['adet']))}× ${k['ad']}', style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 13.5)),
+                child: Text('${_adet(_n((k as Map)['adet']))}× ${k['ad']}', style: TextStyle(color: _ink, fontSize: 13.5)),
               ),
           ]),
         ),
@@ -589,12 +596,12 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
         padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
         child: Column(children: [
           TextField(
-            style: const TextStyle(color: Colors.white),
+            style: TextStyle(color: _ink),
             onChanged: (v) => setState(() => arama = v),
             decoration: InputDecoration(
               hintText: 'Ürün ara…',
-              hintStyle: const TextStyle(color: Color(0xFF64748B)),
-              prefixIcon: const Icon(Icons.search, color: Color(0xFF64748B), size: 20),
+              hintStyle: TextStyle(color: _sub),
+              prefixIcon: Icon(Icons.search, color: _sub, size: 20),
               filled: true, fillColor: _card,
               contentPadding: const EdgeInsets.symmetric(vertical: 0),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
@@ -605,7 +612,7 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
             const Icon(Icons.remove_shopping_cart, size: 15, color: _kirmizi),
             const SizedBox(width: 6),
             Text(tukenen > 0 ? '$tukenen ürün şu an tükendi (86)' : 'Tükenen ürün yok — hepsi satışta',
-                style: TextStyle(color: tukenen > 0 ? _kirmizi : const Color(0xFF94A3B8), fontSize: 12.5, fontWeight: FontWeight.w600)),
+                style: TextStyle(color: tukenen > 0 ? _kirmizi : _sub, fontSize: 12.5, fontWeight: FontWeight.w600)),
           ]),
         ]),
       ),
@@ -637,10 +644,10 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(u['ad'].toString(),
-                style: TextStyle(color: tukendi ? const Color(0xFF94A3B8) : Colors.white, fontSize: 14.5, fontWeight: FontWeight.w600,
+                style: TextStyle(color: tukendi ? _sub : _ink, fontSize: 14.5, fontWeight: FontWeight.w600,
                     decoration: tukendi ? TextDecoration.lineThrough : null, decorationColor: _kirmizi)),
             const SizedBox(height: 2),
-            Text(u['kategori'].toString(), style: const TextStyle(color: Color(0xFF64748B), fontSize: 11.5)),
+            Text(u['kategori'].toString(), style: TextStyle(color: _sub, fontSize: 11.5)),
           ]),
         ),
         if (tukendi)
@@ -729,7 +736,7 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
           Row(children: [
             Icon(ikon, size: 16, color: renk),
             const SizedBox(width: 6),
-            Expanded(child: Text(etiket, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11.5))),
+            Expanded(child: Text(etiket, style: TextStyle(color: _sub, fontSize: 11.5))),
           ]),
           const SizedBox(height: 8),
           Text(deger, style: TextStyle(color: renk, fontSize: 22, fontWeight: FontWeight.bold)),
@@ -751,7 +758,7 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(o['ikon']?.toString() ?? '•', style: const TextStyle(fontSize: 16)),
         const SizedBox(width: 9),
-        Expanded(child: Text(o['metin']?.toString() ?? '', style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 13, height: 1.35))),
+        Expanded(child: Text(o['metin']?.toString() ?? '', style: TextStyle(color: _ink, fontSize: 13, height: 1.35))),
       ]),
     );
   }
@@ -763,16 +770,16 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(children: [
-        SizedBox(width: 90, child: Text(it['ad'].toString(), style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 12.5))),
+        SizedBox(width: 90, child: Text(it['ad'].toString(), style: TextStyle(color: _sub2, fontSize: 12.5))),
         const SizedBox(width: 8),
         Expanded(
           child: ClipRRect(
             borderRadius: BorderRadius.circular(20),
-            child: LinearProgressIndicator(value: oran, minHeight: 9, backgroundColor: const Color(0xFF243049), color: _mor),
+            child: LinearProgressIndicator(value: oran, minHeight: 9, backgroundColor: _card2, color: _mor),
           ),
         ),
         const SizedBox(width: 8),
-        Text('$adet', style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.bold)),
+        Text('$adet', style: TextStyle(color: _ink, fontSize: 12.5, fontWeight: FontWeight.bold)),
       ]),
     );
   }
@@ -783,8 +790,8 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(children: [
-        Expanded(child: Text(e['ad'].toString(), style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 13))),
-        Text('${e['adet']}×', style: const TextStyle(color: Color(0xFF64748B), fontSize: 11.5)),
+        Expanded(child: Text(e['ad'].toString(), style: TextStyle(color: _ink, fontSize: 13))),
+        Text('${e['adet']}×', style: TextStyle(color: _sub, fontSize: 11.5)),
         const SizedBox(width: 10),
         Text('$dk dk', style: TextStyle(color: renk, fontSize: 13.5, fontWeight: FontWeight.bold)),
       ]),
@@ -799,7 +806,7 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
         for (final s in saatlik)
           Expanded(
             child: Column(mainAxisAlignment: MainAxisAlignment.end, children: [
-              Text('${_n((s as Map)['adet']).toInt()}', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 10)),
+              Text('${_n((s as Map)['adet']).toInt()}', style: TextStyle(color: _sub, fontSize: 10)),
               const SizedBox(height: 3),
               Container(
                 height: (90 * (_n(s['adet']).toInt() / maks)).clamp(4, 90).toDouble(),
@@ -810,7 +817,7 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
                 ),
               ),
               const SizedBox(height: 4),
-              Text('${_n(s['saat']).toInt()}', style: const TextStyle(color: Color(0xFF64748B), fontSize: 10)),
+              Text('${_n(s['saat']).toInt()}', style: TextStyle(color: _sub, fontSize: 10)),
             ]),
           ),
       ]),
@@ -826,15 +833,15 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
         color: _mor, backgroundColor: _card,
         child: ListView(children: [
           const SizedBox(height: 150),
-          const Icon(Icons.restaurant_menu, size: 54, color: Color(0xFF334155)),
+          Icon(Icons.restaurant_menu, size: 54, color: _line),
           const SizedBox(height: 12),
-          Center(child: Text(metin, style: const TextStyle(color: Color(0xFF64748B)))),
+          Center(child: Text(metin, style: TextStyle(color: _sub))),
         ]),
       );
 
   Widget _baslik(String t) => Padding(
         padding: const EdgeInsets.only(bottom: 8, left: 2),
-        child: Text(t, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+        child: Text(t, style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.bold)),
       );
 
   Widget _kutu(Widget child) => Container(

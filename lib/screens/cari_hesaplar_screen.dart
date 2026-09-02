@@ -17,8 +17,6 @@ class CariHesaplarScreen extends StatefulWidget {
   State<CariHesaplarScreen> createState() => _CariHesaplarScreenState();
 }
 
-const _bg = Color(0xFF0B1020);
-const _card = Color(0xFF161C2E);
 const _mor1 = Color(0xFF7C3AED);
 const _mavi = Color(0xFF4F46E5);
 const _yesil = Color(0xFF10B981);
@@ -31,6 +29,15 @@ Color _tipRenk(String t) => {'patron': _mor1, 'firma': _mavi, 'musteri': _yesil,
 String _tipAd(String t) => {'patron': 'Patron', 'firma': 'Firma', 'musteri': 'Müşteri', 'personel': 'Personel'}[t] ?? t;
 
 class _CariHesaplarScreenState extends State<CariHesaplarScreen> {
+  TemaProvider get _t => context.watch<TemaProvider>();
+  Color get _bg => _t.bg;
+  Color get _card => _t.card;
+  Color get _card2 => _t.card2;
+  Color get _ink => _t.ink;
+  Color get _sub => _t.sub;
+  Color get _sub2 => _t.sub2;
+  Color get _line => _t.line;
+
   List cariler = [];
   num toplamAlacak = 0;
   bool loading = true;
@@ -67,11 +74,11 @@ class _CariHesaplarScreenState extends State<CariHesaplarScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(builder: (ctx, setD) => AlertDialog(
         backgroundColor: _card,
-        title: const Text('Yeni Cari Hesap', style: TextStyle(color: Colors.white, fontSize: 16)),
+        title: Text('Yeni Cari Hesap', style: TextStyle(color: _ink, fontSize: 16)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          TextField(controller: adC, autofocus: true, style: const TextStyle(color: Colors.white), decoration: _inp('İsim / Ünvan')),
+          TextField(controller: adC, autofocus: true, style: TextStyle(color: _ink), decoration: _inp('İsim / Ünvan')),
           const SizedBox(height: 10),
-          TextField(controller: telC, keyboardType: TextInputType.phone, style: const TextStyle(color: Colors.white), decoration: _inp('Telefon (opsiyonel)')),
+          TextField(controller: telC, keyboardType: TextInputType.phone, style: TextStyle(color: _ink), decoration: _inp('Telefon (opsiyonel)')),
           const SizedBox(height: 12),
           Row(children: [
             for (final t in ['musteri', 'firma', 'personel'])
@@ -81,15 +88,15 @@ class _CariHesaplarScreenState extends State<CariHesaplarScreen> {
                   onTap: () => setD(() => tip = t),
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 8),
-                    decoration: BoxDecoration(color: tip == t ? _tipRenk(t).withValues(alpha: 0.25) : const Color(0xFF1E263B), borderRadius: BorderRadius.circular(8), border: Border.all(color: tip == t ? _tipRenk(t) : Colors.transparent)),
-                    child: Text(_tipAd(t), textAlign: TextAlign.center, style: TextStyle(color: tip == t ? _tipRenk(t) : const Color(0xFF94A3B8), fontSize: 12, fontWeight: FontWeight.bold)),
+                    decoration: BoxDecoration(color: tip == t ? _tipRenk(t).withValues(alpha: 0.25) : _card2, borderRadius: BorderRadius.circular(8), border: Border.all(color: tip == t ? _tipRenk(t) : Colors.transparent)),
+                    child: Text(_tipAd(t), textAlign: TextAlign.center, style: TextStyle(color: tip == t ? _tipRenk(t) : _sub, fontSize: 12, fontWeight: FontWeight.bold)),
                   ),
                 ),
               )),
           ]),
         ]),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Vazgeç', style: TextStyle(color: Color(0xFF94A3B8)))),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Vazgeç', style: TextStyle(color: _sub))),
           FilledButton(onPressed: () => Navigator.pop(ctx, true), style: FilledButton.styleFrom(backgroundColor: _mor1), child: const Text('Ekle')),
         ],
       )),
@@ -117,8 +124,8 @@ class _CariHesaplarScreenState extends State<CariHesaplarScreen> {
       appBar: AppBar(
         backgroundColor: _bg,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: Text(widget.secmeMod ? 'Cari Seç (Açık Hesap)' : 'Cari Hesaplar', style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
+        iconTheme: IconThemeData(color: _ink),
+        title: Text(widget.secmeMod ? 'Cari Seç (Açık Hesap)' : 'Cari Hesaplar', style: TextStyle(color: _ink, fontSize: 17, fontWeight: FontWeight.bold)),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _yeniCari,
@@ -293,6 +300,15 @@ class _CariDetayScreen extends StatefulWidget {
 }
 
 class _CariDetayScreenState extends State<_CariDetayScreen> {
+  TemaProvider get _t => context.watch<TemaProvider>();
+  Color get _bg => _t.bg;
+  Color get _card => _t.card;
+  Color get _card2 => _t.card2;
+  Color get _ink => _t.ink;
+  Color get _sub => _t.sub;
+  Color get _sub2 => _t.sub2;
+  Color get _line => _t.line;
+
   Map<String, dynamic>? d;
   bool loading = true;
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/tema_provider.dart';
 import '../services/api.dart';
 
 /// Sebep Yönetimi (Ayarlar) — silme/iskonto/ikram/iptal sebeplerini düzenle (sahip/müdür).
@@ -18,8 +19,16 @@ class _SebepYonetimiScreenState extends State<SebepYonetimiScreen> {
   String _tur = 'void';
 
   static const _turler = {'void': 'Ürün Silme', 'indirim': 'İskonto', 'ikram': 'İkram', 'iptal': 'İptal'};
-  static const _bg = Color(0xFFF1F5F9);
   static const _mavi = Color(0xFF4F46E5);
+
+  TemaProvider get _t => context.watch<TemaProvider>();
+  Color get _bg => _t.bg;
+  Color get _card => _t.card;
+  Color get _card2 => _t.card2;
+  Color get _ink => _t.ink;
+  Color get _sub => _t.sub;
+  Color get _sub2 => _t.sub2;
+  Color get _line => _t.line;
 
   @override
   void initState() {
@@ -81,10 +90,10 @@ class _SebepYonetimiScreenState extends State<SebepYonetimiScreen> {
     return Scaffold(
       backgroundColor: _bg,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: _card,
         elevation: 0.5,
-        title: const Text('Sebep Yönetimi', style: TextStyle(color: Color(0xFF0F172A), fontSize: 18, fontWeight: FontWeight.bold)),
-        iconTheme: const IconThemeData(color: Color(0xFF0F172A)),
+        title: Text('Sebep Yönetimi', style: TextStyle(color: _ink, fontSize: 18, fontWeight: FontWeight.bold)),
+        iconTheme: IconThemeData(color: _ink),
       ),
       floatingActionButton: duzenleyebilir
           ? FloatingActionButton.extended(onPressed: _ekle, backgroundColor: _mavi, icon: const Icon(Icons.add, color: Colors.white), label: const Text('Sebep Ekle', style: TextStyle(color: Colors.white)))
@@ -94,7 +103,7 @@ class _SebepYonetimiScreenState extends State<SebepYonetimiScreen> {
           : Column(children: [
               // Tur sekmeleri
               Container(
-                color: Colors.white,
+                color: _card,
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 child: SizedBox(
                   height: 38,
@@ -110,11 +119,11 @@ class _SebepYonetimiScreenState extends State<SebepYonetimiScreen> {
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                               decoration: BoxDecoration(
-                                color: _tur == e.key ? _mavi : const Color(0xFFF1F5F9),
+                                color: _tur == e.key ? _mavi : _card2,
                                 borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: _tur == e.key ? _mavi : const Color(0xFFE2E8F0)),
+                                border: Border.all(color: _tur == e.key ? _mavi : _line),
                               ),
-                              child: Text(e.value, style: TextStyle(color: _tur == e.key ? Colors.white : const Color(0xFF334155), fontWeight: FontWeight.bold, fontSize: 13)),
+                              child: Text(e.value, style: TextStyle(color: _tur == e.key ? Colors.white : _sub2, fontWeight: FontWeight.bold, fontSize: 13)),
                             ),
                           ),
                         ),
@@ -123,10 +132,10 @@ class _SebepYonetimiScreenState extends State<SebepYonetimiScreen> {
                 ),
               ),
               if (!duzenleyebilir)
-                const Padding(padding: EdgeInsets.all(12), child: Text('Sebepleri sadece işletme sahibi/müdürü düzenleyebilir.', style: TextStyle(color: Color(0xFF64748B)))),
+                Padding(padding: const EdgeInsets.all(12), child: Text('Sebepleri sadece işletme sahibi/müdürü düzenleyebilir.', style: TextStyle(color: _sub))),
               Expanded(
                 child: liste.isEmpty
-                    ? const Center(child: Text('Bu türde sebep yok.', style: TextStyle(color: Color(0xFF94A3B8))))
+                    ? Center(child: Text('Bu türde sebep yok.', style: TextStyle(color: _sub)))
                     : ListView.separated(
                         padding: const EdgeInsets.all(16),
                         itemCount: liste.length,
@@ -135,9 +144,9 @@ class _SebepYonetimiScreenState extends State<SebepYonetimiScreen> {
                           final s = liste[i] as Map;
                           return Container(
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFE2E8F0))),
+                            decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(12), border: Border.all(color: _line)),
                             child: Row(children: [
-                              Expanded(child: Text(s['metin'].toString(), style: const TextStyle(color: Color(0xFF0F172A), fontSize: 14))),
+                              Expanded(child: Text(s['metin'].toString(), style: TextStyle(color: _ink, fontSize: 14))),
                               if (duzenleyebilir)
                                 GestureDetector(onTap: () => _sil((s['id'] as num).toInt()), child: const Icon(Icons.delete_outline, color: Color(0xFFF43F5E), size: 20)),
                             ]),

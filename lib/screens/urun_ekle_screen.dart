@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
+import '../providers/tema_provider.dart';
 import '../services/api.dart';
 
 /// Sipariş girişi (POS çekirdeği): menüden ürün seç -> sepet -> adisyona ekle.
@@ -25,8 +26,13 @@ class _UrunEkleScreenState extends State<UrunEkleScreen> {
   bool _gonderiliyor = false;
   final _f = NumberFormat.decimalPattern('tr');
 
-  static const _bg = Color(0xFF0B1020);
-  static const _card = Color(0xFF161C2E);
+  TemaProvider get _t => context.watch<TemaProvider>();
+  Color get _bg => _t.bg;
+  Color get _card => _t.card;
+  Color get _ink => _t.ink;
+  Color get _sub => _t.sub;
+  Color get _line => _t.line;
+
   static const _mor1 = Color(0xFF7C3AED);
   static const _mavi = Color(0xFF4F46E5);
 
@@ -100,8 +106,8 @@ class _UrunEkleScreenState extends State<UrunEkleScreen> {
       appBar: AppBar(
         backgroundColor: _bg,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: Text(widget.baslik, style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
+        iconTheme: IconThemeData(color: _ink),
+        title: Text(widget.baslik, style: TextStyle(color: _ink, fontSize: 17, fontWeight: FontWeight.bold)),
       ),
       body: loading
           ? const Center(child: CircularProgressIndicator(color: _mor1))
@@ -128,7 +134,7 @@ class _UrunEkleScreenState extends State<UrunEkleScreen> {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(k['ad'].toString(),
-                            style: TextStyle(color: secili ? Colors.white : const Color(0xFF94A3B8), fontSize: 13, fontWeight: FontWeight.bold)),
+                            style: TextStyle(color: secili ? Colors.white : _sub, fontSize: 13, fontWeight: FontWeight.bold)),
                       ),
                     );
                   },
@@ -137,7 +143,7 @@ class _UrunEkleScreenState extends State<UrunEkleScreen> {
               // Urun grid
               Expanded(
                 child: katUrun.isEmpty
-                    ? const Center(child: Text('Bu kategoride ürün yok.', style: TextStyle(color: Color(0xFF64748B))))
+                    ? Center(child: Text('Bu kategoride ürün yok.', style: TextStyle(color: _sub)))
                     : GridView.builder(
                         padding: const EdgeInsets.all(12),
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -165,12 +171,12 @@ class _UrunEkleScreenState extends State<UrunEkleScreen> {
           decoration: BoxDecoration(
             color: _card,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: adet > 0 ? _mor1 : const Color(0xFF243049), width: adet > 0 ? 1.6 : 1),
+            border: Border.all(color: adet > 0 ? _mor1 : _line, width: adet > 0 ? 1.6 : 1),
           ),
           child: Stack(children: [
             Column(mainAxisAlignment: MainAxisAlignment.spaceBetween, crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(u['ad'].toString(), maxLines: 2, overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+                  style: TextStyle(color: _ink, fontSize: 14, fontWeight: FontWeight.w600)),
               Text(tukendi ? 'Tükendi' : _tl(_n(u['fiyat'])),
                   style: TextStyle(color: tukendi ? const Color(0xFFF43F5E) : const Color(0xFF6EE7B7), fontSize: 15, fontWeight: FontWeight.bold)),
             ]),
@@ -193,14 +199,14 @@ class _UrunEkleScreenState extends State<UrunEkleScreen> {
     return SafeArea(
       child: Container(
         padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-        decoration: const BoxDecoration(color: _card, border: Border(top: BorderSide(color: Color(0xFF243049)))),
+        decoration: BoxDecoration(color: _card, border: Border(top: BorderSide(color: _line))),
         child: Row(children: [
           Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-            Text('$_sepetAdet ürün', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
-            Text(_tl(_sepetTutar), style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+            Text('$_sepetAdet ürün', style: TextStyle(color: _sub, fontSize: 12)),
+            Text(_tl(_sepetTutar), style: TextStyle(color: _ink, fontSize: 18, fontWeight: FontWeight.bold)),
           ]),
           const Spacer(),
-          TextButton(onPressed: () => setState(() => _sepet.clear()), child: const Text('Temizle', style: TextStyle(color: Color(0xFF94A3B8)))),
+          TextButton(onPressed: () => setState(() => _sepet.clear()), child: Text('Temizle', style: TextStyle(color: _sub))),
           const SizedBox(width: 6),
           FilledButton(
             onPressed: _gonderiliyor ? null : _ekle,

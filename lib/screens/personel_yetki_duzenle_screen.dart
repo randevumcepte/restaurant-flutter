@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/tema_provider.dart';
 import '../services/api.dart';
 
 /// Tek personelin yetkileri + limitleri (iskonto %, ikram ₺). Kişinin kendi
@@ -13,12 +14,9 @@ class PersonelYetkiDuzenleScreen extends StatefulWidget {
   State<PersonelYetkiDuzenleScreen> createState() => _PersonelYetkiDuzenleScreenState();
 }
 
-const _bg = Color(0xFF0B1020);
-const _card = Color(0xFF161C2E);
 const _mor1 = Color(0xFF7C3AED);
 const _mavi = Color(0xFF4F46E5);
 const _yesil = Color(0xFF10B981);
-const _gri = Color(0xFF94A3B8);
 
 const _etiketler = {
   'adisyon_ac': 'Adisyon Aç',
@@ -43,6 +41,15 @@ const _gruplar = {
 num _n(dynamic v) => v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0);
 
 class _PersonelYetkiDuzenleScreenState extends State<PersonelYetkiDuzenleScreen> {
+  TemaProvider get _t => context.watch<TemaProvider>();
+  Color get _bg => _t.bg;
+  Color get _card => _t.card;
+  Color get _card2 => _t.card2;
+  Color get _ink => _t.ink;
+  Color get _sub => _t.sub;
+  Color get _sub2 => _t.sub2;
+  Color get _line => _t.line;
+
   Map<String, bool> yetkiler = {};
   double iskontoLimit = 0;
   final _ikramC = TextEditingController();
@@ -111,10 +118,10 @@ class _PersonelYetkiDuzenleScreenState extends State<PersonelYetkiDuzenleScreen>
     return Scaffold(
       backgroundColor: _bg,
       appBar: AppBar(
-        backgroundColor: _bg, elevation: 0, iconTheme: const IconThemeData(color: Colors.white),
+        backgroundColor: _bg, elevation: 0, iconTheme: IconThemeData(color: _ink),
         title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(widget.personelAd, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-          const Text('Yetkiler & Limitler', style: TextStyle(color: _gri, fontSize: 11)),
+          Text(widget.personelAd, style: TextStyle(color: _ink, fontSize: 16, fontWeight: FontWeight.bold)),
+          Text('Yetkiler & Limitler', style: TextStyle(color: _sub, fontSize: 11)),
         ]),
       ),
       body: loading
@@ -156,15 +163,16 @@ class _PersonelYetkiDuzenleScreenState extends State<PersonelYetkiDuzenleScreen>
   Widget _grup(String baslik, List<String> keys) => Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFF232B42))),
+        decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(16), border: Border.all(color: _line), boxShadow: _t.golge),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Padding(padding: const EdgeInsets.only(top: 8, bottom: 2), child: Text(baslik, style: const TextStyle(color: _gri, fontSize: 12, fontWeight: FontWeight.bold))),
+          Padding(padding: const EdgeInsets.only(top: 8, bottom: 2), child: Text(baslik, style: TextStyle(color: _sub, fontSize: 12, fontWeight: FontWeight.bold))),
           for (final k in keys)
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               dense: true,
               activeThumbColor: _yesil,
-              title: Text(_etiketler[k] ?? k, style: const TextStyle(color: Colors.white, fontSize: 14)),
+              inactiveTrackColor: _card2,
+              title: Text(_etiketler[k] ?? k, style: TextStyle(color: _ink, fontSize: 14)),
               value: yetkiler[k] ?? false,
               onChanged: duzenleyebilir ? (v) => setState(() => yetkiler[k] = v) : null,
             ),
@@ -173,17 +181,17 @@ class _PersonelYetkiDuzenleScreenState extends State<PersonelYetkiDuzenleScreen>
 
   Widget _limitler() => Container(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFF232B42))),
+        decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(16), border: Border.all(color: _line), boxShadow: _t.golge),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('Limitler', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          Text('Limitler', style: TextStyle(color: _ink, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Row(children: [
-            const Text('İskonto limiti', style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 13)),
+            Text('İskonto limiti', style: TextStyle(color: _sub2, fontSize: 13)),
             const Spacer(),
             Text('%${iskontoLimit.round()}', style: const TextStyle(color: _yesil, fontWeight: FontWeight.bold)),
           ]),
           Slider(
-            value: iskontoLimit, min: 0, max: 100, divisions: 20, activeColor: _mor1, inactiveColor: const Color(0xFF2D3752),
+            value: iskontoLimit, min: 0, max: 100, divisions: 20, activeColor: _mor1, inactiveColor: _line,
             label: '%${iskontoLimit.round()}',
             onChanged: duzenleyebilir ? (v) => setState(() => iskontoLimit = v) : null,
           ),
@@ -192,11 +200,11 @@ class _PersonelYetkiDuzenleScreenState extends State<PersonelYetkiDuzenleScreen>
             controller: _ikramC,
             enabled: duzenleyebilir,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(
-              labelText: 'İkram limiti (₺)', labelStyle: TextStyle(color: _gri),
-              enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Color(0xFF2D3752))),
-              focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: _mor1)),
+            style: TextStyle(color: _ink),
+            decoration: InputDecoration(
+              labelText: 'İkram limiti (₺)', labelStyle: TextStyle(color: _sub),
+              enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: _line)),
+              focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: _mor1)),
             ),
           ),
         ]),

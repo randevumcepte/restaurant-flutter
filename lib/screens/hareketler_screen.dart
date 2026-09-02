@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
+import '../providers/tema_provider.dart';
 import '../services/api.dart';
 import 'detay_screen.dart';
 
@@ -14,6 +15,13 @@ class HareketlerScreen extends StatefulWidget {
 }
 
 class _HareketlerScreenState extends State<HareketlerScreen> {
+  TemaProvider get _t => context.watch<TemaProvider>();
+  Color get _bg => _t.bg;
+  Color get _card => _t.card;
+  Color get _ink => _t.ink;
+  Color get _sub => _t.sub;
+  Color get _line => _t.line;
+
   List hareketler = [];
   bool loading = true;
   final _f = NumberFormat.decimalPattern('tr');
@@ -65,18 +73,18 @@ class _HareketlerScreenState extends State<HareketlerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F5F9),
+      backgroundColor: _bg,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: _card,
         elevation: 0.5,
-        iconTheme: const IconThemeData(color: Color(0xFF0F172A)),
-        title: const Text('Hareketler', style: TextStyle(color: Color(0xFF0F172A), fontSize: 18, fontWeight: FontWeight.bold)),
-        actions: [IconButton(onPressed: _yukle, icon: const Icon(Icons.refresh, color: Color(0xFF64748B)))],
+        iconTheme: IconThemeData(color: _ink),
+        title: Text('Hareketler', style: TextStyle(color: _ink, fontSize: 18, fontWeight: FontWeight.bold)),
+        actions: [IconButton(onPressed: _yukle, icon: Icon(Icons.refresh, color: _sub))],
       ),
       body: loading
           ? const Center(child: CircularProgressIndicator())
           : hareketler.isEmpty
-              ? const Center(child: Text('Henüz hareket yok.', style: TextStyle(color: Color(0xFF94A3B8))))
+              ? Center(child: Text('Henüz hareket yok.', style: TextStyle(color: _sub)))
               : RefreshIndicator(
                   onRefresh: _yukle,
                   child: ListView.separated(
@@ -94,7 +102,7 @@ class _HareketlerScreenState extends State<HareketlerScreen> {
                             : null,
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFE2E8F0))),
+                          decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(14), border: Border.all(color: _line)),
                           child: Row(children: [
                             Container(
                               width: 38, height: 38, alignment: Alignment.center,
@@ -104,8 +112,8 @@ class _HareketlerScreenState extends State<HareketlerScreen> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                Text(h['baslik'].toString(), style: const TextStyle(color: Color(0xFF0F172A), fontSize: 14, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                Text('${h['personel']} · ${h['zaman']}', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                                Text(h['baslik'].toString(), style: TextStyle(color: _ink, fontSize: 14, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                Text('${h['personel']} · ${h['zaman']}', style: TextStyle(color: _sub, fontSize: 12)),
                               ]),
                             ),
                             if (tutar != null && _n(tutar) > 0)
