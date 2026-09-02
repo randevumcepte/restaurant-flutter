@@ -19,6 +19,7 @@ import 'tema_secim_screen.dart';
 import 'ai_bildirim_screen.dart';
 import 'raporlar_screen.dart';
 import 'rezervasyon_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Patron ana paneli — Kerzz BOSS yogunlugunda: tek ekranda her sey.
 /// Donem secici + karsilastirma + kayip radari + food-cost + odeme/servis dagilimi + 10 gunluk grafik.
@@ -141,6 +142,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: child,
       );
 
+  // Web araci (kurye harita / cagri ekran / masa QR afis) tarayicida ac
+  Future<void> _webAc(String path) async {
+    try {
+      await launchUrl(Uri.parse('${Api.base}$path'), mode: LaunchMode.externalApplication);
+    } catch (_) {}
+  }
+
   // Sol ust menu (drawer) — yonetim sayfalarina hizli gecis
   Widget _drawer(BuildContext context, AuthProvider auth) {
     final patron = auth.rol == 'sahip' || auth.rol == 'mudur';
@@ -184,6 +192,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               if (patron) oge(Icons.palette_outlined, 'QR Menü Rengi', () => git(const TemaSecimScreen()), renk: const Color(0xFFF6CE63)),
               oge(Icons.account_balance_wallet_outlined, 'Cari / Açık Hesaplar', () => git(const CariHesaplarScreen())),
               oge(Icons.event_available_outlined, 'Rezervasyonlar', () => git(const RezervasyonScreen())),
+              if (patron) oge(Icons.map_outlined, 'Canlı Kurye Haritası', () { Navigator.of(context).pop(); _webAc('/kurye-canli'); }, renk: const Color(0xFF10B981)),
+              if (patron) oge(Icons.phone_in_talk_outlined, 'Gelen Çağrı Ekranı', () { Navigator.of(context).pop(); _webAc('/cagri-ekran'); }),
+              if (patron) oge(Icons.qr_code_2, 'Masa QR Afişleri (yazdır)', () { Navigator.of(context).pop(); _webAc('/masa-afisler'); }, renk: const Color(0xFFF6CE63)),
               if (patron) oge(Icons.badge_outlined, 'Personel & Maaş', () => git(const PersonelScreen())),
               if (patron) oge(Icons.receipt_long_outlined, 'Giderler', () => git(const GiderScreen())),
               if (patron) oge(Icons.bar_chart_outlined, 'Raporlar', () => git(const RaporlarScreen())),
