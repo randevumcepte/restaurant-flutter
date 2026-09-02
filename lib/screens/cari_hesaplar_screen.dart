@@ -35,7 +35,6 @@ class _CariHesaplarScreenState extends State<CariHesaplarScreen> {
   Color get _card2 => _t.card2;
   Color get _ink => _t.ink;
   Color get _sub => _t.sub;
-  Color get _sub2 => _t.sub2;
   Color get _line => _t.line;
 
   List cariler = [];
@@ -258,13 +257,13 @@ class _CariHesaplarScreenState extends State<CariHesaplarScreen> {
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(16)),
+        decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(16), border: Border.all(color: _line)),
         child: Row(children: [
           CircleAvatar(radius: 20, backgroundColor: renk.withValues(alpha: 0.25), child: Text(c['ad'].toString().substring(0, 1).toUpperCase(), style: TextStyle(color: renk, fontWeight: FontWeight.bold, fontSize: 16))),
           const SizedBox(width: 12),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(c['ad'].toString(), style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+              Text(c['ad'].toString(), style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.bold)),
               const SizedBox(height: 2),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
@@ -275,9 +274,9 @@ class _CariHesaplarScreenState extends State<CariHesaplarScreen> {
           ),
           Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
             Text(_tl(bakiye), style: TextStyle(color: bakiye > 0 ? _kirmizi : _yesil, fontSize: 16, fontWeight: FontWeight.bold)),
-            Text(bakiye > 0 ? 'borç' : 'temiz', style: const TextStyle(color: Color(0xFF64748B), fontSize: 10)),
+            Text(bakiye > 0 ? 'borç' : 'temiz', style: TextStyle(color: _sub, fontSize: 10)),
           ]),
-          if (widget.secmeMod) const Padding(padding: EdgeInsets.only(left: 6), child: Icon(Icons.chevron_right, color: Color(0xFF64748B))),
+          if (widget.secmeMod) Padding(padding: const EdgeInsets.only(left: 6), child: Icon(Icons.chevron_right, color: _sub)),
         ]),
       ),
     );
@@ -340,9 +339,9 @@ class _CariDetayScreenState extends State<_CariDetayScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(builder: (ctx, setD) => AlertDialog(
         backgroundColor: _card,
-        title: const Text('Tahsilat', style: TextStyle(color: Colors.white, fontSize: 16)),
+        title: Text('Tahsilat', style: TextStyle(color: _ink, fontSize: 16)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          TextField(controller: tutarC, keyboardType: TextInputType.number, autofocus: true, style: const TextStyle(color: Colors.white), decoration: _inp('Tutar (TL)')),
+          TextField(controller: tutarC, keyboardType: TextInputType.number, autofocus: true, style: TextStyle(color: _ink), decoration: _inp('Tutar (TL)')),
           const SizedBox(height: 12),
           Row(children: [
             for (final s in ['nakit', 'havale', 'kredi'])
@@ -352,15 +351,15 @@ class _CariDetayScreenState extends State<_CariDetayScreen> {
                   onTap: () => setD(() => sekil = s),
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 8),
-                    decoration: BoxDecoration(color: sekil == s ? _yesil.withValues(alpha: 0.25) : const Color(0xFF1E263B), borderRadius: BorderRadius.circular(8), border: Border.all(color: sekil == s ? _yesil : Colors.transparent)),
-                    child: Text(s[0].toUpperCase() + s.substring(1), textAlign: TextAlign.center, style: TextStyle(color: sekil == s ? _yesil : const Color(0xFF94A3B8), fontSize: 12, fontWeight: FontWeight.bold)),
+                    decoration: BoxDecoration(color: sekil == s ? _yesil.withValues(alpha: 0.25) : _card2, borderRadius: BorderRadius.circular(8), border: Border.all(color: sekil == s ? _yesil : Colors.transparent)),
+                    child: Text(s[0].toUpperCase() + s.substring(1), textAlign: TextAlign.center, style: TextStyle(color: sekil == s ? _yesil : _sub, fontSize: 12, fontWeight: FontWeight.bold)),
                   ),
                 ),
               )),
           ]),
         ]),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Vazgeç', style: TextStyle(color: Color(0xFF94A3B8)))),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Vazgeç', style: TextStyle(color: _sub))),
           FilledButton(onPressed: () => Navigator.pop(ctx, true), style: FilledButton.styleFrom(backgroundColor: _yesil), child: const Text('Tahsil Et')),
         ],
       )),
@@ -387,8 +386,8 @@ class _CariDetayScreenState extends State<_CariDetayScreen> {
       appBar: AppBar(
         backgroundColor: _bg,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: Text(widget.ad, style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
+        iconTheme: IconThemeData(color: _ink),
+        title: Text(widget.ad, style: TextStyle(color: _ink, fontSize: 17, fontWeight: FontWeight.bold)),
       ),
       body: loading
           ? const Center(child: CircularProgressIndicator(color: _mor1))
@@ -420,7 +419,7 @@ class _CariDetayScreenState extends State<_CariDetayScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    const Padding(padding: EdgeInsets.only(left: 4, bottom: 8), child: Text('Hesap Hareketleri', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold))),
+                    Padding(padding: const EdgeInsets.only(left: 4, bottom: 8), child: Text('Hesap Hareketleri', style: TextStyle(color: _ink, fontSize: 14, fontWeight: FontWeight.bold))),
                     for (final h in hareketler) _hareketSatir(h as Map),
                   ]),
                 ),
@@ -432,14 +431,14 @@ class _CariDetayScreenState extends State<_CariDetayScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(12), border: Border.all(color: _line)),
       child: Row(children: [
         Icon(borc ? Icons.arrow_upward : Icons.arrow_downward, size: 16, color: borc ? _kirmizi : _yesil),
         const SizedBox(width: 10),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(borc ? 'Satış (Borç)' : 'Tahsilat${h['odeme_sekli'] != null ? ' · ${h['odeme_sekli']}' : ''}', style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 13, fontWeight: FontWeight.w600)),
-            Text(h['zaman'].toString(), style: const TextStyle(color: Color(0xFF64748B), fontSize: 11)),
+            Text(borc ? 'Satış (Borç)' : 'Tahsilat${h['odeme_sekli'] != null ? ' · ${h['odeme_sekli']}' : ''}', style: TextStyle(color: _sub2, fontSize: 13, fontWeight: FontWeight.w600)),
+            Text(h['zaman'].toString(), style: TextStyle(color: _sub, fontSize: 11)),
           ]),
         ),
         Text('${borc ? '+' : '-'}${_tl(_n(h['tutar']))}', style: TextStyle(color: borc ? _kirmizi : _yesil, fontSize: 14, fontWeight: FontWeight.bold)),

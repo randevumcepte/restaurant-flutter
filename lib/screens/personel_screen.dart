@@ -52,10 +52,8 @@ class _PersonelScreenState extends State<PersonelScreen> {
   TemaProvider get _t => context.watch<TemaProvider>();
   Color get _bg => _t.bg;
   Color get _card => _t.card;
-  Color get _card2 => _t.card2;
   Color get _ink => _t.ink;
   Color get _sub => _t.sub;
-  Color get _sub2 => _t.sub2;
   Color get _line => _t.line;
 
   String get _ayParam => '${_ay.year}-${_ay.month.toString().padLeft(2, '0')}';
@@ -121,8 +119,8 @@ class _PersonelScreenState extends State<PersonelScreen> {
       appBar: AppBar(
         backgroundColor: _bg,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text('Personel & Maaş', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
+        iconTheme: IconThemeData(color: _ink),
+        title: Text('Personel & Maaş', style: TextStyle(color: _ink, fontSize: 17, fontWeight: FontWeight.bold)),
       ),
       floatingActionButton: duzenleyebilir
           ? FloatingActionButton.extended(
@@ -150,7 +148,7 @@ class _PersonelScreenState extends State<PersonelScreen> {
                           const SizedBox(height: 8),
                           for (final p in aktifler) _personelKart(p as Map),
                           if (pasifler.isNotEmpty) ...[
-                            const Padding(padding: EdgeInsets.fromLTRB(4, 12, 4, 6), child: Text('Pasif', style: TextStyle(color: _gri, fontSize: 12, fontWeight: FontWeight.bold))),
+                            Padding(padding: const EdgeInsets.fromLTRB(4, 12, 4, 6), child: Text('Pasif', style: TextStyle(color: _sub, fontSize: 12, fontWeight: FontWeight.bold))),
                             for (final p in pasifler) _personelKart(p as Map),
                           ],
                           const SizedBox(height: 80),
@@ -318,7 +316,7 @@ class _PersonelScreenState extends State<PersonelScreen> {
         padding: const EdgeInsets.only(bottom: 4),
         child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           IconButton(onPressed: () => _ayDegis(-1), icon: const Icon(Icons.chevron_left, color: _mor1)),
-          Text(_ayMetin, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+          Text(_ayMetin, style: TextStyle(color: _ink, fontWeight: FontWeight.bold, fontSize: 15)),
           IconButton(onPressed: () => _ayDegis(1), icon: const Icon(Icons.chevron_right, color: _mor1)),
         ]),
       );
@@ -360,18 +358,18 @@ class _PersonelScreenState extends State<PersonelScreen> {
         child: Container(
           margin: const EdgeInsets.only(bottom: 10),
           padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFF232B42))),
+          decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(16), border: Border.all(color: _line)),
           child: Row(children: [
             CircleAvatar(radius: 22, backgroundColor: renk.withValues(alpha: 0.18), child: Text(p['ad'].toString().characters.first.toUpperCase(), style: TextStyle(color: renk, fontWeight: FontWeight.bold, fontSize: 18))),
             const SizedBox(width: 12),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(p['ad'].toString(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                Text(p['ad'].toString(), style: TextStyle(color: _ink, fontWeight: FontWeight.bold, fontSize: 15)),
                 const SizedBox(height: 3),
                 Row(children: [
                   Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2), decoration: BoxDecoration(color: renk.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(8)), child: Text(_rolAd(rol), style: TextStyle(color: renk, fontSize: 11, fontWeight: FontWeight.bold))),
                   const SizedBox(width: 8),
-                  Text('Maaş ${_tl(p['maas'])}', style: const TextStyle(color: _gri, fontSize: 12)),
+                  Text('Maaş ${_tl(p['maas'])}', style: TextStyle(color: _sub, fontSize: 12)),
                   if (_n(p['prim_hesap']) > 0) ...[
                     const SizedBox(width: 8),
                     Text('+prim ${_tl(p['prim_hesap'])}', style: const TextStyle(color: _yesil, fontSize: 12)),
@@ -380,10 +378,10 @@ class _PersonelScreenState extends State<PersonelScreen> {
               ]),
             ),
             Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              Text(_tl(net), style: TextStyle(color: net > 0 ? Colors.white : _gri, fontWeight: FontWeight.bold, fontSize: 16)),
-              const Text('kalan', style: TextStyle(color: _gri, fontSize: 10)),
+              Text(_tl(net), style: TextStyle(color: net > 0 ? _ink : _sub, fontWeight: FontWeight.bold, fontSize: 16)),
+              Text('kalan', style: TextStyle(color: _sub, fontSize: 10)),
             ]),
-            const Icon(Icons.chevron_right, color: _gri, size: 20),
+            Icon(Icons.chevron_right, color: _sub, size: 20),
           ]),
         ),
       ),
@@ -412,10 +410,8 @@ class _PersonelDetayScreenState extends State<PersonelDetayScreen> {
   TemaProvider get _t => context.watch<TemaProvider>();
   Color get _bg => _t.bg;
   Color get _card => _t.card;
-  Color get _card2 => _t.card2;
   Color get _ink => _t.ink;
   Color get _sub => _t.sub;
-  Color get _sub2 => _t.sub2;
   Color get _line => _t.line;
 
   bool get _yeni => widget.id == 0;
@@ -467,9 +463,9 @@ class _PersonelDetayScreenState extends State<PersonelDetayScreen> {
         appBar: AppBar(
           backgroundColor: _bg,
           elevation: 0,
-          iconTheme: const IconThemeData(color: Colors.white),
-          leading: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => Navigator.of(context).pop(_degisti)),
-          title: Text(_yeni ? 'Yeni Personel' : (ozet['ad']?.toString() ?? 'Personel'), style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
+          iconTheme: IconThemeData(color: _ink),
+          leading: IconButton(icon: Icon(Icons.arrow_back, color: _ink), onPressed: () => Navigator.of(context).pop(_degisti)),
+          title: Text(_yeni ? 'Yeni Personel' : (ozet['ad']?.toString() ?? 'Personel'), style: TextStyle(color: _ink, fontSize: 17, fontWeight: FontWeight.bold)),
           actions: [
             if (!_yeni && duzenleyebilir) IconButton(onPressed: _formAc, icon: const Icon(Icons.edit, color: _mavi)),
           ],
@@ -477,7 +473,7 @@ class _PersonelDetayScreenState extends State<PersonelDetayScreen> {
         body: loading
             ? const Center(child: CircularProgressIndicator(color: _mor1))
             : ozet.isEmpty
-                ? const Center(child: Text('—', style: TextStyle(color: _gri)))
+                ? Center(child: Text('—', style: TextStyle(color: _sub)))
                 : ListView(padding: const EdgeInsets.all(14), children: [
                     _bilgiKart(),
                     const SizedBox(height: 12),
@@ -500,23 +496,23 @@ class _PersonelDetayScreenState extends State<PersonelDetayScreen> {
     final primTipi = ozet['prim_tipi']?.toString() ?? 'yok';
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFF232B42))),
+      decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(18), border: Border.all(color: _line)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           CircleAvatar(radius: 24, backgroundColor: renk.withValues(alpha: 0.18), child: Text(ozet['ad'].toString().characters.first.toUpperCase(), style: TextStyle(color: renk, fontWeight: FontWeight.bold, fontSize: 20))),
           const SizedBox(width: 12),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(ozet['ad'].toString(), style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
+            Text(ozet['ad'].toString(), style: TextStyle(color: _ink, fontSize: 17, fontWeight: FontWeight.bold)),
             const SizedBox(height: 3),
             Row(children: [
               Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2), decoration: BoxDecoration(color: renk.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(8)), child: Text(_rolAd(rol), style: TextStyle(color: renk, fontSize: 11, fontWeight: FontWeight.bold))),
-              if ((ozet['telefon']?.toString() ?? '').isNotEmpty) ...[const SizedBox(width: 8), Text(ozet['telefon'].toString(), style: const TextStyle(color: _gri, fontSize: 12))],
+              if ((ozet['telefon']?.toString() ?? '').isNotEmpty) ...[const SizedBox(width: 8), Text(ozet['telefon'].toString(), style: TextStyle(color: _sub, fontSize: 12))],
             ]),
           ])),
         ]),
-        const Divider(color: Color(0xFF232B42), height: 22),
+        Divider(color: _line, height: 22),
         _satir('Maaş', '${_tl(ozet['maas'])} / ${_maasTipiAd(ozet['maas_tipi']?.toString())}'),
-        _satir('Prim', primTipi == 'ciro' ? 'Ciro %${_fmt.format(_n(ozet['prim_oran']))}' : 'Yok', renk: primTipi == 'ciro' ? _yesil : _gri),
+        _satir('Prim', primTipi == 'ciro' ? 'Ciro %${_fmt.format(_n(ozet['prim_oran']))}' : 'Yok', renk: primTipi == 'ciro' ? _yesil : _sub),
         if ((ozet['pin']?.toString() ?? '').isNotEmpty) _satir('PIN', ozet['pin'].toString()),
         if ((ozet['iban']?.toString() ?? '').isNotEmpty) _satir('IBAN', ozet['iban'].toString()),
       ]),
@@ -527,16 +523,16 @@ class _PersonelDetayScreenState extends State<PersonelDetayScreen> {
         onTap: _yetkiler,
         child: Container(
           padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFF232B42))),
+          decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(18), border: Border.all(color: _line)),
           child: Row(children: [
             Container(padding: const EdgeInsets.all(9), decoration: BoxDecoration(color: _mavi.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(12)), child: const Icon(Icons.shield_outlined, color: _mavi, size: 22)),
             const SizedBox(width: 12),
-            const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Yetkiler & Limitler', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
-              SizedBox(height: 2),
-              Text('Adisyon, para, yönetim yetkileri + iskonto/ikram limiti', style: TextStyle(color: _gri, fontSize: 12)),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Yetkiler & Limitler', style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 2),
+              Text('Adisyon, para, yönetim yetkileri + iskonto/ikram limiti', style: TextStyle(color: _sub, fontSize: 12)),
             ])),
-            Icon(duzenleyebilir ? Icons.chevron_right : Icons.visibility_outlined, color: _gri, size: 20),
+            Icon(duzenleyebilir ? Icons.chevron_right : Icons.visibility_outlined, color: _sub, size: 20),
           ]),
         ),
       );
@@ -545,9 +541,9 @@ class _PersonelDetayScreenState extends State<PersonelDetayScreen> {
     final net = _n(ozet['net']);
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFF232B42))),
+      decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(18), border: Border.all(color: _line)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Bu Ay Hesap', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        Text('Bu Ay Hesap', style: TextStyle(color: _ink, fontWeight: FontWeight.bold)),
         const SizedBox(height: 10),
         if (_n(ozet['ciro']) > 0) _satir('Ciro (prim tabanı)', _tl(ozet['ciro'])),
         _satir('Maaş tahakkuk', _tl(ozet['maas'])),
@@ -555,17 +551,17 @@ class _PersonelDetayScreenState extends State<PersonelDetayScreen> {
         if (_n(ozet['prim_manuel']) > 0) _satir('Manuel prim', '+${_tl(ozet['prim_manuel'])}', renk: _yesil),
         if (_n(ozet['ek_odeme']) > 0) _satir('Ek ödeme', '+${_tl(ozet['ek_odeme'])}', renk: _yesil),
         if (_n(ozet['kesinti']) > 0) _satir('Kesinti', '-${_tl(ozet['kesinti'])}', renk: _kirmizi),
-        const Divider(color: Color(0xFF232B42), height: 20),
+        Divider(color: _line, height: 20),
         _satir('Hakediş', _tl(ozet['hakedis']), kalin: true),
         if (_n(ozet['avans']) > 0) _satir('Avans', '-${_tl(ozet['avans'])}', renk: _turuncu),
         if (_n(ozet['odenen']) > 0) _satir('Ödenen', '-${_tl(ozet['odenen'])}', renk: _turuncu),
         const SizedBox(height: 6),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(color: (net > 0 ? _yesil : _gri).withValues(alpha: 0.14), borderRadius: BorderRadius.circular(12)),
+          decoration: BoxDecoration(color: (net > 0 ? _yesil : _sub).withValues(alpha: 0.14), borderRadius: BorderRadius.circular(12)),
           child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            const Text('Net Ödenecek', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
-            Text(_tl(net), style: TextStyle(color: net > 0 ? _yesil : _gri, fontWeight: FontWeight.bold, fontSize: 18)),
+            Text('Net Ödenecek', style: TextStyle(color: _ink, fontWeight: FontWeight.bold, fontSize: 15)),
+            Text(_tl(net), style: TextStyle(color: net > 0 ? _yesil : _sub, fontWeight: FontWeight.bold, fontSize: 18)),
           ]),
         ),
       ]),
@@ -592,12 +588,12 @@ class _PersonelDetayScreenState extends State<PersonelDetayScreen> {
   Widget _hareketDefteri() {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFF232B42))),
+      decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(18), border: Border.all(color: _line)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Hareket Defteri', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        Text('Hareket Defteri', style: TextStyle(color: _ink, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         if (hareketler.isEmpty)
-          const Padding(padding: EdgeInsets.symmetric(vertical: 10), child: Text('Bu ay hareket yok.', style: TextStyle(color: _gri, fontSize: 13)))
+          Padding(padding: const EdgeInsets.symmetric(vertical: 10), child: Text('Bu ay hareket yok.', style: TextStyle(color: _sub, fontSize: 13)))
         else
           for (final h in hareketler) _hareketSatir(h as Map),
       ]),
@@ -613,12 +609,12 @@ class _PersonelDetayScreenState extends State<PersonelDetayScreen> {
         Icon(meta.$2, color: meta.$3, size: 18),
         const SizedBox(width: 10),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(meta.$1, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
-          Text('${h['tarih']}${(h['aciklama']?.toString() ?? '').isNotEmpty ? ' · ${h['aciklama']}' : ''}', style: const TextStyle(color: _gri, fontSize: 11)),
+          Text(meta.$1, style: TextStyle(color: _ink, fontSize: 13, fontWeight: FontWeight.w600)),
+          Text('${h['tarih']}${(h['aciklama']?.toString() ?? '').isNotEmpty ? ' · ${h['aciklama']}' : ''}', style: TextStyle(color: _sub, fontSize: 11)),
         ])),
         Text(_tl(h['tutar']), style: TextStyle(color: meta.$3, fontWeight: FontWeight.bold, fontSize: 14)),
         if (duzenleyebilir)
-          IconButton(padding: EdgeInsets.zero, constraints: const BoxConstraints(), onPressed: () => _hareketSil(_n(h['id']).toInt()), icon: const Icon(Icons.close, color: _gri, size: 16)),
+          IconButton(padding: EdgeInsets.zero, constraints: const BoxConstraints(), onPressed: () => _hareketSil(_n(h['id']).toInt()), icon: Icon(Icons.close, color: _sub, size: 16)),
       ]),
     );
   }
@@ -640,8 +636,8 @@ class _PersonelDetayScreenState extends State<PersonelDetayScreen> {
   Widget _satir(String s, String v, {Color? renk, bool kalin = false}) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text(s, style: const TextStyle(color: _gri, fontSize: 13)),
-          Text(v, style: TextStyle(color: renk ?? Colors.white, fontSize: 13, fontWeight: kalin ? FontWeight.bold : FontWeight.w600)),
+          Text(s, style: TextStyle(color: _sub, fontSize: 13)),
+          Text(v, style: TextStyle(color: renk ?? _ink, fontSize: 13, fontWeight: kalin ? FontWeight.bold : FontWeight.w600)),
         ]),
       );
 
@@ -661,15 +657,15 @@ class _PersonelDetayScreenState extends State<PersonelDetayScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: _card,
-        title: Text(baslik, style: const TextStyle(color: Colors.white, fontSize: 17)),
+        title: Text(baslik, style: TextStyle(color: _ink, fontSize: 17)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          TextField(controller: tutarC, autofocus: true, keyboardType: const TextInputType.numberWithOptions(decimal: true), style: const TextStyle(color: Colors.white),
+          TextField(controller: tutarC, autofocus: true, keyboardType: const TextInputType.numberWithOptions(decimal: true), style: TextStyle(color: _ink),
             decoration: _dec('Tutar (TL)')),
           const SizedBox(height: 10),
-          TextField(controller: aciklamaC, style: const TextStyle(color: Colors.white), decoration: _dec('Açıklama (opsiyonel)')),
+          TextField(controller: aciklamaC, style: TextStyle(color: _ink), decoration: _dec('Açıklama (opsiyonel)')),
         ]),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Vazgeç', style: TextStyle(color: _gri))),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Vazgeç', style: TextStyle(color: _sub))),
           FilledButton(style: FilledButton.styleFrom(backgroundColor: _mor1), onPressed: () => Navigator.pop(ctx, true), child: const Text('Kaydet')),
         ],
       ),
@@ -688,8 +684,8 @@ class _PersonelDetayScreenState extends State<PersonelDetayScreen> {
 
   InputDecoration _dec(String label) => InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: _gri),
-        enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Color(0xFF2D3752))),
+        labelStyle: TextStyle(color: _sub),
+        enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: _line)),
         focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: _mor1)),
       );
 
@@ -731,21 +727,21 @@ class _PersonelDetayScreenState extends State<PersonelDetayScreen> {
           padding: EdgeInsets.only(left: 16, right: 16, top: 16, bottom: MediaQuery.of(ctx).viewInsets.bottom + 16),
           child: SingleChildScrollView(
             child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 14), decoration: BoxDecoration(color: const Color(0xFF2D3752), borderRadius: BorderRadius.circular(2))),
-              Text(_yeni ? 'Yeni Personel' : 'Personeli Düzenle', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+              Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 14), decoration: BoxDecoration(color: _line, borderRadius: BorderRadius.circular(2))),
+              Text(_yeni ? 'Yeni Personel' : 'Personeli Düzenle', style: TextStyle(color: _ink, fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 14),
-              TextField(controller: adC, style: const TextStyle(color: Colors.white), decoration: _dec('Ad Soyad')),
+              TextField(controller: adC, style: TextStyle(color: _ink), decoration: _dec('Ad Soyad')),
               const SizedBox(height: 10),
               Row(children: [
-                Expanded(child: TextField(controller: telC, keyboardType: TextInputType.phone, style: const TextStyle(color: Colors.white), decoration: _dec('Telefon'))),
+                Expanded(child: TextField(controller: telC, keyboardType: TextInputType.phone, style: TextStyle(color: _ink), decoration: _dec('Telefon'))),
                 const SizedBox(width: 10),
-                Expanded(child: TextField(controller: pinC, keyboardType: TextInputType.number, style: const TextStyle(color: Colors.white), decoration: _dec('PIN'))),
+                Expanded(child: TextField(controller: pinC, keyboardType: TextInputType.number, style: TextStyle(color: _ink), decoration: _dec('PIN'))),
               ]),
               const SizedBox(height: 10),
               _dropdown('Rol', rol, const {'sahip': 'Sahip', 'mudur': 'Müdür', 'kasa': 'Kasa', 'garson': 'Garson', 'mutfak': 'Mutfak'}, (v) => setS(() => rol = v)),
               const SizedBox(height: 10),
               Row(children: [
-                Expanded(flex: 2, child: TextField(controller: maasC, keyboardType: const TextInputType.numberWithOptions(decimal: true), style: const TextStyle(color: Colors.white), decoration: _dec('Maaş (TL)'))),
+                Expanded(flex: 2, child: TextField(controller: maasC, keyboardType: const TextInputType.numberWithOptions(decimal: true), style: TextStyle(color: _ink), decoration: _dec('Maaş (TL)'))),
                 const SizedBox(width: 10),
                 Expanded(flex: 2, child: _dropdown('Tip', maasTipi, const {'aylik': 'Aylık', 'gunluk': 'Günlük', 'saatlik': 'Saatlik'}, (v) => setS(() => maasTipi = v))),
               ]),
@@ -753,15 +749,15 @@ class _PersonelDetayScreenState extends State<PersonelDetayScreen> {
               _dropdown('Prim', primTipi, const {'yok': 'Prim Yok', 'ciro': 'Ciro Yüzdesi'}, (v) => setS(() => primTipi = v)),
               if (primTipi == 'ciro') ...[
                 const SizedBox(height: 10),
-                TextField(controller: oranC, keyboardType: const TextInputType.numberWithOptions(decimal: true), style: const TextStyle(color: Colors.white), decoration: _dec('Prim Oranı (% ciro)')),
+                TextField(controller: oranC, keyboardType: const TextInputType.numberWithOptions(decimal: true), style: TextStyle(color: _ink), decoration: _dec('Prim Oranı (% ciro)')),
               ],
               const SizedBox(height: 10),
-              TextField(controller: ibanC, style: const TextStyle(color: Colors.white), decoration: _dec('IBAN (opsiyonel)')),
+              TextField(controller: ibanC, style: TextStyle(color: _ink), decoration: _dec('IBAN (opsiyonel)')),
               const SizedBox(height: 6),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 activeThumbColor: _yesil,
-                title: const Text('Aktif', style: TextStyle(color: Colors.white)),
+                title: Text('Aktif', style: TextStyle(color: _ink)),
                 value: aktif,
                 onChanged: (v) => setS(() => aktif = v),
               ),
@@ -813,7 +809,7 @@ class _PersonelDetayScreenState extends State<PersonelDetayScreen> {
             isDense: true,
             dropdownColor: _card,
             isExpanded: true,
-            style: const TextStyle(color: Colors.white),
+            style: TextStyle(color: _ink),
             items: items.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
             onChanged: (v) { if (v != null) onChanged(v); },
           ),

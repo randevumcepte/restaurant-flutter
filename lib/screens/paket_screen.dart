@@ -489,7 +489,6 @@ class _PaketDetayScreenState extends State<PaketDetayScreen> {
   TemaProvider get _t => context.watch<TemaProvider>();
   Color get _bg => _t.bg;
   Color get _card => _t.card;
-  Color get _card2 => _t.card2;
   Color get _ink => _t.ink;
   Color get _sub => _t.sub;
   Color get _sub2 => _t.sub2;
@@ -743,10 +742,10 @@ class _PaketDetayScreenState extends State<PaketDetayScreen> {
                                       ),
                                       const SizedBox(width: 8),
                                       Text(_para(k['tutar']),
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                               fontSize: 14,
                                               fontWeight: FontWeight.w600,
-                                              color: Color(0xFF0F172A))),
+                                              color: _ink)),
                                     ],
                                   ),
                                 )),
@@ -782,12 +781,12 @@ class _PaketDetayScreenState extends State<PaketDetayScreen> {
                 style: TextStyle(
                     fontSize: kalin ? 16 : 14,
                     fontWeight: kalin ? FontWeight.bold : FontWeight.normal,
-                    color: const Color(0xFF334155))),
+                    color: _sub2)),
             Text(deger,
                 style: TextStyle(
                     fontSize: kalin ? 18 : 14,
                     fontWeight: kalin ? FontWeight.bold : FontWeight.w600,
-                    color: renk ?? const Color(0xFF0F172A))),
+                    color: renk ?? _ink)),
           ],
         ),
       );

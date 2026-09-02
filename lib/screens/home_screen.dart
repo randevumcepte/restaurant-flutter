@@ -412,7 +412,7 @@ class _TabGovde extends StatelessWidget {
   Widget build(BuildContext context) {
     return ValueListenableBuilder<int>(
       valueListenable: anaSekme,
-      builder: (_, i, __) => IndexedStack(
+      builder: (_, i, _) => IndexedStack(
         index: i.clamp(0, ekranlar.length - 1),
         children: ekranlar,
       ),
