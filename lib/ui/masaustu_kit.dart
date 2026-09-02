@@ -102,6 +102,7 @@ class MKart extends StatelessWidget {
         color: t.card,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: kenar ?? t.line),
+        boxShadow: t.golge,
       ),
       child: child,
     );
@@ -129,6 +130,7 @@ class MIstatKart extends StatelessWidget {
         color: t.card,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: t.line),
+        boxShadow: t.golge,
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -283,6 +285,7 @@ class MTablo extends StatelessWidget {
         color: t.card,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: t.line),
+        boxShadow: t.golge,
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(children: [

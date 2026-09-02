@@ -35,6 +35,10 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int get _index => anaSekme.value;
 
+  // Masaustunde SAG BOLME icin ic navigator — yonetim ekranlari burada acilir,
+  // sol sabit menu KALIR (SepetTakip gibi).
+  final GlobalKey<NavigatorState> _icerikNav = GlobalKey<NavigatorState>();
+
   static const _bar = Colors.white; // beyaz bar -> belirgin, koyu app uzerinde ayrisir
   static const _secili = Color(0xFF7C3AED); // mor vurgu
   static const _pasif = Color(0xFF94A3B8);
@@ -78,10 +82,26 @@ class _HomeScreenState extends State<HomeScreen> {
             patron: patron,
             aktifIndex: _index,
             sekmeler: _sekmeListesi(patron),
-            onSekme: (i) => anaSekme.value = i,
-            onAsistan: patron ? _asistanAc : null,
+            onSekme: (i) {
+              // Once sag bolmede acik yonetim ekranini kapat, sonra sekmeye gec
+              _icerikNav.currentState?.popUntil((r) => r.isFirst);
+              anaSekme.value = i;
+            },
+            onAsistan: patron
+                ? () => _icerikNav.currentState?.push(MaterialPageRoute(builder: (_) => const AsistanScreen()))
+                : null,
+            // Yonetim menusu: SAG bolmede ac (sol menu kalir). Tek seferde bir ekran.
+            onYonetim: (w) {
+              _icerikNav.currentState?.popUntil((r) => r.isFirst);
+              _icerikNav.currentState?.push(MaterialPageRoute(builder: (_) => w));
+            },
           ),
-          Expanded(child: IndexedStack(index: _index, children: ekranlar)),
+          Expanded(
+            child: Navigator(
+              key: _icerikNav,
+              onGenerateRoute: (s) => MaterialPageRoute(builder: (_) => _TabGovde(ekranlar: ekranlar)),
+            ),
+          ),
         ]),
       );
     }
@@ -215,12 +235,14 @@ class _YanMenu extends StatelessWidget {
   final List<_Sekme> sekmeler;
   final ValueChanged<int> onSekme;
   final VoidCallback? onAsistan;
+  final ValueChanged<Widget>? onYonetim;
   const _YanMenu({
     required this.patron,
     required this.aktifIndex,
     required this.sekmeler,
     required this.onSekme,
     required this.onAsistan,
+    required this.onYonetim,
   });
 
   static const _mor1 = Color(0xFF7C3AED);
@@ -231,7 +253,8 @@ class _YanMenu extends StatelessWidget {
     final t = context.watch<TemaProvider>();
     final auth = context.watch<AuthProvider>();
 
-    void git(Widget ekran) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ekran));
+    // Yonetim ekranini SAG bolmede ac (sol sabit menu kalir).
+    void git(Widget ekran) => onYonetim?.call(ekran);
 
     return Container(
       width: 244,
@@ -374,6 +397,24 @@ class _YanMenu extends StatelessWidget {
             Expanded(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: r, fontSize: 13.5, fontWeight: FontWeight.w600))),
           ]),
         ),
+      ),
+    );
+  }
+}
+
+/// Masaüstü sağ bölmenin KÖK içeriği: aktif sekmeye göre tab ekranını gösterir.
+/// anaSekme değişince güncellenir; yönetim ekranları bunun ÜSTÜNE push edilir
+/// (sol sabit menü hep kalır).
+class _TabGovde extends StatelessWidget {
+  final List<Widget> ekranlar;
+  const _TabGovde({required this.ekranlar});
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<int>(
+      valueListenable: anaSekme,
+      builder: (_, i, __) => IndexedStack(
+        index: i.clamp(0, ekranlar.length - 1),
+        children: ekranlar,
       ),
     );
   }

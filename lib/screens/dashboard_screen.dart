@@ -480,7 +480,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     const donemler = {'gunluk': 'Günlük', 'haftalik': 'Haftalık', 'aylik': 'Aylık', 'yillik': 'Yıllık'};
     return Container(
       padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(14)),
+      decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(14), boxShadow: _t.golge),
       child: Row(
         children: donemler.entries.map((e) {
           final aktif = period == e.key;
@@ -621,7 +621,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _folioKart(String baslik, String deger, String alt, Color renk, bool kapali) {
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(18)),
+      decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(18), boxShadow: _t.golge),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Container(width: 8, height: 8, decoration: BoxDecoration(color: renk, shape: BoxShape.circle)),
@@ -639,7 +639,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final renk = yuzde >= 40 ? _kirmizi : (yuzde >= 30 ? const Color(0xFFF59E0B) : _yesil);
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(18)),
+      decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(18), boxShadow: _t.golge),
       child: Row(children: [
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -664,7 +664,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: CircularProgressIndicator(
                   value: v,
                   strokeWidth: 7,
-                  backgroundColor: const Color(0xFF243049),
+                  backgroundColor: _t.card2,
                   valueColor: AlwaysStoppedAnimation(renk),
                 ),
               ),
@@ -699,7 +699,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: vurgu ? _kirmizi.withValues(alpha: 0.5) : const Color(0xFF243049)),
+        border: Border.all(color: vurgu ? _kirmizi.withValues(alpha: 0.5) : _t.card2),
+        boxShadow: _t.golge,
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
@@ -725,7 +726,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final toplam = liste.fold<num>(0, (a, e) => a + _n((e as Map)['tutar']));
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(18)),
+      decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(18), boxShadow: _t.golge),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(baslik, style: TextStyle(color: _ink, fontSize: 13, fontWeight: FontWeight.bold)),
         const SizedBox(height: 10),
@@ -752,7 +753,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: LinearProgressIndicator(
             value: oran,
             minHeight: 5,
-            backgroundColor: const Color(0xFF243049),
+            backgroundColor: _t.card2,
             valueColor: const AlwaysStoppedAnimation(_mor2),
           ),
         ),
@@ -766,7 +767,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final maks = gunluk.fold<num>(1, (a, e) => _n((e as Map)['ciro']) > a ? _n(e['ciro']) : a);
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
-      decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(18)),
+      decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(18), boxShadow: _t.golge),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('📈 Son 10 Gün', style: TextStyle(color: _ink, fontSize: 13, fontWeight: FontWeight.bold)),
         const SizedBox(height: 14),
@@ -815,7 +816,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _salesCostsKart(List urunler) {
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(18)),
+      decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(18), boxShadow: _t.golge),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           Text('🧾 Ürün Satış & Maliyet', style: TextStyle(color: _ink, fontSize: 13, fontWeight: FontWeight.bold)),
@@ -844,7 +845,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Container(
           width: 40,
           padding: const EdgeInsets.symmetric(vertical: 2),
-          decoration: BoxDecoration(color: const Color(0xFF243049), borderRadius: BorderRadius.circular(6)),
+          decoration: BoxDecoration(color: _t.card2, borderRadius: BorderRadius.circular(6)),
           child: Text('${_n(u['adet']).toInt()}×', textAlign: TextAlign.center, style: TextStyle(color: _sub, fontSize: 11, fontWeight: FontWeight.bold)),
         ),
         const SizedBox(width: 10),

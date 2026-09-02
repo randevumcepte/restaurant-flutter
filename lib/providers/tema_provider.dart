@@ -33,13 +33,19 @@ class TemaProvider extends ChangeNotifier {
   }
 
   // ---- moda gore degisen yuzey/yazi ----
-  Color get bg   => koyu ? const Color(0xFF0B1020) : const Color(0xFFF3F5FA);
+  // Aydinlik modda hafif lavanta tonlu zemin + beyaz kartlar + yumusak golge => cok-beyaz/duz olmaz.
+  Color get bg   => koyu ? const Color(0xFF0B1020) : const Color(0xFFE9ECF7);
   Color get card => koyu ? const Color(0xFF161C2E) : Colors.white;
-  Color get card2 => koyu ? const Color(0xFF1E2740) : const Color(0xFFEEF2F8);
+  Color get card2 => koyu ? const Color(0xFF1E2740) : const Color(0xFFEFF1FC);
   Color get ink  => koyu ? const Color(0xFFF1F5F9) : const Color(0xFF1E293B); // ana yazi
   Color get sub  => koyu ? const Color(0xFF94A3B8) : const Color(0xFF64748B); // ikincil yazi
   Color get sub2 => koyu ? const Color(0xFFCBD5E1) : const Color(0xFF475569);
-  Color get line => koyu ? const Color(0xFF2D3752) : const Color(0xFFE2E8F0); // cizgi/kenar
+  Color get line => koyu ? const Color(0xFF2D3752) : const Color(0xFFE4E7F2); // cizgi/kenar
+
+  // Kartlara derinlik veren yumusak golge (aydinlikta; koyuda golge yok).
+  List<BoxShadow> get golge => koyu
+      ? const []
+      : const [BoxShadow(color: Color(0x14312E81), blurRadius: 16, offset: Offset(0, 5))];
 
   // ---- vurgular (iki modda ayni) ----
   Color get mor1 => const Color(0xFF7C3AED);
