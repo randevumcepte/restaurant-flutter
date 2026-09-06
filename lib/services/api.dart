@@ -226,6 +226,10 @@ class Api {
   }
   static Future<Map<String, dynamic>> temaMod(String token, String mod) => _post('/api/patron/tema-mod', token, {'mod': mod});
 
+  // Garson cagrilari (QR menuden gelen canli cagrilar)
+  static Future<Map<String, dynamic>> garsonCagrilari(String token) => _get('/api/patron/garson-cagrilari', token);
+  static Future<Map<String, dynamic>> garsonCagriKapat(String token, int id) => _post('/api/patron/garson-cagri-kapat', token, {'id': '$id'});
+
   static Future<Map<String, dynamic>> urunKaydet(String token,
       {int? id, required String ad, String aciklama = '', required double fiyat, int kategoriId = 0, bool tukendi = false, bool aktif = true}) {
     final body = {
