@@ -321,6 +321,7 @@ class _MenuYonetimiScreenState extends State<MenuYonetimiScreen> {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
                 Flexible(child: Text('${u['ad']}', style: const TextStyle(color: Colors.white, fontSize: 14.5, fontWeight: FontWeight.bold))),
+                if (u['one_cikan'] == true) _rozet('⭐ Öne çıkan', _mor1),
                 if (tukendi) _rozet('Tükendi', _kirmizi),
                 if (pasif) _rozet('Pasif', const Color(0xFF64748B)),
               ]),
@@ -446,6 +447,10 @@ class _UrunDuzenleSayfaState extends State<_UrunDuzenleSayfa> {
   int kategoriId = 0;
   bool tukendi = false;
   bool aktif = true;
+  bool oneCikan = false;
+  late TextEditingController oneEtiketCtrl;
+  late TextEditingController oneSozCtrl;
+  late TextEditingController oneSiraCtrl;
   int? urunId;
   String? gorsel;
   bool kaydediyor = false;
@@ -464,12 +469,17 @@ class _UrunDuzenleSayfaState extends State<_UrunDuzenleSayfa> {
     kategoriId = (u?['kategori_id'] ?? 0) as int;
     tukendi = u?['tukendi'] == true;
     aktif = u == null ? true : u['aktif'] != false;
+    oneCikan = u?['one_cikan'] == true;
+    oneEtiketCtrl = TextEditingController(text: u?['one_etiket']?.toString() ?? '');
+    oneSozCtrl = TextEditingController(text: u?['one_soz']?.toString() ?? '');
+    oneSiraCtrl = TextEditingController(text: '${u?['one_sira'] ?? 0}');
     gorsel = u?['gorsel']?.toString();
   }
 
   @override
   void dispose() {
     adCtrl.dispose(); fiyatCtrl.dispose(); aciklamaCtrl.dispose();
+    oneEtiketCtrl.dispose(); oneSozCtrl.dispose(); oneSiraCtrl.dispose();
     super.dispose();
   }
 
@@ -481,7 +491,8 @@ class _UrunDuzenleSayfaState extends State<_UrunDuzenleSayfa> {
       final auth = context.read<AuthProvider>();
       final r = await Api.urunKaydet(auth.token!,
           id: urunId, ad: adCtrl.text.trim(), aciklama: aciklamaCtrl.text.trim(),
-          fiyat: fiyat, kategoriId: kategoriId, tukendi: tukendi, aktif: aktif);
+          fiyat: fiyat, kategoriId: kategoriId, tukendi: tukendi, aktif: aktif,
+          oneCikan: oneCikan, oneEtiket: oneEtiketCtrl.text.trim(), oneSoz: oneSozCtrl.text.trim(), oneSira: int.tryParse(oneSiraCtrl.text) ?? 0);
       if (!mounted) return false;
       if (r['ok'] == 1) {
         final urn = Map<String, dynamic>.from(r['urun'] ?? {});
@@ -636,6 +647,8 @@ class _UrunDuzenleSayfaState extends State<_UrunDuzenleSayfa> {
           _switch('Tükendi (86)', 'Geçici olarak yok — menüde "tükendi" görünür', tukendi, _kirmizi, (v) => setState(() => tukendi = v)),
           const SizedBox(height: 8),
           _switch('Aktif', 'Kapalıysa menüde hiç görünmez', aktif, _yesil, (v) => setState(() => aktif = v)),
+          const SizedBox(height: 14),
+          _oneCikanBolum(),
           const SizedBox(height: 22),
           SizedBox(
             width: double.infinity,
@@ -680,6 +693,40 @@ class _UrunDuzenleSayfaState extends State<_UrunDuzenleSayfa> {
           ]),
         ),
         Switch(value: deger, activeThumbColor: renk, onChanged: onc),
+      ]),
+    );
+  }
+
+  // ⭐ Öne Çıkar / Günün Önerisi — asistan bunları müşteriye önce ve iştah kabartıcı anlatır
+  Widget _oneCikanBolum() {
+    return Container(
+      decoration: BoxDecoration(
+        color: _card,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: oneCikan ? _mor1 : const Color(0xFF232B42), width: oneCikan ? 1.4 : 1),
+      ),
+      padding: const EdgeInsets.fromLTRB(14, 8, 12, 12),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: const [
+              Text('⭐ Öne Çıkar / Günün Önerisi', style: TextStyle(color: Colors.white, fontSize: 14.5, fontWeight: FontWeight.w600)),
+              Text('Müşteri "ne önerirsin / içecek / günün yemeği" deyince asistan bunu önce anlatır', style: TextStyle(color: Color(0xFF64748B), fontSize: 11.5)),
+            ]),
+          ),
+          Switch(value: oneCikan, activeThumbColor: _mor1, onChanged: (v) => setState(() => oneCikan = v)),
+        ]),
+        if (oneCikan) ...[
+          const SizedBox(height: 10),
+          _alan(oneEtiketCtrl, 'Rozet — kartta görünür (ör. Şefin Önerisi / Bugüne Özel)', TextInputType.text),
+          const SizedBox(height: 10),
+          _alan(oneSozCtrl, 'İştah kabartıcı cümle — asistan bunu söyler', TextInputType.multiline, maxLines: 2),
+          const SizedBox(height: 6),
+          const Text('Örn: "Bugüne özel, mangalda pişmiş enfes köftemiz sizi bekliyor 😋"',
+              style: TextStyle(color: Color(0xFF475569), fontSize: 11, fontStyle: FontStyle.italic)),
+          const SizedBox(height: 10),
+          _alan(oneSiraCtrl, 'Sıra (küçük olan önce gösterilir)', TextInputType.number),
+        ],
       ]),
     );
   }
