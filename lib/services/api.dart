@@ -230,6 +230,14 @@ class Api {
   static Future<Map<String, dynamic>> garsonCagrilari(String token) => _get('/api/patron/garson-cagrilari', token);
   static Future<Map<String, dynamic>> garsonCagriKapat(String token, int id) => _post('/api/patron/garson-cagri-kapat', token, {'id': '$id'});
 
+  // ---- SEF GARSON AI (garsonun gozu: satis uyarilari + oneri) ----
+  static Future<Map<String, dynamic>> sefGarsonUyarilar(String token, {bool sadeceBenim = false}) =>
+      _get('/api/sefgarson/uyarilar${sadeceBenim ? '?sadece_benim=1' : ''}', token);
+  static Future<Map<String, dynamic>> sefGarsonOneri(String token, int adisyonId, {bool derin = false}) =>
+      _post('/api/sefgarson/oneri', token, {'adisyon_id': '$adisyonId', if (derin) 'derin': '1'});
+  static Future<Map<String, dynamic>> sefGarsonUyariKapat(String token, int adisyonId, String tip) =>
+      _post('/api/sefgarson/uyari-kapat', token, {'adisyon_id': '$adisyonId', 'tip': tip});
+
   static Future<Map<String, dynamic>> urunKaydet(String token,
       {int? id, required String ad, String aciklama = '', required double fiyat, int kategoriId = 0, bool tukendi = false, bool aktif = true}) {
     final body = {

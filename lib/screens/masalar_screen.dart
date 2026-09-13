@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
 import '../responsive.dart';
 import '../services/api.dart';
+import '../widgets/sef_garson_serit.dart';
 import 'detay_screen.dart';
 
 class MasalarScreen extends StatefulWidget {
@@ -145,6 +146,8 @@ class _MasalarScreenState extends State<MasalarScreen> {
       body: loading
           ? const Center(child: CircularProgressIndicator())
           : Column(children: [
+              // SEF GARSON AI: satis firsati/uyari seridi (firsat yoksa yer kaplamaz)
+              const SefGarsonSerit(),
               // Bolge sekmeleri (buton gibi) — tiklayinca aninda o bolge (client-side, kasmaz)
               Container(
                 color: Colors.white,
