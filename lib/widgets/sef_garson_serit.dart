@@ -68,6 +68,8 @@ class _SefGarsonSeritState extends State<SefGarsonSerit> {
         } catch (_) {}
       }
       if (!mounted) return;
+      // Sunucu bir uyariyi tekrar aktive ettiyse (bos soz: "Anladim" deyip satmadi) lokal yesili kaldir
+      for (final u in liste) { if (u['durum'] != 'goruldu') _gorulen.remove(_anahtar(u)); }
       setState(() { uyarilar = liste; yoneticiUyarilar = yon; });
 
       // POPUP: sunucu "bildir=true" dediyse (yeni ya da tekrar hatirlatma) -> titre + popup
