@@ -75,6 +75,11 @@ class _MenuYonetimiScreenState extends State<MenuYonetimiScreen> {
         iconTheme: const IconThemeData(color: Color(0xFF94A3B8)),
         title: const Text('Menü Yönetimi', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
         actions: [
+          IconButton(
+            onPressed: _oneSirala,
+            icon: const Icon(Icons.star_outline, color: Color(0xFFFDE9B5)),
+            tooltip: 'Öne Çıkanları Sırala',
+          ),
           TextButton.icon(
             onPressed: () => _kategoriDuzenle(null),
             icon: const Icon(Icons.create_new_folder_outlined, color: Color(0xFFC4B5FD), size: 19),
@@ -128,6 +133,8 @@ class _MenuYonetimiScreenState extends State<MenuYonetimiScreen> {
       ikon: Icons.restaurant_menu,
       altBaslik: loading || hata != null ? null : '${urunler.length} ürün · ${kategoriler.length} kategori',
       araclar: [
+        MButon('Öne Çıkanları Sırala', t.gold, _oneSirala, dolu: false, ikon: Icons.star_outline),
+        const SizedBox(width: 10),
         MButon('Kategori', t.mavi, () => _kategoriDuzenle(null), dolu: false, ikon: Icons.create_new_folder_outlined),
         const SizedBox(width: 10),
         MButon('Yeni Ürün', t.mor1, () => _urunDuzenle(null), ikon: Icons.add),
@@ -396,6 +403,20 @@ class _MenuYonetimiScreenState extends State<MenuYonetimiScreen> {
     if (degisti == true) _yukle();
   }
 
+  // ---- Öne çıkanları sürükleyerek sırala ----
+  Future<void> _oneSirala() async {
+    final oneCikanlar = urunler.where((u) => u['one_cikan'] == true).toList()
+      ..sort((a, b) => ((a['one_sira'] ?? 0) as int).compareTo((b['one_sira'] ?? 0) as int));
+    if (oneCikanlar.isEmpty) {
+      _uyar('Henüz öne çıkan ürün yok. Bir ürünü açıp ⭐ Öne Çıkar\'ı açın.');
+      return;
+    }
+    final degisti = await Navigator.of(context).push<bool>(MaterialPageRoute(
+      builder: (_) => _OneSiralaSayfa(urunler: oneCikanlar),
+    ));
+    if (degisti == true) _yukle();
+  }
+
   void _sonuc(Map<String, dynamic> r, String basari) {
     if (r['ok'] == 1) { _yukle(); _uyar(basari); }
     else { _uyar(r['hata']?.toString() ?? 'İşlem başarısız'); }
@@ -450,7 +471,6 @@ class _UrunDuzenleSayfaState extends State<_UrunDuzenleSayfa> {
   bool oneCikan = false;
   late TextEditingController oneEtiketCtrl;
   late TextEditingController oneSozCtrl;
-  late TextEditingController oneSiraCtrl;
   int? urunId;
   String? gorsel;
   bool kaydediyor = false;
@@ -472,14 +492,13 @@ class _UrunDuzenleSayfaState extends State<_UrunDuzenleSayfa> {
     oneCikan = u?['one_cikan'] == true;
     oneEtiketCtrl = TextEditingController(text: u?['one_etiket']?.toString() ?? '');
     oneSozCtrl = TextEditingController(text: u?['one_soz']?.toString() ?? '');
-    oneSiraCtrl = TextEditingController(text: '${u?['one_sira'] ?? 0}');
     gorsel = u?['gorsel']?.toString();
   }
 
   @override
   void dispose() {
     adCtrl.dispose(); fiyatCtrl.dispose(); aciklamaCtrl.dispose();
-    oneEtiketCtrl.dispose(); oneSozCtrl.dispose(); oneSiraCtrl.dispose();
+    oneEtiketCtrl.dispose(); oneSozCtrl.dispose();
     super.dispose();
   }
 
@@ -492,7 +511,7 @@ class _UrunDuzenleSayfaState extends State<_UrunDuzenleSayfa> {
       final r = await Api.urunKaydet(auth.token!,
           id: urunId, ad: adCtrl.text.trim(), aciklama: aciklamaCtrl.text.trim(),
           fiyat: fiyat, kategoriId: kategoriId, tukendi: tukendi, aktif: aktif,
-          oneCikan: oneCikan, oneEtiket: oneEtiketCtrl.text.trim(), oneSoz: oneSozCtrl.text.trim(), oneSira: int.tryParse(oneSiraCtrl.text) ?? 0);
+          oneCikan: oneCikan, oneEtiket: oneEtiketCtrl.text.trim(), oneSoz: oneSozCtrl.text.trim());
       if (!mounted) return false;
       if (r['ok'] == 1) {
         final urn = Map<String, dynamic>.from(r['urun'] ?? {});
@@ -724,8 +743,9 @@ class _UrunDuzenleSayfaState extends State<_UrunDuzenleSayfa> {
           const SizedBox(height: 6),
           const Text('Örn: "Bugüne özel, mangalda pişmiş enfes köftemiz sizi bekliyor 😋"',
               style: TextStyle(color: Color(0xFF475569), fontSize: 11, fontStyle: FontStyle.italic)),
-          const SizedBox(height: 10),
-          _alan(oneSiraCtrl, 'Sıra (küçük olan önce gösterilir)', TextInputType.number),
+          const SizedBox(height: 8),
+          const Text('Sırayı elle girmene gerek yok — Menü Yönetimi\'ndeki "Öne Çıkanları Sırala" ile sürükleyerek düzenlersin.',
+              style: TextStyle(color: Color(0xFF64748B), fontSize: 11)),
         ],
       ]),
     );
@@ -745,6 +765,133 @@ class _UrunDuzenleSayfaState extends State<_UrunDuzenleSayfa> {
         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF2D3752))),
         focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: _mor1)),
       ),
+    );
+  }
+}
+
+/// Öne çıkan ürünleri SÜRÜKLEYEREK sırala — numara yok, çakışma yok. En üstteki müşteriye ilk önerilir.
+class _OneSiralaSayfa extends StatefulWidget {
+  final List<Map<String, dynamic>> urunler;
+  const _OneSiralaSayfa({required this.urunler});
+
+  @override
+  State<_OneSiralaSayfa> createState() => _OneSiralaSayfaState();
+}
+
+class _OneSiralaSayfaState extends State<_OneSiralaSayfa> {
+  static const _bg = Color(0xFF0B1020);
+  static const _card = Color(0xFF161C2E);
+  static const _mor1 = Color(0xFF7C3AED);
+  late List<Map<String, dynamic>> list;
+  bool kaydediyor = false;
+
+  @override
+  void initState() {
+    super.initState();
+    list = List<Map<String, dynamic>>.from(widget.urunler);
+  }
+
+  Future<void> _kaydet() async {
+    setState(() => kaydediyor = true);
+    try {
+      final auth = context.read<AuthProvider>();
+      final ids = list.map((u) => u['id'] as int).toList();
+      final r = await Api.oneSiraKaydet(auth.token!, ids);
+      if (!mounted) return;
+      if (r['ok'] == 1) {
+        Navigator.of(context).pop(true);
+      } else {
+        setState(() => kaydediyor = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r['hata']?.toString() ?? 'Kaydedilemedi'), backgroundColor: _card));
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => kaydediyor = false);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bağlantı hatası'), backgroundColor: _card));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: _bg,
+      appBar: AppBar(
+        backgroundColor: _bg,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Color(0xFF94A3B8)),
+        title: const Text('Öne Çıkanları Sırala', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: _mor1,
+        onPressed: kaydediyor ? null : _kaydet,
+        icon: kaydediyor
+            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.4))
+            : const Icon(Icons.check, color: Colors.white),
+        label: const Text('Kaydet', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      ),
+      body: Column(children: [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
+          child: Text('Sürükleyerek sırala 👇  En üstteki, müşteriye ilk önerilir.', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
+        ),
+        Expanded(
+          child: ReorderableListView(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 100),
+            onReorder: (eski, yeni) {
+              setState(() {
+                if (yeni > eski) yeni--;
+                final it = list.removeAt(eski);
+                list.insert(yeni, it);
+              });
+            },
+            children: [for (int i = 0; i < list.length; i++) _sat(list[i], i)],
+          ),
+        ),
+      ]),
+    );
+  }
+
+  Widget _sat(Map<String, dynamic> u, int i) {
+    final gorsel = u['gorsel']?.toString();
+    return Container(
+      key: ValueKey(u['id']),
+      margin: const EdgeInsets.only(bottom: 9),
+      padding: const EdgeInsets.all(9),
+      decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFF232B42))),
+      child: Row(children: [
+        Container(
+          width: 26, height: 26,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(color: _mor1.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(8)),
+          child: Text('${i + 1}', style: const TextStyle(color: Color(0xFFC4B5FD), fontWeight: FontWeight.bold, fontSize: 13)),
+        ),
+        const SizedBox(width: 10),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(9),
+          child: SizedBox(
+            width: 46, height: 46,
+            child: gorsel != null
+                ? Image.network(gorsel, fit: BoxFit.cover, errorBuilder: (_, _, _) => Container(color: const Color(0xFF0E1428), child: const Icon(Icons.image_outlined, color: Color(0xFF334155), size: 20)))
+                : Container(color: const Color(0xFF0E1428), child: const Icon(Icons.image_outlined, color: Color(0xFF334155), size: 20)),
+          ),
+        ),
+        const SizedBox(width: 11),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('${u['ad']}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 14.5, fontWeight: FontWeight.bold)),
+            if (('${u['one_etiket'] ?? ''}').isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text('${u['one_etiket']}', style: const TextStyle(color: Color(0xFFFDE9B5), fontSize: 11.5)),
+              ),
+          ]),
+        ),
+        ReorderableDragStartListener(
+          index: i,
+          child: const Padding(padding: EdgeInsets.all(6), child: Icon(Icons.drag_handle, color: Color(0xFF64748B))),
+        ),
+      ]),
     );
   }
 }

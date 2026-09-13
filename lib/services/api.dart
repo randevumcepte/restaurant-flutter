@@ -248,15 +248,19 @@ class Api {
 
   static Future<Map<String, dynamic>> urunKaydet(String token,
       {int? id, required String ad, String aciklama = '', required double fiyat, int kategoriId = 0, bool tukendi = false, bool aktif = true,
-      bool oneCikan = false, String oneEtiket = '', String oneSoz = '', int oneSira = 0}) {
+      bool oneCikan = false, String oneEtiket = '', String oneSoz = ''}) {
     final body = {
       'ad': ad, 'aciklama': aciklama, 'fiyat': '$fiyat', 'kategori_id': '$kategoriId',
       'tukendi': tukendi ? '1' : '0', 'aktif': aktif ? '1' : '0',
-      'one_cikan': oneCikan ? '1' : '0', 'one_etiket': oneEtiket, 'one_soz': oneSoz, 'one_sira': '$oneSira',
+      'one_cikan': oneCikan ? '1' : '0', 'one_etiket': oneEtiket, 'one_soz': oneSoz,
     };
     if (id != null) body['id'] = '$id';
     return _post('/api/patron/urun-kaydet', token, body);
   }
+
+  // One cikan urunlerin sirasi (surukle-birak) -> ids istenen sirada
+  static Future<Map<String, dynamic>> oneSiraKaydet(String token, List<int> ids) =>
+      _post('/api/patron/one-sira-kaydet', token, {'ids': jsonEncode(ids)});
 
   static Future<Map<String, dynamic>> urunSil(String token, int id) => _post('/api/patron/urun-sil', token, {'id': '$id'});
 
