@@ -248,11 +248,11 @@ class Api {
 
   static Future<Map<String, dynamic>> urunKaydet(String token,
       {int? id, required String ad, String aciklama = '', required double fiyat, int kategoriId = 0, bool tukendi = false, bool aktif = true,
-      bool oneCikan = false, String oneEtiket = '', String oneSoz = ''}) {
+      bool oneCikan = false, String oneSoz = ''}) {
     final body = {
       'ad': ad, 'aciklama': aciklama, 'fiyat': '$fiyat', 'kategori_id': '$kategoriId',
       'tukendi': tukendi ? '1' : '0', 'aktif': aktif ? '1' : '0',
-      'one_cikan': oneCikan ? '1' : '0', 'one_etiket': oneEtiket, 'one_soz': oneSoz,
+      'one_cikan': oneCikan ? '1' : '0', 'one_soz': oneSoz,
     };
     if (id != null) body['id'] = '$id';
     return _post('/api/patron/urun-kaydet', token, body);

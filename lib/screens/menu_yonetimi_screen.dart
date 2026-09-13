@@ -469,8 +469,8 @@ class _UrunDuzenleSayfaState extends State<_UrunDuzenleSayfa> {
   bool tukendi = false;
   bool aktif = true;
   bool oneCikan = false;
-  late TextEditingController oneEtiketCtrl;
   late TextEditingController oneSozCtrl;
+  String oneAiSoz = '';
   int? urunId;
   String? gorsel;
   bool kaydediyor = false;
@@ -490,15 +490,15 @@ class _UrunDuzenleSayfaState extends State<_UrunDuzenleSayfa> {
     tukendi = u?['tukendi'] == true;
     aktif = u == null ? true : u['aktif'] != false;
     oneCikan = u?['one_cikan'] == true;
-    oneEtiketCtrl = TextEditingController(text: u?['one_etiket']?.toString() ?? '');
     oneSozCtrl = TextEditingController(text: u?['one_soz']?.toString() ?? '');
+    oneAiSoz = u?['one_ai_soz']?.toString() ?? '';
     gorsel = u?['gorsel']?.toString();
   }
 
   @override
   void dispose() {
     adCtrl.dispose(); fiyatCtrl.dispose(); aciklamaCtrl.dispose();
-    oneEtiketCtrl.dispose(); oneSozCtrl.dispose();
+    oneSozCtrl.dispose();
     super.dispose();
   }
 
@@ -511,7 +511,7 @@ class _UrunDuzenleSayfaState extends State<_UrunDuzenleSayfa> {
       final r = await Api.urunKaydet(auth.token!,
           id: urunId, ad: adCtrl.text.trim(), aciklama: aciklamaCtrl.text.trim(),
           fiyat: fiyat, kategoriId: kategoriId, tukendi: tukendi, aktif: aktif,
-          oneCikan: oneCikan, oneEtiket: oneEtiketCtrl.text.trim(), oneSoz: oneSozCtrl.text.trim());
+          oneCikan: oneCikan, oneSoz: oneSozCtrl.text.trim());
       if (!mounted) return false;
       if (r['ok'] == 1) {
         final urn = Map<String, dynamic>.from(r['urun'] ?? {});
@@ -737,14 +737,25 @@ class _UrunDuzenleSayfaState extends State<_UrunDuzenleSayfa> {
         ]),
         if (oneCikan) ...[
           const SizedBox(height: 10),
-          _alan(oneEtiketCtrl, 'Rozet — kartta görünür (ör. Şefin Önerisi / Bugüne Özel)', TextInputType.text),
-          const SizedBox(height: 10),
-          _alan(oneSozCtrl, 'İştah kabartıcı cümle — asistan bunu söyler', TextInputType.multiline, maxLines: 2),
+          _alan(oneSozCtrl, 'Ürün notların — malzeme, pişirme, özellik (kısa yaz)', TextInputType.multiline, maxLines: 3),
           const SizedBox(height: 6),
-          const Text('Örn: "Bugüne özel, mangalda pişmiş enfes köftemiz sizi bekliyor 😋"',
-              style: TextStyle(color: Color(0xFF475569), fontSize: 11, fontStyle: FontStyle.italic)),
+          const Text('Sen sadece notları yaz, süslemene gerek yok — yapay zekâ bunu iştah kabartıcı bir cümleye çevirir.\nÖrn: "mangal köfte, yanında pilav ve közlenmiş biber, acı sos"',
+              style: TextStyle(color: Color(0xFF64748B), fontSize: 11.5, height: 1.4)),
+          if (oneAiSoz.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(11),
+              decoration: BoxDecoration(color: _mor1.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10), border: Border.all(color: _mor1.withValues(alpha: 0.4))),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('✨ Yapay zekâ müşteriye şöyle anlatacak:', style: TextStyle(color: Color(0xFFC4B5FD), fontSize: 11.5, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Text('"$oneAiSoz"', style: const TextStyle(color: Colors.white, fontSize: 13.5, fontStyle: FontStyle.italic, height: 1.35)),
+              ]),
+            ),
+          ],
           const SizedBox(height: 8),
-          const Text('Sırayı elle girmene gerek yok — Menü Yönetimi\'ndeki "Öne Çıkanları Sırala" ile sürükleyerek düzenlersin.',
+          const Text('Sırayı elle girmene gerek yok — üstteki ⭐ "Öne Çıkanları Sırala" ile sürükleyerek düzenlersin.',
               style: TextStyle(color: Color(0xFF64748B), fontSize: 11)),
         ],
       ]),
@@ -880,10 +891,14 @@ class _OneSiralaSayfaState extends State<_OneSiralaSayfa> {
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text('${u['ad']}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 14.5, fontWeight: FontWeight.bold)),
-            if (('${u['one_etiket'] ?? ''}').isNotEmpty)
+            if ((('${u['one_ai_soz'] ?? ''}').isNotEmpty ? '${u['one_ai_soz']}' : '${u['one_soz'] ?? ''}').isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 2),
-                child: Text('${u['one_etiket']}', style: const TextStyle(color: Color(0xFFFDE9B5), fontSize: 11.5)),
+                child: Text(
+                  ('${u['one_ai_soz'] ?? ''}').isNotEmpty ? '${u['one_ai_soz']}' : '${u['one_soz']}',
+                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Color(0xFF8698B5), fontSize: 11.5),
+                ),
               ),
           ]),
         ),
