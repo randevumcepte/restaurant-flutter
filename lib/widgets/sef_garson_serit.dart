@@ -219,7 +219,7 @@ class _SefGarsonSeritState extends State<SefGarsonSerit> {
           ]),
         ),
         SizedBox(
-          height: 104,
+          height: 116,
           child: ListView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -274,7 +274,7 @@ class _SefGarsonSeritState extends State<SefGarsonSerit> {
               ? 'Anlaşıldı — satışa gidiliyor 👍'
               : (eskale ? '⚠️ Yöneticiye bildirildi — hâlâ satış yok.' : (u['mesaj']?.toString() ?? '')),
           maxLines: 2, overflow: TextOverflow.ellipsis,
-          style: TextStyle(color: goruldu ? _yesil : (eskale ? _kirmizi : _sub), fontSize: 10.5, height: 1.2,
+          style: TextStyle(color: goruldu ? _yesil : (eskale ? _kirmizi : _sub), fontSize: 11, height: 1.25,
               fontWeight: (goruldu || eskale) ? FontWeight.w700 : FontWeight.normal),
         )),
         const SizedBox(height: 5),
@@ -317,7 +317,7 @@ class _SefGarsonSeritState extends State<SefGarsonSerit> {
         ]),
         const SizedBox(height: 5),
         Expanded(child: Text(y['mesaj']?.toString() ?? 'Garson uyarıları dikkate almıyor.',
-            maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: _ink, fontSize: 10.5, height: 1.2))),
+            maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: _ink, fontSize: 11, height: 1.25))),
         const SizedBox(height: 5),
         SizedBox(
           width: double.infinity, height: 26,
