@@ -203,33 +203,33 @@ class _SefGarsonSeritState extends State<SefGarsonSerit> {
     if (toplam == 0) return const SizedBox.shrink();
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.only(top: 10, bottom: 12),
+      padding: const EdgeInsets.only(top: 6, bottom: 8),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          padding: const EdgeInsets.fromLTRB(14, 0, 14, 5),
           child: Row(children: [
-            const Text('🎯 ', style: TextStyle(fontSize: 15)),
-            const Text('Şef Garson', style: TextStyle(color: _ink, fontSize: 13.5, fontWeight: FontWeight.w900)),
-            const SizedBox(width: 6),
+            const Text('🎯 ', style: TextStyle(fontSize: 12)),
+            const Text('Şef Garson', style: TextStyle(color: _ink, fontSize: 12, fontWeight: FontWeight.w900)),
+            const SizedBox(width: 5),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
-              decoration: BoxDecoration(color: _mor, borderRadius: BorderRadius.circular(10)),
-              child: Text('${uyarilar.where((u) => !_goruldu(u)).length} fırsat', style: const TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.bold)),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              decoration: BoxDecoration(color: _mor, borderRadius: BorderRadius.circular(9)),
+              child: Text('${uyarilar.where((u) => !_goruldu(u)).length} fırsat', style: const TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.bold)),
             ),
           ]),
         ),
         SizedBox(
-          height: 138,
+          height: 104,
           child: ListView(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 14),
             children: [
               // Yonetici (kirmizi) kartlar once
-              for (final y in yoneticiUyarilar) ...[_yoneticiKart(y), const SizedBox(width: 10)],
+              for (final y in yoneticiUyarilar) ...[_yoneticiKart(y), const SizedBox(width: 8)],
               // Uyari kartlari
               for (int i = 0; i < uyarilar.length; i++) ...[
                 _kart(uyarilar[i]),
-                if (i < uyarilar.length - 1) const SizedBox(width: 10),
+                if (i < uyarilar.length - 1) const SizedBox(width: 8),
               ],
             ],
           ),
@@ -246,51 +246,51 @@ class _SefGarsonSeritState extends State<SefGarsonSerit> {
     final kenar = goruldu ? const Color(0xFFA7F3D0) : (eskale ? const Color(0xFFFECACA) : const Color(0xFFFDBA74));
     final ikon = u['ikon']?.toString() ?? '💡';
     return Container(
-      width: 250,
-      padding: const EdgeInsets.all(12),
+      width: 196,
+      padding: const EdgeInsets.all(9),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: kenar, width: eskale ? 1.8 : 1.4),
+        borderRadius: BorderRadius.circular(13),
+        border: Border.all(color: kenar, width: eskale ? 1.6 : 1.2),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Container(
-            width: 34, height: 34,
-            decoration: BoxDecoration(color: vurgu.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(10)),
-            child: Icon(goruldu ? Icons.check_circle : (eskale ? Icons.report_gmailerrorred : Icons.warning_amber_rounded), color: vurgu, size: 20),
+            width: 26, height: 26,
+            decoration: BoxDecoration(color: vurgu.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(8)),
+            child: Icon(goruldu ? Icons.check_circle : (eskale ? Icons.report_gmailerrorred : Icons.warning_amber_rounded), color: vurgu, size: 16),
           ),
-          const SizedBox(width: 9),
+          const SizedBox(width: 7),
           Expanded(child: Row(children: [
-            Text(ikon, style: const TextStyle(fontSize: 14)),
-            const SizedBox(width: 4),
+            Text(ikon, style: const TextStyle(fontSize: 12)),
+            const SizedBox(width: 3),
             Expanded(child: Text(u['baslik']?.toString() ?? '', maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: _ink, fontSize: 13, fontWeight: FontWeight.w900))),
+                style: const TextStyle(color: _ink, fontSize: 11.5, fontWeight: FontWeight.w900))),
           ])),
         ]),
-        const SizedBox(height: 7),
+        const SizedBox(height: 5),
         Expanded(child: Text(
           goruldu
               ? 'Anlaşıldı — satışa gidiliyor 👍'
-              : (eskale ? '⚠️ Yöneticiye bildirildi — hâlâ satış yok. Hemen satışı yap.' : (u['mesaj']?.toString() ?? '')),
-          maxLines: 3, overflow: TextOverflow.ellipsis,
-          style: TextStyle(color: goruldu ? _yesil : (eskale ? _kirmizi : _sub), fontSize: 11.5, height: 1.25,
+              : (eskale ? '⚠️ Yöneticiye bildirildi — hâlâ satış yok.' : (u['mesaj']?.toString() ?? '')),
+          maxLines: 2, overflow: TextOverflow.ellipsis,
+          style: TextStyle(color: goruldu ? _yesil : (eskale ? _kirmizi : _sub), fontSize: 10.5, height: 1.2,
               fontWeight: (goruldu || eskale) ? FontWeight.w700 : FontWeight.normal),
         )),
-        const SizedBox(height: 6),
+        const SizedBox(height: 5),
         if (goruldu)
           const SizedBox(
-            height: 32,
-            child: Center(child: Text('✓ görüldü', style: TextStyle(color: _yesil, fontSize: 12, fontWeight: FontWeight.bold))),
+            height: 26,
+            child: Center(child: Text('✓ görüldü', style: TextStyle(color: _yesil, fontSize: 11, fontWeight: FontWeight.bold))),
           )
         else
           SizedBox(
-            width: double.infinity, height: 32,
+            width: double.infinity, height: 26,
             child: FilledButton.icon(
               onPressed: () => _oneriGoster(u),
               style: FilledButton.styleFrom(backgroundColor: eskale ? _kirmizi : _mor, padding: EdgeInsets.zero),
-              icon: const Icon(Icons.emoji_objects, size: 16, color: Colors.white),
-              label: const Text('Ne satayım?', style: TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.bold)),
+              icon: const Icon(Icons.emoji_objects, size: 13, color: Colors.white),
+              label: const Text('Ne satayım?', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
             ),
           ),
       ]),
@@ -299,32 +299,32 @@ class _SefGarsonSeritState extends State<SefGarsonSerit> {
 
   Widget _yoneticiKart(Map<String, dynamic> y) {
     return Container(
-      width: 260,
-      padding: const EdgeInsets.all(12),
+      width: 200,
+      padding: const EdgeInsets.all(9),
       decoration: BoxDecoration(
-        color: const Color(0xFFFEF2F2), borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFFECACA), width: 1.6),
+        color: const Color(0xFFFEF2F2), borderRadius: BorderRadius.circular(13),
+        border: Border.all(color: const Color(0xFFFECACA), width: 1.4),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Container(
-            width: 34, height: 34,
-            decoration: BoxDecoration(color: _kirmizi.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(10)),
-            child: const Icon(Icons.report_gmailerrorred, color: _kirmizi, size: 21),
+            width: 26, height: 26,
+            decoration: BoxDecoration(color: _kirmizi.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(8)),
+            child: const Icon(Icons.report_gmailerrorred, color: _kirmizi, size: 17),
           ),
-          const SizedBox(width: 9),
-          const Expanded(child: Text('Dikkat edilmiyor', style: TextStyle(color: _kirmizi, fontSize: 13, fontWeight: FontWeight.w900))),
+          const SizedBox(width: 7),
+          const Expanded(child: Text('Dikkat edilmiyor', style: TextStyle(color: _kirmizi, fontSize: 11.5, fontWeight: FontWeight.w900))),
         ]),
-        const SizedBox(height: 7),
+        const SizedBox(height: 5),
         Expanded(child: Text(y['mesaj']?.toString() ?? 'Garson uyarıları dikkate almıyor.',
-            maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(color: _ink, fontSize: 11.5, height: 1.25))),
-        const SizedBox(height: 6),
+            maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: _ink, fontSize: 10.5, height: 1.2))),
+        const SizedBox(height: 5),
         SizedBox(
-          width: double.infinity, height: 32,
+          width: double.infinity, height: 26,
           child: OutlinedButton(
             onPressed: () => _yoneticiOku(y),
             style: OutlinedButton.styleFrom(side: const BorderSide(color: _kirmizi), padding: EdgeInsets.zero),
-            child: const Text('Tamam', style: TextStyle(color: _kirmizi, fontSize: 12.5, fontWeight: FontWeight.bold)),
+            child: const Text('Tamam', style: TextStyle(color: _kirmizi, fontSize: 11, fontWeight: FontWeight.bold)),
           ),
         ),
       ]),
