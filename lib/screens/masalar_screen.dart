@@ -49,6 +49,46 @@ class _MasalarScreenState extends State<MasalarScreen> {
     if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
   }
 
+  // Masa tasima/birlestirme ipucu (AppBar info ikonundan acilir)
+  void _ipucuGoster() {
+    Widget satir(IconData ik, Color renk, String baslik, String aciklama) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 7),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Icon(ik, size: 20, color: renk),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(baslik, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                Text(aciklama, style: const TextStyle(fontSize: 12.5, color: Color(0xFF64748B), height: 1.3)),
+              ]),
+            ),
+          ]),
+        );
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: Row(children: const [
+          Icon(Icons.touch_app_outlined, color: Color(0xFF4F46E5)),
+          SizedBox(width: 8),
+          Expanded(child: Text('Masa taşıma & birleştirme', style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.bold))),
+        ]),
+        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Bir masayı basılı tutup başka masanın üzerine sürükleyin:',
+              style: TextStyle(fontSize: 13, color: Color(0xFF475569))),
+          const SizedBox(height: 8),
+          satir(Icons.add_circle_outline, const Color(0xFF4F46E5), 'Boş → Boş', 'İki masayı birleştirip yeni hesap açar.'),
+          satir(Icons.merge_type, const Color(0xFF4F46E5), 'Boş → Dolu', 'Boş masayı dolu masanın hesabına ekler.'),
+          satir(Icons.merge_type, const Color(0xFF4F46E5), 'Dolu → Dolu', 'İki hesabı tek masada birleştirir.'),
+          satir(Icons.swap_horiz, const Color(0xFF0EA5E9), 'Dolu → Boş', 'Hesabı boş masaya taşır.'),
+        ]),
+        actions: [
+          FilledButton(onPressed: () => Navigator.pop(ctx), child: const Text('Anladım')),
+        ],
+      ),
+    );
+  }
+
   // Bos masaya tiklaninca: kisi sor -> masa ac -> adisyon detayina git
   Future<void> _masaAc(Map m) async {
     final misafir = await _misafirSor(m['ad'].toString(), _n(m['kapasite']).toInt());
@@ -142,6 +182,13 @@ class _MasalarScreenState extends State<MasalarScreen> {
         elevation: 0.5,
         title: Text('Masalar  ($dolu / ${masalar.length} dolu)',
             style: const TextStyle(color: Color(0xFF0F172A), fontSize: 18, fontWeight: FontWeight.bold)),
+        actions: [
+          IconButton(
+            tooltip: 'Masa taşıma/birleştirme nasıl yapılır?',
+            onPressed: _ipucuGoster,
+            icon: const Icon(Icons.info_outline, color: Color(0xFF64748B)),
+          ),
+        ],
       ),
       body: loading
           ? const Center(child: CircularProgressIndicator())
@@ -189,20 +236,6 @@ class _MasalarScreenState extends State<MasalarScreen> {
                     },
                   ),
                 ),
-              ),
-              // Ipucu: surukle-birak
-              Container(
-                width: double.infinity,
-                color: Colors.white,
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                child: Row(children: const [
-                  Icon(Icons.touch_app_outlined, size: 14, color: Color(0xFF94A3B8)),
-                  SizedBox(width: 6),
-                  Expanded(
-                    child: Text('Masayı basılı tutup sürükleyin — boş+boş: birleştir & aç, boş→dolu: hesaba ekle, dolu+dolu: birleştir, dolu→boş: taşı',
-                        style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
-                  ),
-                ]),
               ),
               // Secili bolgenin masalari
               Expanded(
