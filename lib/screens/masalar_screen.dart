@@ -67,11 +67,13 @@ class _MasalarScreenState extends State<MasalarScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         title: Row(children: const [
           Icon(Icons.touch_app_outlined, color: Color(0xFF4F46E5)),
           SizedBox(width: 8),
-          Expanded(child: Text('Masa taşıma & birleştirme', style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.bold))),
+          Expanded(child: Text('Masa taşıma & birleştirme', style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)))),
         ]),
         content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
           const Text('Bir masayı basılı tutup başka masanın üzerine sürükleyin:',
