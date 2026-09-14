@@ -240,22 +240,25 @@ class _SefGarsonSeritState extends State<SefGarsonSerit> {
 
   Widget _kart(Map<String, dynamic> u) {
     final goruldu = _goruldu(u);
-    final vurgu = goruldu ? _yesil : _turuncu;
+    final eskale = !goruldu && u['durum'] == 'eskale';   // yoneticiye bildirildi -> kirmizi (garsonda da)
+    final vurgu = goruldu ? _yesil : (eskale ? _kirmizi : _turuncu);
+    final bg = goruldu ? const Color(0xFFECFDF5) : (eskale ? const Color(0xFFFEF2F2) : const Color(0xFFFFF7ED));
+    final kenar = goruldu ? const Color(0xFFA7F3D0) : (eskale ? const Color(0xFFFECACA) : const Color(0xFFFDBA74));
     final ikon = u['ikon']?.toString() ?? '💡';
     return Container(
       width: 250,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: goruldu ? const Color(0xFFECFDF5) : const Color(0xFFFFF7ED),
+        color: bg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: goruldu ? const Color(0xFFA7F3D0) : const Color(0xFFFDBA74), width: 1.4),
+        border: Border.all(color: kenar, width: eskale ? 1.8 : 1.4),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Container(
             width: 34, height: 34,
             decoration: BoxDecoration(color: vurgu.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(10)),
-            child: Icon(goruldu ? Icons.check_circle : Icons.warning_amber_rounded, color: vurgu, size: 20),
+            child: Icon(goruldu ? Icons.check_circle : (eskale ? Icons.report_gmailerrorred : Icons.warning_amber_rounded), color: vurgu, size: 20),
           ),
           const SizedBox(width: 9),
           Expanded(child: Row(children: [
@@ -267,25 +270,28 @@ class _SefGarsonSeritState extends State<SefGarsonSerit> {
         ]),
         const SizedBox(height: 7),
         Expanded(child: Text(
-          goruldu ? 'Anlaşıldı — satışa gidiliyor 👍' : (u['mesaj']?.toString() ?? ''),
+          goruldu
+              ? 'Anlaşıldı — satışa gidiliyor 👍'
+              : (eskale ? '⚠️ Yöneticiye bildirildi — hâlâ satış yok. Hemen satışı yap.' : (u['mesaj']?.toString() ?? '')),
           maxLines: 3, overflow: TextOverflow.ellipsis,
-          style: TextStyle(color: goruldu ? _yesil : _sub, fontSize: 11.5, height: 1.25, fontWeight: goruldu ? FontWeight.w700 : FontWeight.normal),
+          style: TextStyle(color: goruldu ? _yesil : (eskale ? _kirmizi : _sub), fontSize: 11.5, height: 1.25,
+              fontWeight: (goruldu || eskale) ? FontWeight.w700 : FontWeight.normal),
         )),
         const SizedBox(height: 6),
-        if (!goruldu)
+        if (goruldu)
+          const SizedBox(
+            height: 32,
+            child: Center(child: Text('✓ görüldü', style: TextStyle(color: _yesil, fontSize: 12, fontWeight: FontWeight.bold))),
+          )
+        else
           SizedBox(
             width: double.infinity, height: 32,
             child: FilledButton.icon(
               onPressed: () => _oneriGoster(u),
-              style: FilledButton.styleFrom(backgroundColor: _mor, padding: EdgeInsets.zero),
+              style: FilledButton.styleFrom(backgroundColor: eskale ? _kirmizi : _mor, padding: EdgeInsets.zero),
               icon: const Icon(Icons.emoji_objects, size: 16, color: Colors.white),
               label: const Text('Ne satayım?', style: TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.bold)),
             ),
-          )
-        else
-          const SizedBox(
-            height: 32,
-            child: Center(child: Text('✓ görüldü', style: TextStyle(color: _yesil, fontSize: 12, fontWeight: FontWeight.bold))),
           ),
       ]),
     );
