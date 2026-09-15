@@ -34,27 +34,21 @@ class _MasalarScreenState extends State<MasalarScreen> {
     _yukle();
   }
 
-  // sessiz: tam-sayfa spinner açma (grid yerinde güncellenir -> hızlı hissettirir).
-  // benimGuncelle: 'benim masalarım' atamasını da çek (birleştir/taşı sonrası DEĞİŞMEZ -> gereksiz turdan kaç).
-  Future<void> _yukle({bool sessiz = false, bool benimGuncelle = true}) async {
+  Future<void> _yukle() async {
     final auth = context.read<AuthProvider>();
-    if (!sessiz) setState(() => loading = true);
+    setState(() => loading = true);
     try {
-      // masalar + (gerekirse) benimAtamam PARALEL istek (ardışık bekleme yok)
-      final masaF = Api.masalar(auth.token!);
-      final benimF = benimGuncelle ? Api.benimAtamam(auth.token!) : null;
-      final res = await masaF;
+      final res = await Api.masalar(auth.token!);
       if (!mounted) return;
       final liste = (res['masalar'] as List?) ?? [];
-      if (benimF != null) {
-        try {
-          final benim = await benimF;
-          _benimMasalar
-            ..clear()
-            ..addAll(((benim['masa_idler'] as List?) ?? []).map((e) => _n(e).toInt()));
-          if (_ilkAtama) { _sadeceBenim = _benimMasalar.isNotEmpty; _ilkAtama = false; }
-        } catch (_) {}
-      }
+      // Kendi atamam: sorumlu masalar (vurgu) + varsayilan bolge sekmesi
+      try {
+        final benim = await Api.benimAtamam(auth.token!);
+        _benimMasalar
+          ..clear()
+          ..addAll(((benim['masa_idler'] as List?) ?? []).map((e) => _n(e).toInt()));
+        if (_ilkAtama) { _sadeceBenim = _benimMasalar.isNotEmpty; _ilkAtama = false; }
+      } catch (_) {}
       if (_secilenBolge == null && _benimMasalar.isNotEmpty) {
         final mine = liste.cast<Map?>().firstWhere(
               (m) => m != null && _benimMasalar.contains(_n(m['id']).toInt()),
@@ -69,7 +63,7 @@ class _MasalarScreenState extends State<MasalarScreen> {
     } on ApiYetkiHatasi {
       if (mounted) context.read<AuthProvider>().cikis();
     } catch (_) {
-      if (mounted && !sessiz) setState(() => loading = false);
+      if (mounted) setState(() => loading = false);
     }
   }
 
@@ -131,7 +125,7 @@ class _MasalarScreenState extends State<MasalarScreen> {
       if (res['ok'] == 1 && res['adisyon_id'] != null) {
         await Navigator.of(context).push(MaterialPageRoute(
             builder: (_) => DetayScreen(tip: 'adisyon', id: _n(res['adisyon_id']).toInt(), baslikFallback: m['ad'].toString())));
-        _yukle(sessiz: true, benimGuncelle: false);
+        _yukle();
       } else {
         _uyar(res['hata']?.toString() ?? 'Masa açılamadı');
       }
@@ -321,11 +315,11 @@ class _MasalarScreenState extends State<MasalarScreen> {
         if (birlesik && m['birlesik_hedef_adisyon_id'] != null) {
           await Navigator.of(context).push(MaterialPageRoute(
               builder: (_) => DetayScreen(tip: 'adisyon', id: _n(m['birlesik_hedef_adisyon_id']).toInt(), baslikFallback: m['birlesik_hedef_ad']?.toString() ?? m['ad'].toString())));
-          _yukle(sessiz: true, benimGuncelle: false);
+          _yukle();
         } else if (acik) {
           await Navigator.of(context).push(MaterialPageRoute(
               builder: (_) => DetayScreen(tip: 'adisyon', id: _n(m['adisyon_id']).toInt(), baslikFallback: m['ad'].toString())));
-          _yukle(sessiz: true, benimGuncelle: false);
+          _yukle();
         } else {
           await _masaAc(m);
         }
@@ -549,7 +543,7 @@ class _MasalarScreenState extends State<MasalarScreen> {
               builder: (_) => DetayScreen(tip: 'adisyon', id: _n(res['adisyon_id']).toInt(),
                   baslikFallback: '${source['ad']} + ${target['ad']}')));
         }
-        _yukle(sessiz: true, benimGuncelle: false);
+        _yukle();
       }
     } on ApiYetkiHatasi {
       if (mounted) context.read<AuthProvider>().cikis();
@@ -564,7 +558,7 @@ class _MasalarScreenState extends State<MasalarScreen> {
       final res = await call();
       if (!mounted) return;
       _uyar(res['mesaj']?.toString() ?? res['hata']?.toString() ?? '');
-      if (res['ok'] == 1) _yukle(sessiz: true, benimGuncelle: false);   // hızlı: spinner yok, atama çekme
+      if (res['ok'] == 1) _yukle();
     } on ApiYetkiHatasi {
       if (mounted) context.read<AuthProvider>().cikis();
     } catch (_) {
