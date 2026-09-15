@@ -244,9 +244,14 @@ class _OzelRenkSayfaState extends State<_OzelRenkSayfa> {
   Color get _line => widget.line;
   Color get _gold => widget.gold;
 
+  static const List<Color> _tonSpektrum = [
+    Color(0xFFFF0000), Color(0xFFFFFF00), Color(0xFF00FF00), Color(0xFF00FFFF), Color(0xFF0000FF), Color(0xFFFF00FF), Color(0xFFFF0000),
+  ];
+
   Widget _renkPaneli(Color renk, void Function(Color) onc) {
     const swatches = [0xFFC41E3A, 0xFFE23744, 0xFFF97316, 0xFFF59E0B, 0xFFEAB308, 0xFF84CC16, 0xFF22C55E, 0xFF10B981, 0xFF14B8A6, 0xFF06B6D4, 0xFF3B82F6, 0xFF6366F1, 0xFF7C3AED, 0xFF9333EA, 0xFFD946EF, 0xFFEC4899, 0xFF8B5E34, 0xFF111827];
     final hsv = HSVColor.fromColor(renk);
+    final hex = renk.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase();
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Wrap(spacing: 10, runSpacing: 10, children: swatches.map((v) {
         final c = Color(v);
@@ -258,18 +263,36 @@ class _OzelRenkSayfaState extends State<_OzelRenkSayfa> {
             child: sec ? const Icon(Icons.check, color: Colors.white, size: 18) : null),
         );
       }).toList()),
+      const SizedBox(height: 16),
+      // HEX kodu: logonun/markanin tam rengini yaz (hazir kutucuklarda olmayabilir)
+      Row(children: [
+        SizedBox(width: 88, child: Text('Renk kodu', style: TextStyle(color: _sub, fontSize: 12.5, fontWeight: FontWeight.w600))),
+        Expanded(child: _HexAlan(key: ValueKey(hex), hex: hex, gold: _gold, ink: _ink, card: widget.card, line: _line, onRenk: onc)),
+      ]),
       const SizedBox(height: 14),
-      _slider('Ton', hsv.hue, 0, 360, (val) => onc(hsv.withHue(val).toColor())),
-      _slider('Canlılık', hsv.saturation * 100, 0, 100, (val) => onc(hsv.withSaturation((val / 100).clamp(0, 1)).toColor())),
-      _slider('Parlaklık', hsv.value * 100, 0, 100, (val) => onc(hsv.withValue((val / 100).clamp(0, 1)).toColor())),
+      // Gorsel spektrum (gokkusagi) — surukleyerek ton sec
+      _gradSlider('Ton', _tonSpektrum, hsv.hue, 0, 360, (val) => onc(hsv.withHue(val).toColor())),
+      _gradSlider('Canlılık', [HSVColor.fromAHSV(1, hsv.hue, 0, hsv.value).toColor(), HSVColor.fromAHSV(1, hsv.hue, 1, hsv.value).toColor()],
+          hsv.saturation * 100, 0, 100, (val) => onc(hsv.withSaturation((val / 100).clamp(0, 1)).toColor())),
+      _gradSlider('Parlaklık', [Colors.black, HSVColor.fromAHSV(1, hsv.hue, hsv.saturation, 1).toColor()],
+          hsv.value * 100, 0, 100, (val) => onc(hsv.withValue((val / 100).clamp(0, 1)).toColor())),
     ]);
   }
 
-  Widget _slider(String ad, double deger, double min, double max, void Function(double) onc) {
-    return Row(children: [
+  Widget _gradSlider(String ad, List<Color> colors, double deger, double min, double max, void Function(double) onc) {
+    return Padding(padding: const EdgeInsets.symmetric(vertical: 3), child: Row(children: [
       SizedBox(width: 66, child: Text(ad, style: TextStyle(color: _sub, fontSize: 12.5, fontWeight: FontWeight.w600))),
-      Expanded(child: Slider(value: deger.clamp(min, max), min: min, max: max, activeColor: _gold, onChanged: onc)),
-    ]);
+      Expanded(child: SizedBox(height: 30, child: Stack(alignment: Alignment.center, children: [
+        Container(margin: const EdgeInsets.symmetric(horizontal: 10), height: 12,
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(6), gradient: LinearGradient(colors: colors), border: Border.all(color: _line))),
+        SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            trackHeight: 12, activeTrackColor: Colors.transparent, inactiveTrackColor: Colors.transparent,
+            thumbColor: Colors.white, overlayColor: _gold.withValues(alpha: .2),
+            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10)),
+          child: Slider(value: deger.clamp(min, max), min: min, max: max, onChanged: onc)),
+      ]))),
+    ]));
   }
 
   @override
@@ -307,6 +330,52 @@ class _OzelRenkSayfaState extends State<_OzelRenkSayfa> {
           child: const Text('Bu Rengi Uygula', style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800)),
         ),
       ]),
+    );
+  }
+}
+
+/// HEX kod girisi: logonun/markanin tam rengini yazip uygulamak icin ( or. C41E3A).
+class _HexAlan extends StatefulWidget {
+  final String hex;
+  final Color gold, ink, card, line;
+  final void Function(Color) onRenk;
+  const _HexAlan({super.key, required this.hex, required this.gold, required this.ink, required this.card, required this.line, required this.onRenk});
+  @override
+  State<_HexAlan> createState() => _HexAlanState();
+}
+
+class _HexAlanState extends State<_HexAlan> {
+  late TextEditingController c;
+  @override
+  void initState() { super.initState(); c = TextEditingController(text: widget.hex); }
+  @override
+  void dispose() { c.dispose(); super.dispose(); }
+
+  void _uygula(String s) {
+    s = s.replaceAll('#', '').trim();
+    if (RegExp(r'^[0-9a-fA-F]{6}$').hasMatch(s)) {
+      widget.onRenk(Color(int.parse('FF$s', radix: 16)));
+    } else {
+      c.text = widget.hex;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: c,
+      maxLength: 6,
+      textCapitalization: TextCapitalization.characters,
+      style: TextStyle(color: widget.ink, fontSize: 14.5, letterSpacing: 1.5, fontWeight: FontWeight.w700),
+      decoration: InputDecoration(
+        prefixText: '#  ', prefixStyle: TextStyle(color: widget.gold, fontSize: 15, fontWeight: FontWeight.w800),
+        counterText: '', isDense: true, filled: true, fillColor: widget.card,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: widget.line)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: widget.gold)),
+        suffixIcon: IconButton(icon: Icon(Icons.check, color: widget.gold, size: 20), onPressed: () => _uygula(c.text)),
+      ),
+      onSubmitted: _uygula,
     );
   }
 }
