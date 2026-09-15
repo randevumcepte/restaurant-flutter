@@ -164,29 +164,35 @@ class _MasalarScreenState extends State<MasalarScreen> {
     );
   }
 
-  Color _renk(String durum) {
+  /// Masa kartı görünümü — durum + tema. Katmanlı gradient + belirgin kenar + okunaklı vurgu.
+  /// ($1 gradient renkleri, $2 kenar, $3 tutar/durum vurgu rengi)
+  (List<Color>, Color, Color) _masaStil(String durum) {
+    final k = _t.koyu;
     switch (durum) {
-      case 'dolu':
-        return _t.koyu ? const Color(0xFF1E2740) : const Color(0xFFEEF2FF);
-      case 'rezerve':
-        return _t.koyu ? const Color(0xFF2A2410) : const Color(0xFFFFFBEB);
-      case 'kirli':
-        return _t.koyu ? const Color(0xFF2A1E10) : const Color(0xFFFFF7ED);
-      default:
-        return _t.card; // bos masa: temaya gore kart yuzeyi
-    }
-  }
-
-  Color _kenar(String durum) {
-    switch (durum) {
-      case 'dolu':
-        return _t.koyu ? const Color(0xFF3A4680) : const Color(0xFFC7D2FE);
-      case 'rezerve':
-        return _t.koyu ? const Color(0xFF5C4A18) : const Color(0xFFFDE68A);
-      case 'kirli':
-        return _t.koyu ? const Color(0xFF5C3A18) : const Color(0xFFFED7AA);
-      default:
-        return _t.line;
+      case 'dolu': // DOLU: canlı mor/indigo — belirgin dursun
+        return (
+          k ? const [Color(0xFF3E2F78), Color(0xFF241E45)] : const [Color(0xFFEEF0FF), Color(0xFFDDE1FF)],
+          k ? const Color(0xFF8B6FF0) : const Color(0xFFA5B4FC),
+          k ? const Color(0xFFC9B8FF) : const Color(0xFF4F46E5),
+        );
+      case 'rezerve': // REZERVE: amber
+        return (
+          k ? const [Color(0xFF3C3113), Color(0xFF29220D)] : const [Color(0xFFFFFBEB), Color(0xFFFEF3C7)],
+          k ? const Color(0xFFB88A1E) : const Color(0xFFFCD34D),
+          k ? const Color(0xFFFCD34D) : const Color(0xFFB45309),
+        );
+      case 'kirli': // KİRLİ: turuncu
+        return (
+          k ? const [Color(0xFF3C2913), Color(0xFF291C0D)] : const [Color(0xFFFFF7ED), Color(0xFFFFEDD5)],
+          k ? const Color(0xFFB5651D) : const Color(0xFFFDBA74),
+          k ? const Color(0xFFFDBA74) : const Color(0xFFC2410C),
+        );
+      default: // BOŞ: sakin kart + yeşil "müsait" vurgusu
+        return (
+          k ? const [Color(0xFF171E33), Color(0xFF121829)] : const [Colors.white, Color(0xFFF7F9FF)],
+          k ? const Color(0xFF2B3552) : const Color(0xFFE4E7F2),
+          k ? const Color(0xFF5FD8A6) : const Color(0xFF10B981),
+        );
     }
   }
 
@@ -407,11 +413,17 @@ class _MasalarScreenState extends State<MasalarScreen> {
       );
     }
 
+    final stil = _masaStil(durum);
+    final coklu = grup.length > 1;
     return Container(
       decoration: BoxDecoration(
-        color: grup.length > 1 ? (t.koyu ? const Color(0xFF241E40) : const Color(0xFFF5F3FF)) : _renk(durum),
+        gradient: coklu ? null : LinearGradient(colors: stil.$1, begin: Alignment.topLeft, end: Alignment.bottomRight),
+        color: coklu ? (t.koyu ? const Color(0xFF2A2350) : const Color(0xFFF5F3FF)) : null,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: grup.length > 1 ? const Color(0xFFC4B5FD) : _kenar(durum), width: grup.length > 1 ? 2 : 1.5),
+        border: Border.all(color: coklu ? const Color(0xFFC4B5FD) : stil.$2, width: coklu ? 2 : 1.4),
+        boxShadow: t.koyu
+            ? (durum == 'dolu' ? [BoxShadow(color: const Color(0xFF8B6FF0).withValues(alpha: 0.18), blurRadius: 14, offset: const Offset(0, 5))] : null)
+            : t.golge,
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -442,8 +454,8 @@ class _MasalarScreenState extends State<MasalarScreen> {
             padding: const EdgeInsets.only(top: 4),
             child: acik
                 ? Text(_n(m['tutar']) > 0 ? '${_f.format(_n(m['tutar']).round())}TL' : 'açık',
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5)))
-                : Text('boş', style: TextStyle(fontSize: 10, color: t.sub)),
+                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: stil.$3))
+                : Text('● boş', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: stil.$3)),
           ),
         ],
       ),
