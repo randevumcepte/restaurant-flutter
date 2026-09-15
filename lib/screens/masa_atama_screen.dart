@@ -107,7 +107,13 @@ class _MasaAtamaScreenState extends State<MasaAtamaScreen> {
               const SizedBox(height: 8),
               Wrap(spacing: 8, runSpacing: 8, children: personeller.map((p) {
                 final secili = p['id'] == seciliPersonel;
-                final atamaSay = ((p['bolge_idler'] as List?)?.length ?? 0) + ((p['masa_idler'] as List?)?.length ?? 0);
+                // Rozet = SORUMLU gercek masa sayisi (bolgelerdeki masalar ∪ ekstra masalar)
+                final bIds = ((p['bolge_idler'] as List?) ?? []).map((e) => (e as num).toInt()).toSet();
+                final resolved = <int>{...((p['masa_idler'] as List?) ?? []).map((e) => (e as num).toInt())};
+                for (final m in masalar) {
+                  if (bIds.contains((m['bolge_id'] as num).toInt())) resolved.add((m['id'] as num).toInt());
+                }
+                final atamaSay = resolved.length;
                 return GestureDetector(
                   onTap: () => _personelSec(p),
                   child: Container(
@@ -123,10 +129,13 @@ class _MasaAtamaScreenState extends State<MasaAtamaScreen> {
                       Text(_rolAd(p['rol']?.toString()), style: TextStyle(color: secili ? Colors.white70 : t.sub, fontSize: 11)),
                       if (atamaSay > 0) ...[
                         const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                          decoration: BoxDecoration(color: secili ? Colors.white24 : t.mor1, borderRadius: BorderRadius.circular(9)),
-                          child: Text('$atamaSay', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                        Tooltip(
+                          message: 'Sorumlu masa sayısı',
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                            decoration: BoxDecoration(color: secili ? Colors.white24 : t.mor1, borderRadius: BorderRadius.circular(9)),
+                            child: Text('$atamaSay masa', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                          ),
                         ),
                       ],
                     ]),
