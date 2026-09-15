@@ -152,6 +152,11 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
   Future<void> _hazir(int adisyonId) async {
     try {
       await Api.mutfakHazir(_token, adisyonId: adisyonId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text('✓ Hazır — "Servise Hazır" sekmesine taşındı, garson alacak'),
+          backgroundColor: _yesil, duration: const Duration(seconds: 2)));
+      }
       _siparisYukle(sessiz: true);
       _serviseYukle(sessiz: true);
     } catch (_) {}
@@ -160,6 +165,11 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
   Future<void> _basla(int adisyonId) async {
     try {
       await Api.mutfakBasla(_token, adisyonId: adisyonId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text('👨‍🍳 Hazırlanmaya başlandı'),
+          backgroundColor: _amber, duration: const Duration(seconds: 2)));
+      }
       _siparisYukle(sessiz: true);
     } catch (_) {}
   }
@@ -172,6 +182,11 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
   Future<void> _servisEt(int adisyonId) async {
     try {
       await Api.mutfakServis(_token, adisyonId: adisyonId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text('🍽 Servis edildi — masaya götürüldü'),
+          backgroundColor: _mavi, duration: const Duration(seconds: 2)));
+      }
       _serviseYukle(sessiz: true);
     } catch (_) {}
   }
