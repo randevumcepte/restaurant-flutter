@@ -35,7 +35,6 @@ class _TemaSecimScreenState extends State<TemaSecimScreen> {
   Color ozelAna = const Color(0xFFC41E3A);   // varsayilan ozel: kirmizi
   Color ozelDetay = const Color(0xFFE9C46A);  // varsayilan detay: altin
   bool detayAyri = false;                      // detay ayri renk mi (yoksa genel renkle ayni)
-  String mod = 'koyu';                         // QR menu varsayilan modu (koyu/acik)
 
   @override
   void initState() { super.initState(); _yukle(); }
@@ -62,7 +61,6 @@ class _TemaSecimScreenState extends State<TemaSecimScreen> {
           final r2 = res['renk2']?.toString() ?? '';
           detayAyri = r2.isNotEmpty;
           ozelDetay = r2.isNotEmpty ? _hex(r2) : const Color(0xFFE9C46A);
-          mod = res['mod']?.toString() ?? 'koyu';
           loading = false;
         });
       } else {
@@ -99,57 +97,21 @@ class _TemaSecimScreenState extends State<TemaSecimScreen> {
     }
   }
 
-  Future<void> _modKaydet(String m) async {
-    if (!duzenleyebilir || mod == m) return;
-    final auth = context.read<AuthProvider>();
-    final onceki = mod;
-    setState(() => mod = m);
-    try {
-      final res = await Api.temaMod(auth.token!, m);
-      if (!mounted) return;
-      if (res['ok'] != 1) { setState(() => mod = onceki); return; }
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(m == 'acik' ? '☀️ Varsayılan: Açık mod' : '🌙 Varsayılan: Koyu mod'),
-        backgroundColor: const Color(0xFF16A34A), duration: const Duration(seconds: 2)));
-    } catch (_) { if (mounted) setState(() => mod = onceki); }
-  }
-
-  Widget _modSecici() {
-    Widget seg(String m, IconData ik, String etiket) {
-      final aktif = mod == m;
-      return Expanded(child: GestureDetector(
-        onTap: () => _modKaydet(m),
-        child: Container(
-          margin: const EdgeInsets.all(4),
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: aktif ? _gold : Colors.transparent, borderRadius: BorderRadius.circular(12)),
-          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Icon(ik, size: 18, color: aktif ? const Color(0xFF3A2600) : _sub),
-            const SizedBox(width: 7),
-            Text(etiket, style: TextStyle(color: aktif ? const Color(0xFF3A2600) : _sub, fontSize: 14, fontWeight: FontWeight.w800)),
-          ]),
-        ),
-      ));
-    }
-    return Container(
-      decoration: BoxDecoration(color: _bg, borderRadius: BorderRadius.circular(15), border: Border.all(color: _line)),
-      child: Row(children: [seg('koyu', Icons.dark_mode, 'Koyu'), seg('acik', Icons.light_mode, 'Açık')]),
-    );
-  }
-
   void _ozelDuzenle() {
+    if (!duzenleyebilir) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bu ayarı yalnızca Sahip/Müdür değiştirebilir.')));
+      return;
+    }
     Color ana = ozelAna, detay = ozelDetay; bool ayri = detayAyri;
     showModalBottomSheet(
-      context: context, backgroundColor: _card, isScrollControlled: true,
+      context: context, backgroundColor: _card, isScrollControlled: true, useSafeArea: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
       builder: (ctx) => StatefulBuilder(builder: (ctx, setLocal) {
-        return DraggableScrollableSheet(
-          expand: false, initialChildSize: .85, maxChildSize: .95, minChildSize: .5,
-          builder: (_, sc) => SingleChildScrollView(
-            controller: sc,
-            padding: const EdgeInsets.fromLTRB(18, 14, 18, 28),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        return ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.9),
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(18, 14, 18, 28 + MediaQuery.of(ctx).viewInsets.bottom),
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               Center(child: Container(width: 44, height: 5, decoration: BoxDecoration(color: _line, borderRadius: BorderRadius.circular(3)))),
               const SizedBox(height: 14),
               const Text('Kendi Rengini Oluştur', style: TextStyle(color: _gold, fontSize: 18, fontWeight: FontWeight.w800)),
@@ -158,8 +120,8 @@ class _TemaSecimScreenState extends State<TemaSecimScreen> {
               const SizedBox(height: 16),
               Text('Genel Renk (butonlar, vurgular)', style: TextStyle(color: _ink, fontSize: 14, fontWeight: FontWeight.w700)),
               const SizedBox(height: 8),
-              ColorPicker(pickerColor: ana, onColorChanged: (c) => ana = c, enableAlpha: false, displayThumbColor: true,
-                  paletteType: PaletteType.hueWheel, labelTypes: const [], pickerAreaHeightPercent: .65),
+              ColorPicker(pickerColor: ana, onColorChanged: (c) => setLocal(() => ana = c), enableAlpha: false, displayThumbColor: true,
+                  paletteType: PaletteType.hueWheel, labelTypes: const [], pickerAreaHeightPercent: .62),
               Divider(color: _line, height: 26),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero, activeThumbColor: _gold,
@@ -170,8 +132,8 @@ class _TemaSecimScreenState extends State<TemaSecimScreen> {
                 const SizedBox(height: 6),
                 Text('Detay Rengi (fiyatlar, çizgiler, logo)', style: TextStyle(color: _ink, fontSize: 14, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 8),
-                ColorPicker(pickerColor: detay, onColorChanged: (c) => detay = c, enableAlpha: false, displayThumbColor: true,
-                    paletteType: PaletteType.hueWheel, labelTypes: const [], pickerAreaHeightPercent: .6),
+                ColorPicker(pickerColor: detay, onColorChanged: (c) => setLocal(() => detay = c), enableAlpha: false, displayThumbColor: true,
+                    paletteType: PaletteType.hueWheel, labelTypes: const [], pickerAreaHeightPercent: .58),
               ],
               const SizedBox(height: 18),
               ElevatedButton(
@@ -210,13 +172,6 @@ class _TemaSecimScreenState extends State<TemaSecimScreen> {
                   ),
                   if (!duzenleyebilir) const Padding(padding: EdgeInsets.only(top: 12),
                       child: Text('Bu ayarı yalnızca Sahip/Müdür değiştirebilir.', style: TextStyle(color: Color(0xFFF87171), fontSize: 12.5))),
-
-                  const SizedBox(height: 18),
-                  Text('Menü Modu', style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.w800)),
-                  const SizedBox(height: 4),
-                  Text('QR menünün açılış modu. Müşteri sol üstteki ☀️/🌙 ile kendi de değiştirebilir.', style: TextStyle(color: _sub, fontSize: 11.5)),
-                  const SizedBox(height: 8),
-                  _modSecici(),
 
                   const SizedBox(height: 22),
                   Text('Kendi Rengin', style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.w800)),
