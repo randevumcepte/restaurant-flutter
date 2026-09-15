@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
+import '../providers/tema_provider.dart';
 import '../responsive.dart';
 import '../services/api.dart';
 import '../widgets/sef_garson_serit.dart';
@@ -22,6 +23,8 @@ class _MasalarScreenState extends State<MasalarScreen> {
   bool _sadeceBenim = false;         // "Sadece benim masalarim" filtresi (atamasi olanda varsayilan acik)
   bool _ilkAtama = true;             // _sadeceBenim varsayilanini bir kez ayarla
   final _f = NumberFormat.decimalPattern('tr');
+
+  TemaProvider get _t => context.watch<TemaProvider>();
 
   num _n(dynamic v) => v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0);
 
@@ -70,6 +73,7 @@ class _MasalarScreenState extends State<MasalarScreen> {
 
   // Masa tasima/birlestirme ipucu (AppBar info ikonundan acilir)
   void _ipucuGoster() {
+    final t = _t;
     Widget satir(IconData ik, Color renk, String baslik, String aciklama) => Padding(
           padding: const EdgeInsets.symmetric(vertical: 7),
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -77,8 +81,8 @@ class _MasalarScreenState extends State<MasalarScreen> {
             const SizedBox(width: 10),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(baslik, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-                Text(aciklama, style: const TextStyle(fontSize: 12.5, color: Color(0xFF64748B), height: 1.3)),
+                Text(baslik, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: t.ink)),
+                Text(aciklama, style: TextStyle(fontSize: 12.5, color: t.sub, height: 1.3)),
               ]),
             ),
           ]),
@@ -86,17 +90,17 @@ class _MasalarScreenState extends State<MasalarScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
+        backgroundColor: t.card,
+        surfaceTintColor: t.card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: Row(children: const [
-          Icon(Icons.touch_app_outlined, color: Color(0xFF4F46E5)),
-          SizedBox(width: 8),
-          Expanded(child: Text('Masa taşıma & birleştirme', style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)))),
+        title: Row(children: [
+          const Icon(Icons.touch_app_outlined, color: Color(0xFF4F46E5)),
+          const SizedBox(width: 8),
+          Expanded(child: Text('Masa taşıma & birleştirme', style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.bold, color: t.ink))),
         ]),
         content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('Bir masayı basılı tutup başka masanın üzerine sürükleyin:',
-              style: TextStyle(fontSize: 13, color: Color(0xFF475569))),
+          Text('Bir masayı basılı tutup başka masanın üzerine sürükleyin:',
+              style: TextStyle(fontSize: 13, color: t.sub2)),
           const SizedBox(height: 8),
           satir(Icons.add_circle_outline, const Color(0xFF4F46E5), 'Boş → Boş', 'İki masayı birleştirip yeni hesap açar.'),
           satir(Icons.merge_type, const Color(0xFF4F46E5), 'Boş → Dolu', 'Boş masayı dolu masanın hesabına ekler.'),
@@ -133,18 +137,21 @@ class _MasalarScreenState extends State<MasalarScreen> {
   }
 
   Future<int?> _misafirSor(String masaAd, int kapasite) {
+    final t = _t;
     int sayi = kapasite >= 1 && kapasite <= 20 ? kapasite : 2;
     return showDialog<int>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setD) => AlertDialog(
-          title: Text('$masaAd — Masa Aç', style: const TextStyle(fontSize: 17)),
+          backgroundColor: t.card,
+          surfaceTintColor: t.card,
+          title: Text('$masaAd — Masa Aç', style: TextStyle(fontSize: 17, color: t.ink)),
           content: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Text('Kaç kişi?', style: TextStyle(color: Color(0xFF64748B))),
+            Text('Kaç kişi?', style: TextStyle(color: t.sub)),
             const SizedBox(height: 12),
             Row(mainAxisAlignment: MainAxisAlignment.center, children: [
               IconButton(iconSize: 34, color: const Color(0xFF4F46E5), onPressed: () => setD(() { if (sayi > 1) sayi--; }), icon: const Icon(Icons.remove_circle_outline)),
-              SizedBox(width: 56, child: Text('$sayi', textAlign: TextAlign.center, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold))),
+              SizedBox(width: 56, child: Text('$sayi', textAlign: TextAlign.center, style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: t.ink))),
               IconButton(iconSize: 34, color: const Color(0xFF4F46E5), onPressed: () => setD(() { if (sayi < 20) sayi++; }), icon: const Icon(Icons.add_circle_outline)),
             ]),
           ]),
@@ -160,31 +167,32 @@ class _MasalarScreenState extends State<MasalarScreen> {
   Color _renk(String durum) {
     switch (durum) {
       case 'dolu':
-        return const Color(0xFFEEF2FF);
+        return _t.koyu ? const Color(0xFF1E2740) : const Color(0xFFEEF2FF);
       case 'rezerve':
-        return const Color(0xFFFFFBEB);
+        return _t.koyu ? const Color(0xFF2A2410) : const Color(0xFFFFFBEB);
       case 'kirli':
-        return const Color(0xFFFFF7ED);
+        return _t.koyu ? const Color(0xFF2A1E10) : const Color(0xFFFFF7ED);
       default:
-        return Colors.white;
+        return _t.card; // bos masa: temaya gore kart yuzeyi
     }
   }
 
   Color _kenar(String durum) {
     switch (durum) {
       case 'dolu':
-        return const Color(0xFFC7D2FE);
+        return _t.koyu ? const Color(0xFF3A4680) : const Color(0xFFC7D2FE);
       case 'rezerve':
-        return const Color(0xFFFDE68A);
+        return _t.koyu ? const Color(0xFF5C4A18) : const Color(0xFFFDE68A);
       case 'kirli':
-        return const Color(0xFFFED7AA);
+        return _t.koyu ? const Color(0xFF5C3A18) : const Color(0xFFFED7AA);
       default:
-        return const Color(0xFFE2E8F0);
+        return _t.line;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final t = _t;
     // Bolgeye gore grupla
     final Map<String, List> gruplu = {};
     for (final m in masalar) {
@@ -201,12 +209,14 @@ class _MasalarScreenState extends State<MasalarScreen> {
     final dolu = masalar.where((m) => m['adisyon_id'] != null).length;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F5F9),
+      backgroundColor: t.bg,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: t.card,
+        surfaceTintColor: t.card,
         elevation: 0.5,
+        iconTheme: IconThemeData(color: t.ink),
         title: Text('Masalar  ($dolu / ${masalar.length} dolu)',
-            style: const TextStyle(color: Color(0xFF0F172A), fontSize: 18, fontWeight: FontWeight.bold)),
+            style: TextStyle(color: t.ink, fontSize: 18, fontWeight: FontWeight.bold)),
         actions: [
           if (_benimMasalar.isNotEmpty)
             TextButton.icon(
@@ -217,7 +227,7 @@ class _MasalarScreenState extends State<MasalarScreen> {
           IconButton(
             tooltip: 'Masa taşıma/birleştirme nasıl yapılır?',
             onPressed: _ipucuGoster,
-            icon: const Icon(Icons.info_outline, color: Color(0xFF64748B)),
+            icon: Icon(Icons.info_outline, color: t.sub),
           ),
         ],
       ),
@@ -228,7 +238,7 @@ class _MasalarScreenState extends State<MasalarScreen> {
               const SefGarsonSerit(),
               // Bolge sekmeleri (buton gibi) — tiklayinca aninda o bolge (client-side, kasmaz)
               Container(
-                color: Colors.white,
+                color: t.card,
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 child: SizedBox(
                   height: 38,
@@ -247,12 +257,12 @@ class _MasalarScreenState extends State<MasalarScreen> {
                           duration: const Duration(milliseconds: 150),
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
                           decoration: BoxDecoration(
-                            color: secili ? const Color(0xFF4F46E5) : const Color(0xFFF1F5F9),
+                            color: secili ? const Color(0xFF4F46E5) : t.card,
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: secili ? const Color(0xFF4F46E5) : const Color(0xFFE2E8F0)),
+                            border: Border.all(color: secili ? const Color(0xFF4F46E5) : t.line),
                           ),
                           child: Row(children: [
-                            Text(b, style: TextStyle(color: secili ? Colors.white : const Color(0xFF334155), fontWeight: FontWeight.bold, fontSize: 13)),
+                            Text(b, style: TextStyle(color: secili ? Colors.white : t.ink, fontWeight: FontWeight.bold, fontSize: 13)),
                             if (bDolu > 0) ...[
                               const SizedBox(width: 6),
                               Container(
@@ -364,6 +374,7 @@ class _MasalarScreenState extends State<MasalarScreen> {
   }
 
   Widget _hucreGovde(Map m) {
+    final t = _t;
     final acik = m['adisyon_id'] != null;
     final durum = m['durum'].toString();
     final birlesik = durum == 'birlesik';
@@ -373,15 +384,15 @@ class _MasalarScreenState extends State<MasalarScreen> {
     if (birlesik) {
       return Container(
         decoration: BoxDecoration(
-          color: const Color(0xFFF1F5F9),
+          color: t.card2,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFCBD5E1), width: 1.5, style: BorderStyle.solid),
+          border: Border.all(color: t.line, width: 1.5, style: BorderStyle.solid),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(m['ad'].toString(),
-                style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF94A3B8), decoration: TextDecoration.lineThrough)),
+                style: TextStyle(fontWeight: FontWeight.bold, color: t.sub, decoration: TextDecoration.lineThrough)),
             const SizedBox(height: 4),
             const Icon(Icons.merge_type, size: 15, color: Color(0xFF4F46E5)),
             Padding(
@@ -398,7 +409,7 @@ class _MasalarScreenState extends State<MasalarScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: grup.length > 1 ? const Color(0xFFF5F3FF) : _renk(durum),
+        color: grup.length > 1 ? (t.koyu ? const Color(0xFF241E40) : const Color(0xFFF5F3FF)) : _renk(durum),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: grup.length > 1 ? const Color(0xFFC4B5FD) : _kenar(durum), width: grup.length > 1 ? 2 : 1.5),
       ),
@@ -422,17 +433,17 @@ class _MasalarScreenState extends State<MasalarScreen> {
               ]),
             ),
             const SizedBox(height: 2),
-            Text('birleşik masa', style: const TextStyle(fontSize: 9, color: Color(0xFF94A3B8))),
+            Text('birleşik masa', style: TextStyle(fontSize: 9, color: t.sub)),
           ] else ...[
-            Text(m['ad'].toString(), style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-            Text('${m['kapasite']} kişi', style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8))),
+            Text(m['ad'].toString(), style: TextStyle(fontWeight: FontWeight.bold, color: t.ink)),
+            Text('${m['kapasite']} kişi', style: TextStyle(fontSize: 10, color: t.sub)),
           ],
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: acik
                 ? Text(_n(m['tutar']) > 0 ? '${_f.format(_n(m['tutar']).round())}TL' : 'açık',
                     style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5)))
-                : const Text('boş', style: TextStyle(fontSize: 10, color: Color(0xFFCBD5E1))),
+                : Text('boş', style: TextStyle(fontSize: 10, color: t.sub)),
           ),
         ],
       ),
@@ -551,12 +562,15 @@ class _MasalarScreenState extends State<MasalarScreen> {
     String? vurgu,
     required String onayText,
   }) {
+    final t = _t;
     return showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Row(children: [Icon(ikon, color: renk), const SizedBox(width: 8), Text(baslik, style: const TextStyle(fontSize: 17))]),
+        backgroundColor: t.card,
+        surfaceTintColor: t.card,
+        title: Row(children: [Icon(ikon, color: renk), const SizedBox(width: 8), Text(baslik, style: TextStyle(fontSize: 17, color: t.ink))]),
         content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(mesaj, style: const TextStyle(color: Color(0xFF475569), height: 1.4)),
+          Text(mesaj, style: TextStyle(color: t.sub2, height: 1.4)),
           if (vurgu != null) ...[
             const SizedBox(height: 12),
             Container(

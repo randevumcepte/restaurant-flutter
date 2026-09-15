@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/tema_provider.dart';
 import '../services/api.dart';
 
 /// SEF GARSON AI — Masalar ekranina GOMULU satis uyari seridi + AKILLI POPUP/ESKALASYON.
@@ -19,11 +20,12 @@ class SefGarsonSerit extends StatefulWidget {
 
 class _SefGarsonSeritState extends State<SefGarsonSerit> {
   static const _mor = Color(0xFF7C3AED);
-  static const _ink = Color(0xFF0F172A);
-  static const _sub = Color(0xFF64748B);
   static const _turuncu = Color(0xFFF59E0B);
   static const _yesil = Color(0xFF16A34A);
   static const _kirmizi = Color(0xFFDC2626);
+
+  TemaProvider get _t => context.watch<TemaProvider>();
+  Color get _sub => _t.sub;
 
   List<Map<String, dynamic>> uyarilar = [];
   List<Map<String, dynamic>> yoneticiUyarilar = [];
@@ -94,6 +96,7 @@ class _SefGarsonSeritState extends State<SefGarsonSerit> {
   // Yeni firsat popup'i: "Ne satayim?" -> oneri akisi; "Sonra" -> kapat (sunucu tekrar hatirlatir)
   Future<void> _popupGoster(Map<String, dynamic> u) async {
     _popupAcik = true;
+    final t = context.read<TemaProvider>();
     final ikon = u['ikon']?.toString() ?? '💡';
     // Sunucu bos baslik/mesaj gonderirse popup bombos gorunmesin -> anlamli varsayilan
     final bt = u['baslik']?.toString().trim() ?? '';
@@ -107,8 +110,8 @@ class _SefGarsonSeritState extends State<SefGarsonSerit> {
     await showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
+        backgroundColor: t.card,
+        surfaceTintColor: t.card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 6),
         title: Row(children: [
@@ -118,12 +121,12 @@ class _SefGarsonSeritState extends State<SefGarsonSerit> {
             child: Center(child: Text(ikon, style: const TextStyle(fontSize: 22))),
           ),
           const SizedBox(width: 12),
-          Expanded(child: Text(baslik, style: const TextStyle(color: _ink, fontSize: 16.5, fontWeight: FontWeight.w900))),
+          Expanded(child: Text(baslik, style: TextStyle(color: t.ink, fontSize: 16.5, fontWeight: FontWeight.w900))),
         ]),
-        content: Text(mesaj, style: const TextStyle(color: _ink, fontSize: 14.5, height: 1.4)),
+        content: Text(mesaj, style: TextStyle(color: t.ink, fontSize: 14.5, height: 1.4)),
         actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Sonra', style: TextStyle(color: _sub, fontWeight: FontWeight.w600))),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Sonra', style: TextStyle(color: t.sub, fontWeight: FontWeight.w600))),
           FilledButton.icon(
             onPressed: () { Navigator.pop(ctx); _oneriGoster(u); },
             style: FilledButton.styleFrom(backgroundColor: _mor, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11)),
@@ -139,9 +142,10 @@ class _SefGarsonSeritState extends State<SefGarsonSerit> {
   // AI oneri sheet'i. Alttaki "Anladim" -> uyari GORULDU (yesil) + popup/hatirlatma durur.
   Future<void> _oneriGoster(Map<String, dynamic> u) async {
     final auth = context.read<AuthProvider>();
+    final t = context.read<TemaProvider>();
     await showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: t.card,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
       builder: (sheetCtx) => FutureBuilder<Map<String, dynamic>>(
@@ -161,23 +165,23 @@ class _SefGarsonSeritState extends State<SefGarsonSerit> {
                   child: const Icon(Icons.emoji_objects, color: Colors.white, size: 22),
                 ),
                 const SizedBox(width: 12),
-                Expanded(child: Text('${u['masa_adi']} — ne satayım?', style: const TextStyle(color: _ink, fontSize: 16, fontWeight: FontWeight.bold))),
+                Expanded(child: Text('${u['masa_adi']} — ne satayım?', style: TextStyle(color: t.ink, fontSize: 16, fontWeight: FontWeight.bold))),
               ]),
               const SizedBox(height: 16),
               if (yuk)
-                Row(children: const [
-                  SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2.4, color: _mor)),
-                  SizedBox(width: 12),
-                  Text('Şef düşünüyor…', style: TextStyle(color: _sub, fontSize: 14)),
+                Row(children: [
+                  const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2.4, color: _mor)),
+                  const SizedBox(width: 12),
+                  Text('Şef düşünüyor…', style: TextStyle(color: t.sub, fontSize: 14)),
                 ])
               else ...[
-                Text(mesaj, style: const TextStyle(color: _ink, fontSize: 15.5, height: 1.35, fontWeight: FontWeight.w600)),
+                Text(mesaj, style: TextStyle(color: t.ink, fontSize: 15.5, height: 1.35, fontWeight: FontWeight.w600)),
                 if (urunler.isNotEmpty) ...[
                   const SizedBox(height: 14),
                   Wrap(spacing: 8, runSpacing: 8, children: urunler.map((ad) => Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(color: _mor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10), border: Border.all(color: _mor.withValues(alpha: 0.35))),
-                    child: Text(ad, style: const TextStyle(color: _ink, fontSize: 13.5, fontWeight: FontWeight.w700)),
+                    child: Text(ad, style: TextStyle(color: t.ink, fontSize: 13.5, fontWeight: FontWeight.w700)),
                   )).toList()),
                 ],
               ],
@@ -212,15 +216,16 @@ class _SefGarsonSeritState extends State<SefGarsonSerit> {
   Widget build(BuildContext context) {
     final toplam = uyarilar.length + yoneticiUyarilar.length;
     if (toplam == 0) return const SizedBox.shrink();
+    final t = _t;
     return Container(
-      color: Colors.white,
+      color: t.card,
       padding: const EdgeInsets.only(top: 6, bottom: 8),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(14, 0, 14, 5),
           child: Row(children: [
             const Text('🎯 ', style: TextStyle(fontSize: 12)),
-            const Text('Şef Garson', style: TextStyle(color: _ink, fontSize: 12, fontWeight: FontWeight.w900)),
+            Text('Şef Garson', style: TextStyle(color: t.ink, fontSize: 12, fontWeight: FontWeight.w900)),
             const SizedBox(width: 5),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
@@ -250,11 +255,16 @@ class _SefGarsonSeritState extends State<SefGarsonSerit> {
   }
 
   Widget _kart(Map<String, dynamic> u) {
+    final t = _t;
     final goruldu = _goruldu(u);
     final eskale = !goruldu && u['durum'] == 'eskale';   // yoneticiye bildirildi -> kirmizi (garsonda da)
     final vurgu = goruldu ? _yesil : (eskale ? _kirmizi : _turuncu);
-    final bg = goruldu ? const Color(0xFFECFDF5) : (eskale ? const Color(0xFFFEF2F2) : const Color(0xFFFFF7ED));
-    final kenar = goruldu ? const Color(0xFFA7F3D0) : (eskale ? const Color(0xFFFECACA) : const Color(0xFFFDBA74));
+    final bg = t.koyu
+        ? vurgu.withValues(alpha: 0.14)
+        : (goruldu ? const Color(0xFFECFDF5) : (eskale ? const Color(0xFFFEF2F2) : const Color(0xFFFFF7ED)));
+    final kenar = t.koyu
+        ? vurgu.withValues(alpha: 0.45)
+        : (goruldu ? const Color(0xFFA7F3D0) : (eskale ? const Color(0xFFFECACA) : const Color(0xFFFDBA74)));
     final ikon = u['ikon']?.toString() ?? '💡';
     return Container(
       width: 196,
@@ -276,7 +286,7 @@ class _SefGarsonSeritState extends State<SefGarsonSerit> {
             Text(ikon, style: const TextStyle(fontSize: 12)),
             const SizedBox(width: 3),
             Expanded(child: Text(u['baslik']?.toString() ?? '', maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: _ink, fontSize: 11.5, fontWeight: FontWeight.w900))),
+                style: TextStyle(color: t.ink, fontSize: 11.5, fontWeight: FontWeight.w900))),
           ])),
         ]),
         const SizedBox(height: 5),
@@ -309,12 +319,14 @@ class _SefGarsonSeritState extends State<SefGarsonSerit> {
   }
 
   Widget _yoneticiKart(Map<String, dynamic> y) {
+    final t = _t;
     return Container(
       width: 200,
       padding: const EdgeInsets.all(9),
       decoration: BoxDecoration(
-        color: const Color(0xFFFEF2F2), borderRadius: BorderRadius.circular(13),
-        border: Border.all(color: const Color(0xFFFECACA), width: 1.4),
+        color: t.koyu ? _kirmizi.withValues(alpha: 0.14) : const Color(0xFFFEF2F2),
+        borderRadius: BorderRadius.circular(13),
+        border: Border.all(color: t.koyu ? _kirmizi.withValues(alpha: 0.45) : const Color(0xFFFECACA), width: 1.4),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
@@ -328,7 +340,7 @@ class _SefGarsonSeritState extends State<SefGarsonSerit> {
         ]),
         const SizedBox(height: 5),
         Expanded(child: Text(y['mesaj']?.toString() ?? 'Garson uyarıları dikkate almıyor.',
-            maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: _ink, fontSize: 11, height: 1.25))),
+            maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.ink, fontSize: 11, height: 1.25))),
         const SizedBox(height: 5),
         SizedBox(
           width: double.infinity, height: 26,
