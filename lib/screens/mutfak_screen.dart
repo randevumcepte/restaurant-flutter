@@ -66,6 +66,7 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
     _tab.addListener(() => setState(() {}));
     _siparisYukle();
     _serviseYukle();
+    _urunYukle(); // 86 rozeti (tükendi sayısı) baştan görünsün
     // Aktif sekmeye göre 15 sn'de bir tazele (mutfak canlı olmalı)
     _timer = Timer.periodic(const Duration(seconds: 15), (_) {
       if (_tab.index == 0) _siparisYukle(sessiz: true);
@@ -221,7 +222,9 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     final basliklar = ['Siparişler', 'Servise Hazır', '86 / Tükendi', 'Analiz'];
-    final rozet = [siparisler.length, servise.length, 0, 0];
+    // 86 rozeti = tükendi (satıştan kaldırılmış) ürün sayısı
+    final tukendiSayi = urunler.where((u) => u['tukendi'] == true || _n(u['tukendi']) == 1).length;
+    final rozet = [siparisler.length, servise.length, tukendiSayi, 0];
     return Scaffold(
       backgroundColor: _bg,
       appBar: AppBar(
