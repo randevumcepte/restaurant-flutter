@@ -5,6 +5,7 @@ import '../providers/tema_provider.dart';
 import '../ana_sekme.dart';
 import '../responsive.dart';
 import 'dashboard_screen.dart';
+import 'garson_ozet_screen.dart';
 import 'masalar_screen.dart';
 import 'mutfak_screen.dart';
 import 'paket_screen.dart';
@@ -67,9 +68,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final rol = context.watch<AuthProvider>().rol;
     final patron = rol == 'sahip' || rol == 'mudur';
 
+    // Garson: KENDİ özeti + Masalar + Mutfak (Paket garsona kapalı — masaya bakar).
+    // (İleride yetkiden tek tıkla Paket açılabilir: rol yerine yetki listesine bağlanır.)
     final List<Widget> ekranlar = patron
         ? const [DashboardScreen(), MasalarScreen(), MutfakScreen(), PaketScreen()]
-        : const [MasalarScreen(), MutfakScreen(), PaketScreen()];
+        : const [GarsonOzetScreen(), MasalarScreen(), MutfakScreen()];
 
     if (_index >= ekranlar.length) anaSekme.value = 0;
 
@@ -125,9 +128,9 @@ class _HomeScreenState extends State<HomeScreen> {
           _Sekme(Icons.delivery_dining_outlined, Icons.delivery_dining, 'Paket'),
         ]
       : const [
+          _Sekme(Icons.insights_outlined, Icons.insights, 'Özetim'),
           _Sekme(Icons.table_bar_outlined, Icons.table_bar, 'Masalar'),
           _Sekme(Icons.restaurant_menu_outlined, Icons.restaurant_menu, 'Mutfak'),
-          _Sekme(Icons.delivery_dining_outlined, Icons.delivery_dining, 'Paket'),
         ];
 
   // Ortada yükseltilmiş mikrofon — Patron Asistan devreye girer.
@@ -186,9 +189,9 @@ class _HomeScreenState extends State<HomeScreen> {
       height: 64,
       padding: EdgeInsets.zero,
       child: Row(children: [
-        _item(0, Icons.table_bar_outlined, Icons.table_bar, 'Masalar'),
-        _item(1, Icons.restaurant_menu_outlined, Icons.restaurant_menu, 'Mutfak'),
-        _item(2, Icons.delivery_dining_outlined, Icons.delivery_dining, 'Paket'),
+        _item(0, Icons.insights_outlined, Icons.insights, 'Özetim'),
+        _item(1, Icons.table_bar_outlined, Icons.table_bar, 'Masalar'),
+        _item(2, Icons.restaurant_menu_outlined, Icons.restaurant_menu, 'Mutfak'),
       ]),
     );
   }
