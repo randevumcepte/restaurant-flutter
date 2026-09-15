@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import '../providers/auth_provider.dart';
 import '../providers/tema_provider.dart';
 import '../services/api.dart';
@@ -97,6 +96,37 @@ class _TemaSecimScreenState extends State<TemaSecimScreen> {
     }
   }
 
+  // Standart widget'larla renk seçici (harici paket YOK -> kesin çalışır): hazır kutucuklar + Ton/Canlılık/Parlaklık.
+  Widget _renkPaneli(Color renk, void Function(Color) onc) {
+    const swatches = [0xFFC41E3A, 0xFFE23744, 0xFFF97316, 0xFFF59E0B, 0xFFEAB308, 0xFF84CC16, 0xFF22C55E, 0xFF10B981, 0xFF14B8A6, 0xFF06B6D4, 0xFF3B82F6, 0xFF6366F1, 0xFF7C3AED, 0xFF9333EA, 0xFFD946EF, 0xFFEC4899, 0xFF8B5E34, 0xFF111827];
+    final hsv = HSVColor.fromColor(renk);
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Container(height: 44, decoration: BoxDecoration(color: renk, borderRadius: BorderRadius.circular(12), border: Border.all(color: _line))),
+      const SizedBox(height: 12),
+      Wrap(spacing: 10, runSpacing: 10, children: swatches.map((v) {
+        final c = Color(v);
+        final sec = c.toARGB32() == renk.toARGB32();
+        return GestureDetector(
+          onTap: () => onc(c),
+          child: Container(width: 38, height: 38, decoration: BoxDecoration(
+            color: c, shape: BoxShape.circle, border: Border.all(color: sec ? _gold : Colors.white24, width: sec ? 3 : 1)),
+            child: sec ? const Icon(Icons.check, color: Colors.white, size: 18) : null),
+        );
+      }).toList()),
+      const SizedBox(height: 14),
+      _etiketliSlider('Ton', hsv.hue, 0, 360, (val) => onc(hsv.withHue(val).toColor())),
+      _etiketliSlider('Canlılık', hsv.saturation * 100, 0, 100, (val) => onc(hsv.withSaturation((val / 100).clamp(0, 1)).toColor())),
+      _etiketliSlider('Parlaklık', hsv.value * 100, 0, 100, (val) => onc(hsv.withValue((val / 100).clamp(0, 1)).toColor())),
+    ]);
+  }
+
+  Widget _etiketliSlider(String ad, double deger, double min, double max, void Function(double) onc) {
+    return Row(children: [
+      SizedBox(width: 66, child: Text(ad, style: TextStyle(color: _sub, fontSize: 12.5, fontWeight: FontWeight.w600))),
+      Expanded(child: Slider(value: deger.clamp(min, max), min: min, max: max, activeColor: _gold, onChanged: onc)),
+    ]);
+  }
+
   void _ozelDuzenle() {
     if (!duzenleyebilir) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bu ayarı yalnızca Sahip/Müdür değiştirebilir.')));
@@ -119,9 +149,8 @@ class _TemaSecimScreenState extends State<TemaSecimScreen> {
               Text('Genel renk butonları; detay rengi fiyat/çizgi/logoyu belirler.', style: TextStyle(color: _sub, fontSize: 12.5)),
               const SizedBox(height: 16),
               Text('Genel Renk (butonlar, vurgular)', style: TextStyle(color: _ink, fontSize: 14, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 8),
-              ColorPicker(pickerColor: ana, onColorChanged: (c) => setLocal(() => ana = c), enableAlpha: false, displayThumbColor: true,
-                  paletteType: PaletteType.hueWheel, labelTypes: const [], pickerAreaHeightPercent: .62),
+              const SizedBox(height: 10),
+              _renkPaneli(ana, (c) => setLocal(() => ana = c)),
               Divider(color: _line, height: 26),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero, activeThumbColor: _gold,
@@ -131,9 +160,8 @@ class _TemaSecimScreenState extends State<TemaSecimScreen> {
               if (ayri) ...[
                 const SizedBox(height: 6),
                 Text('Detay Rengi (fiyatlar, çizgiler, logo)', style: TextStyle(color: _ink, fontSize: 14, fontWeight: FontWeight.w700)),
-                const SizedBox(height: 8),
-                ColorPicker(pickerColor: detay, onColorChanged: (c) => setLocal(() => detay = c), enableAlpha: false, displayThumbColor: true,
-                    paletteType: PaletteType.hueWheel, labelTypes: const [], pickerAreaHeightPercent: .58),
+                const SizedBox(height: 10),
+                _renkPaneli(detay, (c) => setLocal(() => detay = c)),
               ],
               const SizedBox(height: 18),
               ElevatedButton(
