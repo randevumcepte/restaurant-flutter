@@ -885,11 +885,11 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
   Widget _saatlikGrafik(List saatlik) {
     final maks = saatlik.fold<int>(1, (m, e) => _n((e as Map)['adet']).toInt() > m ? _n(e['adet']).toInt() : m);
     return SizedBox(
-      height: 120,
+      height: 134,   // sayı(≈14) + 3 + bar(≤90) + 4 + saat(≈14) = ~125; taşmaya karşı pay
       child: Row(crossAxisAlignment: CrossAxisAlignment.end, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
         for (final s in saatlik)
           Expanded(
-            child: Column(mainAxisAlignment: MainAxisAlignment.end, children: [
+            child: Column(mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.end, children: [
               Text('${_n((s as Map)['adet']).toInt()}', style: TextStyle(color: _sub, fontSize: 10)),
               const SizedBox(height: 3),
               Container(
