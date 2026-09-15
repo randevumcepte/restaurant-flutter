@@ -70,6 +70,34 @@ class _PaketScreenState extends State<PaketScreen> {
     }
   }
 
+  // Platform rozeti: platform varsa markalı renkli; YOKSA (telefon/manuel paket) sade "🛍 Paket" — çirkin gri "-" gitti
+  Widget _platRozet(String plat, {bool buyuk = false}) {
+    final var_ = plat.isNotEmpty && plat != '-';
+    if (var_) {
+      return Container(
+        padding: EdgeInsets.symmetric(horizontal: buyuk ? 10 : 8, vertical: buyuk ? 4 : 3),
+        decoration: BoxDecoration(color: _platRenk(plat), borderRadius: BorderRadius.circular(6)),
+        child: Text(plat.toUpperCase(), style: TextStyle(color: Colors.white, fontSize: buyuk ? 11 : 10, fontWeight: FontWeight.bold)),
+      );
+    }
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: buyuk ? 10 : 8, vertical: buyuk ? 4 : 3),
+      decoration: BoxDecoration(color: _sub.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6), border: Border.all(color: _line)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(Icons.shopping_bag_outlined, size: buyuk ? 13 : 11, color: _sub2),
+        const SizedBox(width: 4),
+        Text('Paket', style: TextStyle(color: _sub2, fontSize: buyuk ? 11 : 10.5, fontWeight: FontWeight.bold)),
+      ]),
+    );
+  }
+
+  // Teslimat durumu -> okunur etiket + renk (boşsa "Yeni")
+  static const Map<String, List<dynamic>> _durumHar = {
+    'hazirlaniyor': ['Yeni', Color(0xFF2563EB)], 'yeni': ['Yeni', Color(0xFF2563EB)], '': ['Yeni', Color(0xFF2563EB)],
+    'hazir': ['Hazır', Color(0xFFEA580C)], 'yolda': ['Yolda', Color(0xFF16A34A)], 'teslim': ['Teslim', Color(0xFF16A34A)],
+  };
+  List<dynamic> _durum(String d) => _durumHar[d] ?? [d.isEmpty ? 'Yeni' : d, _sub];
+
   // Bekleme süresine göre renk: gecikme uyarısı
   Color _sureRenk(int dk) {
     if (dk >= 45) return const Color(0xFFDC2626); // kırmızı
@@ -168,17 +196,16 @@ class _PaketScreenState extends State<PaketScreen> {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Row(children: [
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                            decoration: BoxDecoration(
-                                                color: _platRenk(plat), borderRadius: BorderRadius.circular(6)),
-                                            child: Text(plat.toUpperCase(),
-                                                style: const TextStyle(
-                                                    color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                                          ),
+                                          _platRozet(plat),
                                           const SizedBox(width: 8),
-                                          Text('● ${s['teslimat_durumu'] ?? ''}',
-                                              style: TextStyle(fontSize: 12, color: _sub)),
+                                          Builder(builder: (_) {
+                                            final dr = _durum((s['teslimat_durumu'] ?? '').toString());
+                                            return Row(mainAxisSize: MainAxisSize.min, children: [
+                                              Container(width: 7, height: 7, decoration: BoxDecoration(color: dr[1] as Color, shape: BoxShape.circle)),
+                                              const SizedBox(width: 5),
+                                              Text(dr[0] as String, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: dr[1] as Color)),
+                                            ]);
+                                          }),
                                           const Spacer(),
                                           // Süre rozeti
                                           Container(
@@ -327,14 +354,7 @@ class _PaketScreenState extends State<PaketScreen> {
       child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
         Expanded(
           flex: _fPlat,
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(color: _platRenk(plat), borderRadius: BorderRadius.circular(6)),
-              child: Text(plat.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-            ),
-          ),
+          child: Align(alignment: Alignment.centerLeft, child: _platRozet(plat)),
         ),
         Expanded(
           flex: _fMus,
@@ -597,17 +617,24 @@ class _PaketDetayScreenState extends State<PaketDetayScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                  color: _platRenk(plat), borderRadius: BorderRadius.circular(6)),
-                              child: Text(plat.toUpperCase(),
-                                  style: const TextStyle(
-                                      color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-                            ),
+                            (plat.isNotEmpty && plat != '-')
+                                ? Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(color: _platRenk(plat), borderRadius: BorderRadius.circular(6)),
+                                    child: Text(plat.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                                  )
+                                : Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(color: _sub.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6), border: Border.all(color: _line)),
+                                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                      Icon(Icons.shopping_bag_outlined, size: 13, color: _sub2),
+                                      const SizedBox(width: 4),
+                                      Text('Paket', style: TextStyle(color: _sub2, fontSize: 11, fontWeight: FontWeight.bold)),
+                                    ]),
+                                  ),
                             const SizedBox(width: 8),
-                            Text('● ${d?['teslimat_durumu'] ?? ''}',
-                                style: TextStyle(fontSize: 13, color: _sub)),
+                            if ((d?['teslimat_durumu'] ?? '').toString().isNotEmpty)
+                              Text('● ${d?['teslimat_durumu']}', style: TextStyle(fontSize: 13, color: _sub)),
                             const Spacer(),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
