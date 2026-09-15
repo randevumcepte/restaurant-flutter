@@ -95,9 +95,20 @@ class _SefGarsonSeritState extends State<SefGarsonSerit> {
   Future<void> _popupGoster(Map<String, dynamic> u) async {
     _popupAcik = true;
     final ikon = u['ikon']?.toString() ?? '💡';
+    // Sunucu bos baslik/mesaj gonderirse popup bombos gorunmesin -> anlamli varsayilan
+    final bt = u['baslik']?.toString().trim() ?? '';
+    final baslik = bt.isNotEmpty ? bt : 'Satış fırsatı';
+    final mt = u['mesaj']?.toString().trim() ?? '';
+    final masaAd = u['masa_adi']?.toString().trim() ?? '';
+    final mesaj = mt.isNotEmpty
+        ? mt
+        : (masaAd.isNotEmpty ? '$masaAd masasında satışı artırabileceğiniz bir fırsat var. Öneri için "Ne satayım?" deyin. 😊'
+                             : 'Satışı artırabileceğiniz bir fırsat var. Öneri için "Ne satayım?" deyin. 😊');
     await showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 6),
         title: Row(children: [
@@ -107,9 +118,9 @@ class _SefGarsonSeritState extends State<SefGarsonSerit> {
             child: Center(child: Text(ikon, style: const TextStyle(fontSize: 22))),
           ),
           const SizedBox(width: 12),
-          Expanded(child: Text(u['baslik']?.toString() ?? 'Satış fırsatı', style: const TextStyle(color: _ink, fontSize: 16.5, fontWeight: FontWeight.w900))),
+          Expanded(child: Text(baslik, style: const TextStyle(color: _ink, fontSize: 16.5, fontWeight: FontWeight.w900))),
         ]),
-        content: Text(u['mesaj']?.toString() ?? '', style: const TextStyle(color: _sub, fontSize: 14.5, height: 1.4)),
+        content: Text(mesaj, style: const TextStyle(color: _ink, fontSize: 14.5, height: 1.4)),
         actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Sonra', style: TextStyle(color: _sub, fontWeight: FontWeight.w600))),
