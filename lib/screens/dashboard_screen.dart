@@ -15,6 +15,7 @@ import 'kasa_screen.dart';
 import 'cari_hesaplar_screen.dart';
 import 'sebep_yonetimi_screen.dart';
 import 'menu_yonetimi_screen.dart';
+import 'masa_atama_screen.dart';
 import 'tema_secim_screen.dart';
 import 'garson_cagrilari_screen.dart';
 import 'ai_bildirim_screen.dart';
@@ -198,6 +199,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               if (patron) oge(Icons.phone_in_talk_outlined, 'Gelen Çağrı Ekranı', () { Navigator.of(context).pop(); _webAc('/cagri-ekran'); }),
               if (patron) oge(Icons.qr_code_2, 'Masa QR Afişleri (yazdır)', () { Navigator.of(context).pop(); _webAc('/masa-afisler'); }, renk: const Color(0xFFF6CE63)),
               if (patron) oge(Icons.badge_outlined, 'Personel & Maaş', () => git(const PersonelScreen())),
+              if (patron) oge(Icons.table_restaurant_outlined, 'Masa & Bölge Atama', () => git(const MasaAtamaScreen())),
               if (patron) oge(Icons.receipt_long_outlined, 'Giderler', () => git(const GiderScreen())),
               if (patron) oge(Icons.bar_chart_outlined, 'Raporlar', () => git(const RaporlarScreen())),
               if (patron) oge(Icons.rule_folder_outlined, 'İptal / İkram Sebepleri', () => git(const SebepYonetimiScreen())),

@@ -18,6 +18,7 @@ class _MasalarScreenState extends State<MasalarScreen> {
   List masalar = [];
   bool loading = true;
   String? _secilenBolge; // ust sekmede secili bolge
+  final Set<int> _benimMasalar = {}; // giren personelin sorumlu masalari (vurgu + varsayilan bolge)
   final _f = NumberFormat.decimalPattern('tr');
 
   num _n(dynamic v) => v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0);
@@ -34,8 +35,23 @@ class _MasalarScreenState extends State<MasalarScreen> {
     try {
       final res = await Api.masalar(auth.token!);
       if (!mounted) return;
+      final liste = (res['masalar'] as List?) ?? [];
+      // Kendi atamam: sorumlu masalar (vurgu) + varsayilan bolge sekmesi
+      try {
+        final benim = await Api.benimAtamam(auth.token!);
+        _benimMasalar
+          ..clear()
+          ..addAll(((benim['masa_idler'] as List?) ?? []).map((e) => _n(e).toInt()));
+      } catch (_) {}
+      if (_secilenBolge == null && _benimMasalar.isNotEmpty) {
+        final mine = liste.cast<Map?>().firstWhere(
+              (m) => m != null && _benimMasalar.contains(_n(m['id']).toInt()),
+              orElse: () => null,
+            );
+        if (mine != null) _secilenBolge = mine['bolge']?.toString();
+      }
       setState(() {
-        masalar = (res['masalar'] as List?) ?? [];
+        masalar = liste;
         loading = false;
       });
     } on ApiYetkiHatasi {
@@ -279,7 +295,7 @@ class _MasalarScreenState extends State<MasalarScreen> {
           await _masaAc(m);
         }
       },
-      child: _hucreGovde(m),
+      child: _hucreVurgulu(m),
     );
 
     // Her masa hem surukleyici hem hedef olabilir. Birlesik (linkli) kaynak masa haric.
@@ -315,6 +331,23 @@ class _MasalarScreenState extends State<MasalarScreen> {
         return cell;
       },
     );
+  }
+
+  // Hucre + "senin masan" rozeti (atanan masalarda sag ustte)
+  Widget _hucreVurgulu(Map m) {
+    final govde = _hucreGovde(m);
+    if (!_benimMasalar.contains(_n(m['id']).toInt())) return govde;
+    return Stack(children: [
+      Positioned.fill(child: govde),
+      Positioned(
+        top: 5, right: 5,
+        child: Container(
+          padding: const EdgeInsets.all(3),
+          decoration: const BoxDecoration(color: Color(0xFF7C3AED), shape: BoxShape.circle),
+          child: const Icon(Icons.person, size: 10, color: Colors.white),
+        ),
+      ),
+    ]);
   }
 
   Widget _hucreGovde(Map m) {

@@ -20,6 +20,7 @@ import 'personel_screen.dart';
 import 'gider_screen.dart';
 import 'raporlar_screen.dart';
 import 'sebep_yonetimi_screen.dart';
+import 'masa_atama_screen.dart';
 
 /// Uygulama kabugu — iki yuz:
 ///  • TELEFON: koyu bar + ortada mikrofon (mevcut mobil deneyim, aynen korunur).
@@ -307,6 +308,7 @@ class _YanMenu extends StatelessWidget {
               _link(t, Icons.account_balance_wallet_outlined, 'Cari / Açık Hesaplar', () => git(const CariHesaplarScreen())),
               _link(t, Icons.event_available_outlined, 'Rezervasyonlar', () => git(const RezervasyonScreen())),
               if (patron) _link(t, Icons.badge_outlined, 'Personel & Maaş', () => git(const PersonelScreen())),
+              if (patron) _link(t, Icons.table_restaurant_outlined, 'Masa & Bölge Atama', () => git(const MasaAtamaScreen())),
               if (patron) _link(t, Icons.receipt_long_outlined, 'Giderler', () => git(const GiderScreen())),
               if (patron) _link(t, Icons.bar_chart_outlined, 'Raporlar', () => git(const RaporlarScreen())),
               if (patron) _link(t, Icons.rule_folder_outlined, 'İptal / İkram Sebepleri', () => git(const SebepYonetimiScreen())),
