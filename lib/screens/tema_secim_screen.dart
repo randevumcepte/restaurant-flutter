@@ -279,6 +279,55 @@ class _OzelRenkSayfaState extends State<_OzelRenkSayfa> {
     ]);
   }
 
+  // Yakisan hazir IKILI kombinler (genel + detay). Dokun -> ikisini birden uygula.
+  static const List<List<dynamic>> _kombinler = [
+    ['Kırmızı & Beyaz', 0xFFC41E3A, 0xFFFFFFFF],
+    ['Kırmızı & Siyah', 0xFFC41E3A, 0xFF141414],
+    ['Kırmızı & Altın', 0xFFC41E3A, 0xFFE9C46A],
+    ['Siyah & Altın', 0xFF141414, 0xFFE9C46A],
+    ['Lacivert & Altın', 0xFF1B2A4A, 0xFFE9C46A],
+    ['Bordo & Krem', 0xFF6E1423, 0xFFF1E3C6],
+    ['Yeşil & Altın', 0xFF1B4332, 0xFFE9C46A],
+    ['Zümrüt & Beyaz', 0xFF059669, 0xFFFFFFFF],
+    ['Turuncu & Kahve', 0xFFE76F51, 0xFF6B4226],
+    ['Mor & Altın', 0xFF7C3AED, 0xFFE9C46A],
+    ['Antrasit & Turuncu', 0xFF2B2B2B, 0xFFF97316],
+    ['Petrol & Bakır', 0xFF264653, 0xFFC97B4A],
+    ['Kahve & Krem', 0xFF5C3A21, 0xFFEFE3D0],
+    ['Mavi & Beyaz', 0xFF1E88E5, 0xFFFFFFFF],
+    ['Siyah & Beyaz', 0xFF141414, 0xFFFFFFFF],
+    ['Yeşil & Krem', 0xFF2E6B4F, 0xFFF1E9D2],
+    ['Fuşya & Bordo', 0xFFE23E57, 0xFF7A1F3D],
+    ['Gri & Sarı', 0xFF3A3A3A, 0xFFF4C430],
+  ];
+
+  Widget _kombinBolum() {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text('Önerilen Kombinler (dokun-uygula)', style: TextStyle(color: _ink, fontSize: 14, fontWeight: FontWeight.w700)),
+      const SizedBox(height: 4),
+      Text('Logonuzda tam renk yoksa yakışan hazır ikililerden başlayabilirsiniz.', style: TextStyle(color: _sub, fontSize: 11.5)),
+      const SizedBox(height: 10),
+      Wrap(spacing: 10, runSpacing: 10, children: _kombinler.map((k) {
+        final a = Color(k[1] as int), d = Color(k[2] as int);
+        final sec = ayri && a.toARGB32() == ana.toARGB32() && d.toARGB32() == detay.toARGB32();
+        return GestureDetector(
+          onTap: () => setState(() { ana = a; detay = d; ayri = true; }),
+          child: Container(
+            width: 158, clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(color: widget.card, borderRadius: BorderRadius.circular(12), border: Border.all(color: sec ? _gold : _line, width: sec ? 2 : 1)),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              SizedBox(height: 32, child: Row(children: [Expanded(child: Container(color: a)), Expanded(child: Container(color: d))])),
+              Padding(padding: const EdgeInsets.fromLTRB(9, 6, 7, 7), child: Row(children: [
+                Expanded(child: Text(k[0] as String, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: sec ? _gold : _ink, fontSize: 11.5, fontWeight: FontWeight.w700))),
+                if (sec) Icon(Icons.check_circle, color: _gold, size: 15),
+              ])),
+            ]),
+          ),
+        );
+      }).toList()),
+    ]);
+  }
+
   Widget _gradSlider(String ad, List<Color> colors, double deger, double min, double max, void Function(double) onc) {
     return Padding(padding: const EdgeInsets.symmetric(vertical: 3), child: Row(children: [
       SizedBox(width: 66, child: Text(ad, style: TextStyle(color: _sub, fontSize: 12.5, fontWeight: FontWeight.w600))),
@@ -307,6 +356,8 @@ class _OzelRenkSayfaState extends State<_OzelRenkSayfa> {
           decoration: BoxDecoration(borderRadius: BorderRadius.circular(14), border: Border.all(color: _line)),
           child: Row(children: [Expanded(child: Container(color: ana)), Expanded(child: Container(color: detayGoster))])),
         const SizedBox(height: 18),
+        _kombinBolum(),
+        Divider(color: _line, height: 32),
         Text('Genel Renk (butonlar, vurgular)', style: TextStyle(color: _ink, fontSize: 14, fontWeight: FontWeight.w700)),
         const SizedBox(height: 12),
         _renkPaneli(ana, (c) => setState(() => ana = c)),
