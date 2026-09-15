@@ -156,8 +156,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _patronBar() {
     return BottomAppBar(
       color: _bar,
-      elevation: 12,
-      shadowColor: Colors.black26,
+      elevation: 0,                       // notch cevresindeki siyah golge yayini kaldir
+      shadowColor: Colors.transparent,
       surfaceTintColor: Colors.white,
       shape: const CircularNotchedRectangle(),
       notchMargin: 6,
