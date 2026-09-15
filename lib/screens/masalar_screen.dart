@@ -73,7 +73,7 @@ class _MasalarScreenState extends State<MasalarScreen> {
 
   // Masa tasima/birlestirme ipucu (AppBar info ikonundan acilir)
   void _ipucuGoster() {
-    final t = _t;
+    final t = context.read<TemaProvider>();   // build DIŞI -> watch değil read (yoksa "watch outside build" hatası)
     Widget satir(IconData ik, Color renk, String baslik, String aciklama) => Padding(
           padding: const EdgeInsets.symmetric(vertical: 7),
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -137,7 +137,7 @@ class _MasalarScreenState extends State<MasalarScreen> {
   }
 
   Future<int?> _misafirSor(String masaAd, int kapasite) {
-    final t = _t;
+    final t = context.read<TemaProvider>();   // build DIŞI -> read
     int sayi = kapasite >= 1 && kapasite <= 20 ? kapasite : 2;
     return showDialog<int>(
       context: context,
@@ -574,7 +574,7 @@ class _MasalarScreenState extends State<MasalarScreen> {
     String? vurgu,
     required String onayText,
   }) {
-    final t = _t;
+    final t = context.read<TemaProvider>();   // build DIŞI (dialog) -> read
     return showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
