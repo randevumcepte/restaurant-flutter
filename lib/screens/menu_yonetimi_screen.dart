@@ -18,10 +18,9 @@ class MenuYonetimiScreen extends StatefulWidget {
 }
 
 class _MenuYonetimiScreenState extends State<MenuYonetimiScreen> {
-  static const _bg = Color(0xFF0B1020);
-  static const _card = Color(0xFF161C2E);
   static const _mor1 = Color(0xFF7C3AED);
   static const _kirmizi = Color(0xFFF43F5E);
+  TemaProvider get _t => context.watch<TemaProvider>();
   final _f = NumberFormat.decimalPattern('tr');
 
   bool loading = true;
@@ -66,14 +65,15 @@ class _MenuYonetimiScreenState extends State<MenuYonetimiScreen> {
   @override
   Widget build(BuildContext context) {
     if (genisMi(context)) return _masaustu(context);
+    final t = _t;
     final kategorisiz = urunler.where((u) => (u['kategori_id'] ?? 0) == 0).toList();
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: t.bg,
       appBar: AppBar(
-        backgroundColor: _bg,
+        backgroundColor: t.bg,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Color(0xFF94A3B8)),
-        title: const Text('Menü Yönetimi', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
+        iconTheme: IconThemeData(color: t.sub),
+        title: Text('Menü Yönetimi', style: TextStyle(color: t.ink, fontSize: 17, fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
             onPressed: _oneSirala,
@@ -100,7 +100,7 @@ class _MenuYonetimiScreenState extends State<MenuYonetimiScreen> {
               : RefreshIndicator(
                   onRefresh: _yukle,
                   color: _mor1,
-                  backgroundColor: _card,
+                  backgroundColor: t.card,
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(12, 8, 12, 90),
                     children: [
@@ -109,11 +109,11 @@ class _MenuYonetimiScreenState extends State<MenuYonetimiScreen> {
                       if (kategoriler.isEmpty && urunler.isEmpty)
                         Padding(
                           padding: const EdgeInsets.only(top: 60),
-                          child: Column(children: const [
-                            Icon(Icons.restaurant_menu, color: Color(0xFF334155), size: 54),
-                            SizedBox(height: 12),
+                          child: Column(children: [
+                            Icon(Icons.restaurant_menu, color: t.sub, size: 54),
+                            const SizedBox(height: 12),
                             Text('Henüz menü yok.\nÖnce kategori, sonra ürün ekleyin.',
-                                textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF64748B))),
+                                textAlign: TextAlign.center, style: TextStyle(color: t.sub)),
                           ]),
                         ),
                     ],
@@ -261,15 +261,16 @@ class _MenuYonetimiScreenState extends State<MenuYonetimiScreen> {
 
   Widget _hataGorunum() => Center(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.wifi_off, color: Color(0xFF64748B), size: 44),
+          Icon(Icons.wifi_off, color: _t.sub, size: 44),
           const SizedBox(height: 10),
-          Text(hata ?? '', style: const TextStyle(color: Color(0xFF94A3B8))),
+          Text(hata ?? '', style: TextStyle(color: _t.sub)),
           const SizedBox(height: 14),
           ElevatedButton(onPressed: _yukle, style: ElevatedButton.styleFrom(backgroundColor: _mor1), child: const Text('Tekrar dene')),
         ]),
       );
 
   Widget _kategoriBolum(Map<String, dynamic>? kat, List<Map<String, dynamic>> list) {
+    final t = _t;
     final baslik = kat?['ad']?.toString() ?? 'Kategorisiz';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -277,18 +278,18 @@ class _MenuYonetimiScreenState extends State<MenuYonetimiScreen> {
         Padding(
           padding: const EdgeInsets.fromLTRB(4, 14, 4, 6),
           child: Row(children: [
-            Text(baslik, style: const TextStyle(color: Colors.white, fontSize: 15.5, fontWeight: FontWeight.bold)),
+            Text(baslik, style: TextStyle(color: t.ink, fontSize: 15.5, fontWeight: FontWeight.bold)),
             const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(20)),
-              child: Text('${list.length}', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12, fontWeight: FontWeight.bold)),
+              decoration: BoxDecoration(color: t.card, borderRadius: BorderRadius.circular(20)),
+              child: Text('${list.length}', style: TextStyle(color: t.sub, fontSize: 12, fontWeight: FontWeight.bold)),
             ),
             const Spacer(),
             if (kat != null)
               IconButton(
                 onPressed: () => _kategoriDuzenle(kat),
-                icon: const Icon(Icons.edit_outlined, color: Color(0xFF64748B), size: 19),
+                icon: Icon(Icons.edit_outlined, color: t.sub, size: 19),
                 visualDensity: VisualDensity.compact,
               ),
           ]),
@@ -296,7 +297,7 @@ class _MenuYonetimiScreenState extends State<MenuYonetimiScreen> {
         if (list.isEmpty)
           Padding(
             padding: const EdgeInsets.only(left: 4, bottom: 4),
-            child: Text('Bu kategoride ürün yok', style: TextStyle(color: const Color(0xFF64748B), fontSize: 12.5)),
+            child: Text('Bu kategoride ürün yok', style: TextStyle(color: t.sub, fontSize: 12.5)),
           ),
         for (final u in list) _urunKart(u),
       ],
@@ -304,6 +305,7 @@ class _MenuYonetimiScreenState extends State<MenuYonetimiScreen> {
   }
 
   Widget _urunKart(Map<String, dynamic> u) {
+    final t = _t;
     final gorsel = u['gorsel']?.toString();
     final tukendi = u['tukendi'] == true;
     final pasif = u['aktif'] == false;
@@ -312,7 +314,7 @@ class _MenuYonetimiScreenState extends State<MenuYonetimiScreen> {
       child: Container(
         margin: const EdgeInsets.only(bottom: 9),
         padding: const EdgeInsets.all(9),
-        decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFF232B42))),
+        decoration: BoxDecoration(color: t.card, borderRadius: BorderRadius.circular(14), border: Border.all(color: t.line)),
         child: Row(children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
@@ -327,21 +329,21 @@ class _MenuYonetimiScreenState extends State<MenuYonetimiScreen> {
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
-                Flexible(child: Text('${u['ad']}', style: const TextStyle(color: Colors.white, fontSize: 14.5, fontWeight: FontWeight.bold))),
+                Flexible(child: Text('${u['ad']}', style: TextStyle(color: t.ink, fontSize: 14.5, fontWeight: FontWeight.bold))),
                 if (u['one_cikan'] == true) _rozet('⭐ Öne çıkan', _mor1),
                 if (tukendi) _rozet('Tükendi', _kirmizi),
-                if (pasif) _rozet('Pasif', const Color(0xFF64748B)),
+                if (pasif) _rozet('Pasif', t.sub),
               ]),
               if (('${u['aciklama'] ?? ''}').isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 2),
-                  child: Text('${u['aciklama']}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF8698B5), fontSize: 11.5)),
+                  child: Text('${u['aciklama']}', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.sub, fontSize: 11.5)),
                 ),
               const SizedBox(height: 3),
-              Text(_tl(u['fiyat']), style: const TextStyle(color: Color(0xFFFDE9B5), fontSize: 13.5, fontWeight: FontWeight.bold)),
+              Text(_tl(u['fiyat']), style: TextStyle(color: t.gold, fontSize: 13.5, fontWeight: FontWeight.bold)),
             ]),
           ),
-          const Icon(Icons.chevron_right, color: Color(0xFF475569)),
+          Icon(Icons.chevron_right, color: t.sub),
         ]),
       ),
     );
@@ -355,19 +357,20 @@ class _MenuYonetimiScreenState extends State<MenuYonetimiScreen> {
       );
 
   Widget _fotoYer() => Container(
-        color: const Color(0xFF0E1428),
-        child: const Icon(Icons.image_outlined, color: Color(0xFF334155), size: 24),
+        color: _t.card2,
+        child: Icon(Icons.image_outlined, color: _t.sub, size: 24),
       );
 
   // ---- Kategori ekle/düzenle ----
   Future<void> _kategoriDuzenle(Map<String, dynamic>? kat) async {
     final adCtrl = TextEditingController(text: kat?['ad']?.toString() ?? '');
     final siraCtrl = TextEditingController(text: '${kat?['sira'] ?? kategoriler.length}');
+    final t = _t;
     final res = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: _card,
-        title: Text(kat == null ? 'Yeni Kategori' : 'Kategori Düzenle', style: const TextStyle(color: Colors.white, fontSize: 17)),
+        backgroundColor: t.card,
+        title: Text(kat == null ? 'Yeni Kategori' : 'Kategori Düzenle', style: TextStyle(color: t.ink, fontSize: 17)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           _alan(adCtrl, 'Kategori adı', TextInputType.text),
           const SizedBox(height: 10),
@@ -376,7 +379,7 @@ class _MenuYonetimiScreenState extends State<MenuYonetimiScreen> {
         actions: [
           if (kat != null)
             TextButton(onPressed: () => Navigator.pop(ctx, 'sil'), child: const Text('Sil', style: TextStyle(color: _kirmizi))),
-          TextButton(onPressed: () => Navigator.pop(ctx, null), child: const Text('Vazgeç', style: TextStyle(color: Color(0xFF94A3B8)))),
+          TextButton(onPressed: () => Navigator.pop(ctx, null), child: Text('Vazgeç', style: TextStyle(color: t.sub))),
           ElevatedButton(onPressed: () => Navigator.pop(ctx, 'kaydet'), style: ElevatedButton.styleFrom(backgroundColor: _mor1), child: const Text('Kaydet')),
         ],
       ),
@@ -424,21 +427,22 @@ class _MenuYonetimiScreenState extends State<MenuYonetimiScreen> {
 
   void _uyar(String m) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m), backgroundColor: _card));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m), backgroundColor: _t.card));
   }
 
   Widget _alan(TextEditingController c, String etiket, TextInputType tip, {int maxLines = 1}) {
+    final t = _t;
     return TextField(
       controller: c,
       keyboardType: tip,
       maxLines: maxLines,
-      style: const TextStyle(color: Colors.white),
+      style: TextStyle(color: t.ink),
       decoration: InputDecoration(
         labelText: etiket,
-        labelStyle: const TextStyle(color: Color(0xFF94A3B8)),
+        labelStyle: TextStyle(color: t.sub),
         filled: true,
-        fillColor: const Color(0xFF0E1428),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF2D3752))),
+        fillColor: t.card2,
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: t.line)),
         focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: _mor1)),
       ),
     );
@@ -456,11 +460,10 @@ class _UrunDuzenleSayfa extends StatefulWidget {
 }
 
 class _UrunDuzenleSayfaState extends State<_UrunDuzenleSayfa> {
-  static const _bg = Color(0xFF0B1020);
-  static const _card = Color(0xFF161C2E);
   static const _mor1 = Color(0xFF7C3AED);
   static const _yesil = Color(0xFF10B981);
   static const _kirmizi = Color(0xFFF43F5E);
+  TemaProvider get _t => context.watch<TemaProvider>();
 
   late TextEditingController adCtrl;
   late TextEditingController fiyatCtrl;
@@ -531,14 +534,15 @@ class _UrunDuzenleSayfaState extends State<_UrunDuzenleSayfa> {
   }
 
   Future<void> _sil() async {
+    final t = _t;
     final onay = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: _card,
-        title: const Text('Ürünü sil?', style: TextStyle(color: Colors.white, fontSize: 17)),
-        content: Text('"${adCtrl.text}" menüden kalkacak.', style: const TextStyle(color: Color(0xFF94A3B8))),
+        backgroundColor: t.card,
+        title: Text('Ürünü sil?', style: TextStyle(color: t.ink, fontSize: 17)),
+        content: Text('"${adCtrl.text}" menüden kalkacak.', style: TextStyle(color: t.sub)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Vazgeç', style: TextStyle(color: Color(0xFF94A3B8)))),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Vazgeç', style: TextStyle(color: t.sub))),
           ElevatedButton(onPressed: () => Navigator.pop(ctx, true), style: ElevatedButton.styleFrom(backgroundColor: _kirmizi), child: const Text('Sil')),
         ],
       ),
@@ -560,13 +564,14 @@ class _UrunDuzenleSayfaState extends State<_UrunDuzenleSayfa> {
       if (!ok) return;
     }
     if (!mounted) return;
+    final t = _t;
     final kaynak = await showModalBottomSheet<ImageSource>(
       context: context,
-      backgroundColor: _card,
+      backgroundColor: t.card,
       builder: (ctx) => SafeArea(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          ListTile(leading: const Icon(Icons.photo_camera, color: Colors.white), title: const Text('Kamera', style: TextStyle(color: Colors.white)), onTap: () => Navigator.pop(ctx, ImageSource.camera)),
-          ListTile(leading: const Icon(Icons.photo_library, color: Colors.white), title: const Text('Galeri', style: TextStyle(color: Colors.white)), onTap: () => Navigator.pop(ctx, ImageSource.gallery)),
+          ListTile(leading: Icon(Icons.photo_camera, color: t.ink), title: Text('Kamera', style: TextStyle(color: t.ink)), onTap: () => Navigator.pop(ctx, ImageSource.camera)),
+          ListTile(leading: Icon(Icons.photo_library, color: t.ink), title: Text('Galeri', style: TextStyle(color: t.ink)), onTap: () => Navigator.pop(ctx, ImageSource.gallery)),
         ]),
       ),
     );
@@ -588,19 +593,20 @@ class _UrunDuzenleSayfaState extends State<_UrunDuzenleSayfa> {
 
   void _uyar(String m) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m), backgroundColor: _card));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m), backgroundColor: _t.card));
   }
 
   @override
   Widget build(BuildContext context) {
+    final t = _t;
     final kats = widget.kategoriler;
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: t.bg,
       appBar: AppBar(
-        backgroundColor: _bg,
+        backgroundColor: t.bg,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Color(0xFF94A3B8)),
-        title: Text(yeni ? 'Yeni Ürün' : 'Ürünü Düzenle', style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
+        iconTheme: IconThemeData(color: t.sub),
+        title: Text(yeni ? 'Yeni Ürün' : 'Ürünü Düzenle', style: TextStyle(color: t.ink, fontSize: 17, fontWeight: FontWeight.bold)),
         actions: [
           if (!yeni) IconButton(onPressed: _sil, icon: const Icon(Icons.delete_outline, color: _kirmizi)),
         ],
@@ -615,7 +621,7 @@ class _UrunDuzenleSayfaState extends State<_UrunDuzenleSayfa> {
               child: Container(
                 width: double.infinity,
                 height: 190,
-                decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFF2D3752))),
+                decoration: BoxDecoration(color: t.card, borderRadius: BorderRadius.circular(18), border: Border.all(color: t.line)),
                 clipBehavior: Clip.antiAlias,
                 child: fotoYukleniyor
                     ? const Center(child: CircularProgressIndicator(color: _mor1))
@@ -642,16 +648,16 @@ class _UrunDuzenleSayfaState extends State<_UrunDuzenleSayfa> {
           const SizedBox(height: 12),
           // Kategori
           Container(
-            decoration: BoxDecoration(color: const Color(0xFF0E1428), borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFF2D3752))),
+            decoration: BoxDecoration(color: t.card2, borderRadius: BorderRadius.circular(10), border: Border.all(color: t.line)),
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<int>(
                 value: kategoriId,
                 isExpanded: true,
-                dropdownColor: _card,
-                iconEnabledColor: const Color(0xFF94A3B8),
-                style: const TextStyle(color: Colors.white, fontSize: 14.5),
-                hint: const Text('Kategori', style: TextStyle(color: Color(0xFF94A3B8))),
+                dropdownColor: t.card,
+                iconEnabledColor: t.sub,
+                style: TextStyle(color: t.ink, fontSize: 14.5),
+                hint: Text('Kategori', style: TextStyle(color: t.sub)),
                 items: [
                   const DropdownMenuItem(value: 0, child: Text('Kategorisiz')),
                   for (final k in kats) DropdownMenuItem(value: k['id'] as int, child: Text('${k['ad']}')),
@@ -681,10 +687,10 @@ class _UrunDuzenleSayfaState extends State<_UrunDuzenleSayfa> {
             ),
           ),
           if (yeni)
-            const Padding(
-              padding: EdgeInsets.only(top: 10),
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
               child: Text('İpucu: Fotoğraf eklemek için karta dokunun — ürün otomatik kaydedilip fotoğraf yüklenir.',
-                  textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF64748B), fontSize: 12)),
+                  textAlign: TextAlign.center, style: TextStyle(color: t.sub, fontSize: 12)),
             ),
         ],
       ),
@@ -693,22 +699,23 @@ class _UrunDuzenleSayfaState extends State<_UrunDuzenleSayfa> {
 
   Widget _fotoBos() => Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: const [
-          Icon(Icons.add_a_photo_outlined, color: Color(0xFF475569), size: 34),
-          SizedBox(height: 8),
-          Text('Fotoğraf ekle', style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+        children: [
+          Icon(Icons.add_a_photo_outlined, color: _t.sub, size: 34),
+          const SizedBox(height: 8),
+          Text('Fotoğraf ekle', style: TextStyle(color: _t.sub, fontSize: 13)),
         ],
       );
 
   Widget _switch(String baslik, String alt, bool deger, Color renk, ValueChanged<bool> onc) {
+    final t = _t;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-      decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: t.card, borderRadius: BorderRadius.circular(12)),
       child: Row(children: [
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(baslik, style: const TextStyle(color: Colors.white, fontSize: 14.5, fontWeight: FontWeight.w600)),
-            Text(alt, style: const TextStyle(color: Color(0xFF64748B), fontSize: 11.5)),
+            Text(baslik, style: TextStyle(color: t.ink, fontSize: 14.5, fontWeight: FontWeight.w600)),
+            Text(alt, style: TextStyle(color: t.sub, fontSize: 11.5)),
           ]),
         ),
         Switch(value: deger, activeThumbColor: renk, onChanged: onc),
@@ -718,19 +725,20 @@ class _UrunDuzenleSayfaState extends State<_UrunDuzenleSayfa> {
 
   // ⭐ Öne Çıkar / Günün Önerisi — asistan bunları müşteriye önce ve iştah kabartıcı anlatır
   Widget _oneCikanBolum() {
+    final t = _t;
     return Container(
       decoration: BoxDecoration(
-        color: _card,
+        color: t.card,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: oneCikan ? _mor1 : const Color(0xFF232B42), width: oneCikan ? 1.4 : 1),
+        border: Border.all(color: oneCikan ? _mor1 : t.line, width: oneCikan ? 1.4 : 1),
       ),
       padding: const EdgeInsets.fromLTRB(14, 8, 12, 12),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: const [
-              Text('⭐ Öne Çıkar / Günün Önerisi', style: TextStyle(color: Colors.white, fontSize: 14.5, fontWeight: FontWeight.w600)),
-              Text('Müşteri "ne önerirsin / içecek / günün yemeği" deyince asistan bunu önce anlatır', style: TextStyle(color: Color(0xFF64748B), fontSize: 11.5)),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('⭐ Öne Çıkar / Günün Önerisi', style: TextStyle(color: t.ink, fontSize: 14.5, fontWeight: FontWeight.w600)),
+              Text('Müşteri "ne önerirsin / içecek / günün yemeği" deyince asistan bunu önce anlatır', style: TextStyle(color: t.sub, fontSize: 11.5)),
             ]),
           ),
           Switch(value: oneCikan, activeThumbColor: _mor1, onChanged: (v) => setState(() => oneCikan = v)),
@@ -739,8 +747,8 @@ class _UrunDuzenleSayfaState extends State<_UrunDuzenleSayfa> {
           const SizedBox(height: 10),
           _alan(oneSozCtrl, 'Ürün notların — malzeme, pişirme, özellik (kısa yaz)', TextInputType.multiline, maxLines: 3),
           const SizedBox(height: 6),
-          const Text('Sen sadece notları yaz, süslemene gerek yok — yapay zekâ bunu iştah kabartıcı bir cümleye çevirir.\nÖrn: "mangal köfte, yanında pilav ve közlenmiş biber, acı sos"',
-              style: TextStyle(color: Color(0xFF64748B), fontSize: 11.5, height: 1.4)),
+          Text('Sen sadece notları yaz, süslemene gerek yok — yapay zekâ bunu iştah kabartıcı bir cümleye çevirir.\nÖrn: "mangal köfte, yanında pilav ve közlenmiş biber, acı sos"',
+              style: TextStyle(color: t.sub, fontSize: 11.5, height: 1.4)),
           if (oneAiSoz.isNotEmpty) ...[
             const SizedBox(height: 10),
             Container(
@@ -750,30 +758,31 @@ class _UrunDuzenleSayfaState extends State<_UrunDuzenleSayfa> {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 const Text('✨ Yapay zekâ müşteriye şöyle anlatacak:', style: TextStyle(color: Color(0xFFC4B5FD), fontSize: 11.5, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 4),
-                Text('"$oneAiSoz"', style: const TextStyle(color: Colors.white, fontSize: 13.5, fontStyle: FontStyle.italic, height: 1.35)),
+                Text('"$oneAiSoz"', style: TextStyle(color: t.ink, fontSize: 13.5, fontStyle: FontStyle.italic, height: 1.35)),
               ]),
             ),
           ],
           const SizedBox(height: 8),
-          const Text('Sırayı elle girmene gerek yok — üstteki ⭐ "Öne Çıkanları Sırala" ile sürükleyerek düzenlersin.',
-              style: TextStyle(color: Color(0xFF64748B), fontSize: 11)),
+          Text('Sırayı elle girmene gerek yok — üstteki ⭐ "Öne Çıkanları Sırala" ile sürükleyerek düzenlersin.',
+              style: TextStyle(color: t.sub, fontSize: 11)),
         ],
       ]),
     );
   }
 
   Widget _alan(TextEditingController c, String etiket, TextInputType tip, {int maxLines = 1}) {
+    final t = _t;
     return TextField(
       controller: c,
       keyboardType: tip,
       maxLines: maxLines,
-      style: const TextStyle(color: Colors.white),
+      style: TextStyle(color: t.ink),
       decoration: InputDecoration(
         labelText: etiket,
-        labelStyle: const TextStyle(color: Color(0xFF94A3B8)),
+        labelStyle: TextStyle(color: t.sub),
         filled: true,
-        fillColor: const Color(0xFF0E1428),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF2D3752))),
+        fillColor: t.card2,
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: t.line)),
         focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: _mor1)),
       ),
     );
@@ -790,9 +799,8 @@ class _OneSiralaSayfa extends StatefulWidget {
 }
 
 class _OneSiralaSayfaState extends State<_OneSiralaSayfa> {
-  static const _bg = Color(0xFF0B1020);
-  static const _card = Color(0xFF161C2E);
   static const _mor1 = Color(0xFF7C3AED);
+  TemaProvider get _t => context.watch<TemaProvider>();
   late List<Map<String, dynamic>> list;
   bool kaydediyor = false;
 
@@ -813,25 +821,26 @@ class _OneSiralaSayfaState extends State<_OneSiralaSayfa> {
         Navigator.of(context).pop(true);
       } else {
         setState(() => kaydediyor = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r['hata']?.toString() ?? 'Kaydedilemedi'), backgroundColor: _card));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r['hata']?.toString() ?? 'Kaydedilemedi'), backgroundColor: _t.card));
       }
     } catch (_) {
       if (mounted) {
         setState(() => kaydediyor = false);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bağlantı hatası'), backgroundColor: _card));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('Bağlantı hatası'), backgroundColor: _t.card));
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final t = _t;
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: t.bg,
       appBar: AppBar(
-        backgroundColor: _bg,
+        backgroundColor: t.bg,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Color(0xFF94A3B8)),
-        title: const Text('Öne Çıkanları Sırala', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
+        iconTheme: IconThemeData(color: t.sub),
+        title: Text('Öne Çıkanları Sırala', style: TextStyle(color: t.ink, fontSize: 17, fontWeight: FontWeight.bold)),
       ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: _mor1,
@@ -842,9 +851,9 @@ class _OneSiralaSayfaState extends State<_OneSiralaSayfa> {
         label: const Text('Kaydet', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
       body: Column(children: [
-        const Padding(
-          padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
-          child: Text('Sürükleyerek sırala 👇  En üstteki, müşteriye ilk önerilir.', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          child: Text('Sürükleyerek sırala 👇  En üstteki, müşteriye ilk önerilir.', style: TextStyle(color: t.sub, fontSize: 13)),
         ),
         Expanded(
           child: ReorderableListView(
@@ -864,12 +873,13 @@ class _OneSiralaSayfaState extends State<_OneSiralaSayfa> {
   }
 
   Widget _sat(Map<String, dynamic> u, int i) {
+    final t = _t;
     final gorsel = u['gorsel']?.toString();
     return Container(
       key: ValueKey(u['id']),
       margin: const EdgeInsets.only(bottom: 9),
       padding: const EdgeInsets.all(9),
-      decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFF232B42))),
+      decoration: BoxDecoration(color: t.card, borderRadius: BorderRadius.circular(14), border: Border.all(color: t.line)),
       child: Row(children: [
         Container(
           width: 26, height: 26,
@@ -883,28 +893,28 @@ class _OneSiralaSayfaState extends State<_OneSiralaSayfa> {
           child: SizedBox(
             width: 46, height: 46,
             child: gorsel != null
-                ? Image.network(gorsel, fit: BoxFit.cover, errorBuilder: (_, _, _) => Container(color: const Color(0xFF0E1428), child: const Icon(Icons.image_outlined, color: Color(0xFF334155), size: 20)))
-                : Container(color: const Color(0xFF0E1428), child: const Icon(Icons.image_outlined, color: Color(0xFF334155), size: 20)),
+                ? Image.network(gorsel, fit: BoxFit.cover, errorBuilder: (_, _, _) => Container(color: t.card2, child: Icon(Icons.image_outlined, color: t.sub, size: 20)))
+                : Container(color: t.card2, child: Icon(Icons.image_outlined, color: t.sub, size: 20)),
           ),
         ),
         const SizedBox(width: 11),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('${u['ad']}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 14.5, fontWeight: FontWeight.bold)),
+            Text('${u['ad']}', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.ink, fontSize: 14.5, fontWeight: FontWeight.bold)),
             if ((('${u['one_ai_soz'] ?? ''}').isNotEmpty ? '${u['one_ai_soz']}' : '${u['one_soz'] ?? ''}').isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 2),
                 child: Text(
                   ('${u['one_ai_soz'] ?? ''}').isNotEmpty ? '${u['one_ai_soz']}' : '${u['one_soz']}',
                   maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Color(0xFF8698B5), fontSize: 11.5),
+                  style: TextStyle(color: t.sub, fontSize: 11.5),
                 ),
               ),
           ]),
         ),
         ReorderableDragStartListener(
           index: i,
-          child: const Padding(padding: EdgeInsets.all(6), child: Icon(Icons.drag_handle, color: Color(0xFF64748B))),
+          child: Padding(padding: const EdgeInsets.all(6), child: Icon(Icons.drag_handle, color: t.sub)),
         ),
       ]),
     );
