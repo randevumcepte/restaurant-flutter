@@ -560,15 +560,17 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Container(
-          margin: const EdgeInsets.only(top: 1), padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-          decoration: BoxDecoration(color: _card2, borderRadius: BorderRadius.circular(6)),
-          child: Text('${_adet(_n(k['adet']))}×', style: const TextStyle(color: Color(0xFFC4B5FD), fontSize: 12, fontWeight: FontWeight.bold)),
+          margin: const EdgeInsets.only(top: 1),
+          constraints: const BoxConstraints(minWidth: 34),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(color: _mor, borderRadius: BorderRadius.circular(8)),
+          child: Text('${_adet(_n(k['adet']))}×', textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w900)),
         ),
-        const SizedBox(width: 9),
+        const SizedBox(width: 10),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              Flexible(child: Text(k['ad'].toString(), style: TextStyle(color: _ink, fontSize: 13.5, fontWeight: FontWeight.w600))),
+              Flexible(child: Text(k['ad'].toString(), style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.w700))),
               if (kur.isNotEmpty && kur != 'null') ...[
                 const SizedBox(width: 6),
                 Container(
@@ -641,8 +643,17 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             for (final k in kalemler)
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2),
-                child: Text('${_adet(_n((k as Map)['adet']))}× ${k['ad']}', style: TextStyle(color: _ink, fontSize: 13.5)),
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Container(
+                    constraints: const BoxConstraints(minWidth: 34),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(color: _mavi, borderRadius: BorderRadius.circular(8)),
+                    child: Text('${_adet(_n((k as Map)['adet']))}×', textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 14.5, fontWeight: FontWeight.w900)),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text(k['ad'].toString(), style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.w700))),
+                ]),
               ),
           ]),
         ),
