@@ -307,24 +307,27 @@ class _OzelRenkSayfaState extends State<_OzelRenkSayfa> {
       const SizedBox(height: 4),
       Text('Logonuzda tam renk yoksa yakışan hazır ikililerden başlayabilirsiniz.', style: TextStyle(color: _sub, fontSize: 11.5)),
       const SizedBox(height: 10),
-      Wrap(spacing: 10, runSpacing: 10, children: _kombinler.map((k) {
-        final a = Color(k[1] as int), d = Color(k[2] as int);
-        final sec = ayri && a.toARGB32() == ana.toARGB32() && d.toARGB32() == detay.toARGB32();
-        return GestureDetector(
-          onTap: () => setState(() { ana = a; detay = d; ayri = true; }),
-          child: Container(
-            width: 158, clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(color: widget.card, borderRadius: BorderRadius.circular(12), border: Border.all(color: sec ? _gold : _line, width: sec ? 2 : 1)),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              SizedBox(height: 32, child: Row(children: [Expanded(child: Container(color: a)), Expanded(child: Container(color: d))])),
-              Padding(padding: const EdgeInsets.fromLTRB(9, 6, 7, 7), child: Row(children: [
-                Expanded(child: Text(k[0] as String, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: sec ? _gold : _ink, fontSize: 11.5, fontWeight: FontWeight.w700))),
-                if (sec) Icon(Icons.check_circle, color: _gold, size: 15),
-              ])),
-            ]),
-          ),
-        );
-      }).toList()),
+      LayoutBuilder(builder: (ctx, cons) {
+        final w = (cons.maxWidth - 10) / 2;   // TAM 2 sütun (10px aralık)
+        return Wrap(spacing: 10, runSpacing: 10, children: _kombinler.map((k) {
+          final a = Color(k[1] as int), d = Color(k[2] as int);
+          final sec = ayri && a.toARGB32() == ana.toARGB32() && d.toARGB32() == detay.toARGB32();
+          return GestureDetector(
+            onTap: () => setState(() { ana = a; detay = d; ayri = true; }),
+            child: Container(
+              width: w, clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(color: widget.card, borderRadius: BorderRadius.circular(12), border: Border.all(color: sec ? _gold : _line, width: sec ? 2 : 1)),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                SizedBox(height: 34, child: Row(children: [Expanded(child: Container(color: a)), Expanded(child: Container(color: d))])),
+                Padding(padding: const EdgeInsets.fromLTRB(9, 6, 7, 8), child: Row(children: [
+                  Expanded(child: Text(k[0] as String, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: sec ? _gold : _ink, fontSize: 11.5, fontWeight: FontWeight.w700))),
+                  if (sec) Icon(Icons.check_circle, color: _gold, size: 15),
+                ])),
+              ]),
+            ),
+          );
+        }).toList());
+      }),
     ]);
   }
 
