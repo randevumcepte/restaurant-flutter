@@ -535,16 +535,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Stack(clipBehavior: Clip.none, children: [
       IconButton(
         tooltip: 'AI Bildirimleri',
-        onPressed: () => Navigator.of(context).push(PageRouteBuilder(
-          transitionDuration: const Duration(milliseconds: 220),
-          opaque: true,
-          barrierColor: _bg,
-          pageBuilder: (_, _, _) => AiBildirimScreen(bildirimler: bildirimler, period: period),
-          transitionsBuilder: (_, anim, _, child) => SlideTransition(
-            position: Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
-            child: child,
-          ),
-        )),
+        onPressed: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => AiBildirimScreen(bildirimler: bildirimler, period: period)),
+        ),
         // AI bildirim -> normal can degil, mor gradientli sparkle (AI icgorusu hissi)
         icon: ShaderMask(
           shaderCallback: (r) => const LinearGradient(
