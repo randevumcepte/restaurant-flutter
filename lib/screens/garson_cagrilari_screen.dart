@@ -108,6 +108,19 @@ class _GarsonCagrilariScreenState extends State<GarsonCagrilariScreen> {
     }
   }
 
+  Future<void> _hepsiniKapat() async {
+    if (_mesgul || cagrilar.isEmpty) return;
+    _mesgul = true;
+    try { Vibration.cancel(); } catch (_) {}
+    setState(() => cagrilar = []);
+    final auth = context.read<AuthProvider>();
+    try { await Api.garsonCagriHepsiniKapat(auth.token!); } catch (_) {}
+    _biliniyor.clear();
+    _anonsSayac = 0;
+    _mesgul = false;
+    _cek();
+  }
+
   Future<void> _kapat(int id) async {
     if (_mesgul) return;
     _mesgul = true;
@@ -140,6 +153,12 @@ class _GarsonCagrilariScreenState extends State<GarsonCagrilariScreen> {
           ],
         ]),
         actions: [
+          if (cagrilar.isNotEmpty)
+            TextButton.icon(
+              onPressed: _hepsiniKapat,
+              icon: Icon(Icons.done_all, color: t.gold, size: 19),
+              label: Text('Tümünü karşıla', style: TextStyle(color: t.gold, fontWeight: FontWeight.bold)),
+            ),
           IconButton(
             tooltip: sesli ? 'Sesli anons açık' : 'Sesli anons kapalı',
             onPressed: () => setState(() => sesli = !sesli),
