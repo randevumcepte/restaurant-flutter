@@ -157,6 +157,18 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
     } catch (_) {}
   }
 
+  Future<void> _basla(int adisyonId) async {
+    try {
+      await Api.mutfakBasla(_token, adisyonId: adisyonId);
+      _siparisYukle(sessiz: true);
+    } catch (_) {}
+  }
+
+  // Backend'in verdigi renk kodu (kalan sureye gore): yesil/amber/kirmizi
+  Color _renkKod(String? r) => r == 'kirmizi' ? _kirmizi : (r == 'amber' ? _amber : _yesil);
+  // Kalan sure yazisi: pozitif -> "~X dk kaldı", negatif -> "X dk gecikme"
+  String _kalanYazi(int kalan) => kalan > 0 ? '~$kalan dk kaldı' : (kalan == 0 ? 'süresi doldu' : '${-kalan} dk gecikme');
+
   Future<void> _servisEt(int adisyonId) async {
     try {
       await Api.mutfakServis(_token, adisyonId: adisyonId);
@@ -408,21 +420,34 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
   }
 
   Widget _kart(Map s) {
-    final dk = _n(s['dk']).toInt();
-    final renk = _renk(dk);
+    final gecen = _n(s['gecen'] ?? s['dk']).toInt();
+    final kalan = _n(s['kalan'] ?? 0).toInt();
+    final hedef = _n(s['hedef'] ?? 15).toInt();
+    final renk = _renkKod(s['renk']?.toString());
+    final basladi = s['asama']?.toString() == 'hazirlaniyor' || s['basladi'] == true;
     final kalemler = (s['kalemler'] as List?) ?? [];
     final toplamAdet = kalemler.fold<num>(0, (t, k) => t + _n((k as Map)['adet']));
+    // hazırlık ilerleme oranı (0-1)
+    final oran = hedef > 0 ? ((gecen / hedef).clamp(0.0, 1.0)).toDouble() : 0.0;
+    final adId = _n(s['adisyon_id']).toInt();
     return Container(
       decoration: BoxDecoration(
         color: _card,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: renk.withValues(alpha: 0.5), width: 1.2),
+        border: Border.all(color: renk.withValues(alpha: 0.6), width: 1.4),
       ),
       child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(color: renk.withValues(alpha: 0.12), borderRadius: const BorderRadius.vertical(top: Radius.circular(13))),
           child: Row(children: [
+            // AŞAMA rozeti
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(color: (basladi ? _amber : _yesil).withValues(alpha: 0.9), borderRadius: BorderRadius.circular(20)),
+              child: Text(basladi ? '👨‍🍳 Hazırlanıyor' : '🆕 Yeni', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+            ),
+            const SizedBox(width: 8),
             Flexible(
               child: Text(s['masa'].toString(),
                   overflow: TextOverflow.ellipsis,
@@ -430,38 +455,68 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
             ),
             const SizedBox(width: 6),
             Text('· ${_adet(toplamAdet)} ürün', style: TextStyle(color: _sub, fontSize: 12)),
+          ]),
+        ),
+        // SÜRE ŞERİDİ: geçen + kalan/gecikme + ilerleme çubuğu
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+          child: Row(children: [
+            Icon(Icons.schedule, size: 13, color: renk),
+            const SizedBox(width: 4),
+            Text('${_sure(gecen)} geçti', style: TextStyle(color: _sub, fontSize: 12, fontWeight: FontWeight.w600)),
             const Spacer(),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(color: renk.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(20)),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Icon(Icons.schedule, size: 12, color: renk),
-                const SizedBox(width: 4),
-                Text(_sure(dk), style: TextStyle(color: renk, fontSize: 12, fontWeight: FontWeight.bold)),
-              ]),
-            ),
+            Text(_kalanYazi(kalan), style: TextStyle(color: renk, fontSize: 12.5, fontWeight: FontWeight.bold)),
           ]),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+          padding: const EdgeInsets.fromLTRB(12, 6, 12, 2),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(value: oran, minHeight: 5, backgroundColor: renk.withValues(alpha: 0.15), color: renk),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 6, 12, 4),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             for (final k in kalemler) _kalemSatir(k as Map),
           ]),
         ),
+        // BUTONLAR: Yeni -> [Başla][Hazır], Hazırlanıyor -> [Hazır]
         Padding(
           padding: const EdgeInsets.fromLTRB(10, 2, 10, 10),
-          child: SizedBox(
-            width: double.infinity, height: 40,
-            child: FilledButton.icon(
-              onPressed: () => _hazir(_n(s['adisyon_id']).toInt()),
-              style: FilledButton.styleFrom(
-                backgroundColor: _yesil, padding: EdgeInsets.zero,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          child: Row(children: [
+            if (!basladi) ...[
+              Expanded(
+                child: SizedBox(
+                  height: 40,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _basla(adId),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: _amber, width: 1.4), padding: EdgeInsets.zero,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    icon: Icon(Icons.play_arrow_rounded, size: 19, color: _amber),
+                    label: Text('Başla', style: TextStyle(color: _amber, fontWeight: FontWeight.bold, fontSize: 14)),
+                  ),
+                ),
               ),
-              icon: const Icon(Icons.check, size: 17, color: Colors.white),
-              label: const Text('Hazır', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+              const SizedBox(width: 8),
+            ],
+            Expanded(
+              child: SizedBox(
+                height: 40,
+                child: FilledButton.icon(
+                  onPressed: () => _hazir(adId),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: _yesil, padding: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  icon: const Icon(Icons.check, size: 17, color: Colors.white),
+                  label: const Text('Hazır', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                ),
+              ),
             ),
-          ),
+          ]),
         ),
       ]),
     );

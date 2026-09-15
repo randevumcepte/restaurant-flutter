@@ -143,6 +143,17 @@ class Api {
     return jsonDecode(r.body) as Map<String, dynamic>;
   }
 
+  // Hazirlamaya BASLA (Yeni -> Hazirlaniyor)
+  static Future<Map<String, dynamic>> mutfakBasla(String token, {int? kalemId, int? adisyonId}) async {
+    final body = <String, String>{};
+    if (kalemId != null) body['kalem_id'] = '$kalemId';
+    if (adisyonId != null) body['adisyon_id'] = '$adisyonId';
+    final r = await http.post(Uri.parse('$base/api/mutfak/basla'),
+        headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'}, body: body);
+    if (r.statusCode == 401) throw ApiYetkiHatasi();
+    return jsonDecode(r.body) as Map<String, dynamic>;
+  }
+
   // Servise hazir (durum=hazir) siparisler + garson aldi (servis)
   static Future<Map<String, dynamic>> mutfakServiseHazir(String token) => _get('/api/mutfak/servise-hazir', token);
   static Future<Map<String, dynamic>> mutfakServis(String token, {int? kalemId, int? adisyonId}) async {
