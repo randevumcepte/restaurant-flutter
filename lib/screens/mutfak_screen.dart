@@ -243,27 +243,17 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
         ],
         bottom: TabBar(
           controller: _tab,
-          isScrollable: true,
-          tabAlignment: TabAlignment.start,
+          isScrollable: false,   // 4 sekme de EŞİT genişlik, hepsi görünür (taşmaz)
           indicatorColor: _mor,
+          indicatorWeight: 3,
           labelColor: _ink,
           unselectedLabelColor: _sub,
-          labelStyle: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold),
+          labelPadding: const EdgeInsets.symmetric(horizontal: 2),
           tabs: [
-            for (int i = 0; i < basliklar.length; i++)
-              Tab(
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  Text(basliklar[i]),
-                  if (rozet[i] > 0) ...[
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                      decoration: BoxDecoration(color: i == 1 ? _mavi : _mor, borderRadius: BorderRadius.circular(20)),
-                      child: Text('${rozet[i]}', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-                    ),
-                  ],
-                ]),
-              ),
+            _mtab(Icons.receipt_long, 'Sipariş', rozet[0], _mor),
+            _mtab(Icons.room_service_outlined, 'Servis', rozet[1], _mavi),
+            _mtab(Icons.block, '86', rozet[2], _kirmizi),
+            _mtab(Icons.insights, 'Analiz', rozet[3], _mor),
           ],
         ),
       ),
@@ -276,6 +266,30 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
           _analizSekme(),
         ],
       ),
+    );
+  }
+
+  // Ana sekme: ikon + kısa etiket + rozet (kaymasız, eşit genişlik, mutfak için okunaklı)
+  Tab _mtab(IconData ik, String lbl, int n, Color c) {
+    return Tab(
+      height: 52,
+      child: Column(mainAxisAlignment: MainAxisAlignment.center, mainAxisSize: MainAxisSize.min, children: [
+        Stack(clipBehavior: Clip.none, children: [
+          Icon(ik, size: 21),
+          if (n > 0)
+            Positioned(
+              right: -11, top: -6,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                constraints: const BoxConstraints(minWidth: 16),
+                decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(20)),
+                child: Text('$n', textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+              ),
+            ),
+        ]),
+        const SizedBox(height: 3),
+        Text(lbl, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
+      ]),
     );
   }
 
