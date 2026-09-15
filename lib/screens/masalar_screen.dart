@@ -19,6 +19,8 @@ class _MasalarScreenState extends State<MasalarScreen> {
   bool loading = true;
   String? _secilenBolge; // ust sekmede secili bolge
   final Set<int> _benimMasalar = {}; // giren personelin sorumlu masalari (vurgu + varsayilan bolge)
+  bool _sadeceBenim = false;         // "Sadece benim masalarim" filtresi (atamasi olanda varsayilan acik)
+  bool _ilkAtama = true;             // _sadeceBenim varsayilanini bir kez ayarla
   final _f = NumberFormat.decimalPattern('tr');
 
   num _n(dynamic v) => v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0);
@@ -42,6 +44,7 @@ class _MasalarScreenState extends State<MasalarScreen> {
         _benimMasalar
           ..clear()
           ..addAll(((benim['masa_idler'] as List?) ?? []).map((e) => _n(e).toInt()));
+        if (_ilkAtama) { _sadeceBenim = _benimMasalar.isNotEmpty; _ilkAtama = false; }
       } catch (_) {}
       if (_secilenBolge == null && _benimMasalar.isNotEmpty) {
         final mine = liste.cast<Map?>().firstWhere(
@@ -190,7 +193,11 @@ class _MasalarScreenState extends State<MasalarScreen> {
     }
     final bolgeler = gruplu.keys.toList();
     final aktif = (_secilenBolge != null && bolgeler.contains(_secilenBolge)) ? _secilenBolge! : (bolgeler.isNotEmpty ? bolgeler.first : '');
-    final aktifMasalar = gruplu[aktif] ?? [];
+    var aktifMasalar = gruplu[aktif] ?? [];
+    // "Sadece benim masalarim" acikken sorumlu masalara filtrele
+    if (_sadeceBenim && _benimMasalar.isNotEmpty) {
+      aktifMasalar = aktifMasalar.where((m) => _benimMasalar.contains(_n(m['id']).toInt())).toList();
+    }
     final dolu = masalar.where((m) => m['adisyon_id'] != null).length;
 
     return Scaffold(
@@ -201,6 +208,12 @@ class _MasalarScreenState extends State<MasalarScreen> {
         title: Text('Masalar  ($dolu / ${masalar.length} dolu)',
             style: const TextStyle(color: Color(0xFF0F172A), fontSize: 18, fontWeight: FontWeight.bold)),
         actions: [
+          if (_benimMasalar.isNotEmpty)
+            TextButton.icon(
+              onPressed: () async { setState(() => _sadeceBenim = !_sadeceBenim); await _yukle(); },
+              icon: Icon(_sadeceBenim ? Icons.person : Icons.groups, color: const Color(0xFF7C3AED), size: 19),
+              label: Text(_sadeceBenim ? 'Benim' : 'Tümü', style: const TextStyle(color: Color(0xFF7C3AED), fontSize: 13, fontWeight: FontWeight.w700)),
+            ),
           IconButton(
             tooltip: 'Masa taşıma/birleştirme nasıl yapılır?',
             onPressed: _ipucuGoster,
