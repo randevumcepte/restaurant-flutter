@@ -73,6 +73,11 @@ class _GarsonOzetScreenState extends State<GarsonOzetScreen> {
         automaticallyImplyLeading: false,
         title: Text('👋 ${ad.isEmpty ? "Özetim" : ad}', style: TextStyle(color: t.ink, fontSize: 18, fontWeight: FontWeight.bold)),
         actions: [
+          IconButton(
+            tooltip: t.koyu ? 'Açık moda geç' : 'Koyu moda geç',
+            onPressed: () => context.read<TemaProvider>().cevir(),
+            icon: Icon(t.koyu ? Icons.light_mode : Icons.dark_mode, color: t.gold),
+          ),
           IconButton(onPressed: () => _yukle(), icon: Icon(Icons.refresh, color: t.sub)),
           IconButton(
             tooltip: 'Çıkış',
