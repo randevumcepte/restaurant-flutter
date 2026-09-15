@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:vibration/vibration.dart';
 import '../providers/auth_provider.dart';
 import '../providers/tema_provider.dart';
 import '../services/api.dart';
@@ -21,9 +22,29 @@ class _GarsonCagrilariScreenState extends State<GarsonCagrilariScreen> {
   List<Map<String, dynamic>> cagrilar = [];
   final Set<int> _biliniyor = {};
   bool _ilk = true, sesli = true, _mesgul = false;
+  bool? _titresebilir;   // cihaz titresim destekliyor mu (bir kez sorulur)
+  int _anonsSayac = 0;   // sesli hatirlatma sayaci
   String? hata;
   Timer? _timer;
   final FlutterTts _tts = FlutterTts();
+
+  // GÜÇLÜ desenli titreşim — yoğun restoranda hissedilsin (karşılanana kadar her poll tekrar).
+  Future<void> _titret() async {
+    try {
+      _titresebilir ??= (await Vibration.hasVibrator()) == true;
+      if (_titresebilir == true) {
+        // bekle-BRR-dur-BRR-dur-BRRRR : belirgin, alarm hissi (~2.1 sn)
+        Vibration.vibrate(
+          pattern: [0, 500, 200, 500, 200, 750],
+          intensities: [0, 255, 0, 255, 0, 255],
+        );
+      } else {
+        HapticFeedback.heavyImpact();
+      }
+    } catch (_) {
+      try { HapticFeedback.heavyImpact(); } catch (_) {}
+    }
+  }
 
   @override
   void initState() {
@@ -38,6 +59,7 @@ class _GarsonCagrilariScreenState extends State<GarsonCagrilariScreen> {
   void dispose() {
     _timer?.cancel();
     _tts.stop();
+    try { Vibration.cancel(); } catch (_) {}
     super.dispose();
   }
 
@@ -55,11 +77,22 @@ class _GarsonCagrilariScreenState extends State<GarsonCagrilariScreen> {
         final liste = ((res['cagrilar'] as List?) ?? []).map((e) => Map<String, dynamic>.from(e)).toList();
         // yeni cagri var mi?
         final yeniler = liste.where((c) => !_biliniyor.contains(c['id'])).toList();
-        if (!_ilk && yeniler.isNotEmpty) {
-          HapticFeedback.heavyImpact();
-          if (sesli) {
-            final ilkYeni = yeniler.first;
-            _tts.speak('${ilkYeni['masa']}, ${_tipYazi(ilkYeni['tip']?.toString() ?? '')}');
+        if (!_ilk) {
+          // KARŞILANANA KADAR TEKRAR: açık çağrı oldukça her yenilemede (≈4 sn) güçlü titret.
+          if (liste.isNotEmpty) {
+            _titret();
+            if (sesli) {
+              if (yeniler.isNotEmpty) {
+                _anonsSayac = 0;
+                final ilkYeni = yeniler.first;
+                _tts.speak('${ilkYeni['masa']}, ${_tipYazi(ilkYeni['tip']?.toString() ?? '')}');
+              } else if ((++_anonsSayac) % 3 == 0) {
+                // ≈12 sn'de bir sesli hatırlatma (TTS sürekli konuşmasın)
+                _tts.speak('${liste.length} bekleyen çağrı var');
+              }
+            }
+          } else {
+            _anonsSayac = 0;
           }
         }
         _biliniyor
