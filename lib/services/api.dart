@@ -369,6 +369,13 @@ class Api {
   static Future<Map<String, dynamic>> receteKaydet(String token, int urunId, List<Map<String, dynamic>> kalemler) =>
       _post('/api/patron/recete-kaydet', token, {'urun_id': '$urunId', 'kalemler': jsonEncode(kalemler)});
 
+  // ---- YARI MAMUL (alt recete) ----
+  static Future<Map<String, dynamic>> yariMamuller(String token) => _get('/api/patron/yarimamuller', token);
+  static Future<Map<String, dynamic>> yariMamulDetay(String token, int id) => _get('/api/patron/yarimamul-detay?id=$id', token);
+  static Future<Map<String, dynamic>> yariMamulKaydet(String token, {int? id, required String ad, required double verimMiktar, required int verimBirimId, required List<Map<String, dynamic>> kalemler}) =>
+      _post('/api/patron/yarimamul-kaydet', token, {if (id != null) 'id': '$id', 'ad': ad, 'verim_miktar': '$verimMiktar', 'verim_birim_id': '$verimBirimId', 'kalemler': jsonEncode(kalemler)});
+  static Future<Map<String, dynamic>> yariMamulSil(String token, int id) => _post('/api/patron/yarimamul-sil', token, {'id': '$id'});
+
   // ---- FINANS ----
   static Future<Map<String, dynamic>> finans(String token, {String? ay}) => _get('/api/patron/finans${ay != null ? '?ay=$ay' : ''}', token);
 

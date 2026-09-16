@@ -72,7 +72,9 @@ class _ReceteScreenState extends State<ReceteScreen> {
     final recetesiz = urunler.where((u) => (u as Map)['receteli'] != true).length;
     return Scaffold(
       backgroundColor: _bg,
-      appBar: AppBar(backgroundColor: _bg, elevation: 0, iconTheme: const IconThemeData(color: Colors.white), title: const Text('Reçete Yönetimi', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold))),
+      appBar: AppBar(backgroundColor: _bg, elevation: 0, iconTheme: const IconThemeData(color: Colors.white), title: const Text('Reçete Yönetimi', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)), actions: [
+        TextButton.icon(onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const YariMamulListScreen())), icon: const Icon(Icons.blender_outlined, color: _mavi, size: 18), label: const Text('Yarı Mamüller', style: TextStyle(color: _mavi, fontSize: 13))),
+      ]),
       body: loading
           ? const Center(child: CircularProgressIndicator(color: _mor1))
           : Column(children: [
@@ -131,6 +133,8 @@ class _ReceteScreenState extends State<ReceteScreen> {
             ),
           ),
         ),
+        const SizedBox(width: 8),
+        MButon('Yarı Mamüller', t.mavi, () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const YariMamulListScreen())), dolu: false, ikon: Icons.blender_outlined),
         const SizedBox(width: 8),
         MButon('Yenile', t.mor1, _yukle, dolu: false, ikon: Icons.refresh),
         const SizedBox(width: 4),
@@ -268,8 +272,9 @@ class ReceteEditorScreen extends StatefulWidget {
 }
 
 class _ReceteEditorScreenState extends State<ReceteEditorScreen> {
-  final List<Map<String, dynamic>> kalemler = []; // {malzeme_id, malzeme, miktar, birim_id, birim, satir_maliyet}
+  final List<Map<String, dynamic>> kalemler = []; // {malzeme_id, malzeme, miktar, birim_id, birim} VEYA {alt_recete_id, yarimamul:true, birim_maliyet, ...}
   List malzemeler = [];
+  List yarimamuller = []; // yari mamul secim listesi
   List birimler = [];
   double fiyat = 0;
   bool loading = true;
@@ -288,12 +293,23 @@ class _ReceteEditorScreenState extends State<ReceteEditorScreen> {
       final res = await Api.urunRecete(auth.token!, widget.urunId);
       final m = await Api.stokMeta(auth.token!);
       final mal = await Api.malzemeler(auth.token!);
+      final ym = await Api.yariMamuller(auth.token!);
       if (!mounted) return;
       if (res['ok'] == 1) {
         setState(() {
+          yarimamuller = (ym['yarimamuller'] as List?) ?? [];
           kalemler.clear();
           for (final k in (res['kalemler'] as List?) ?? []) {
-            kalemler.add({'malzeme_id': _n((k as Map)['malzeme_id']).toInt(), 'malzeme': k['malzeme'], 'miktar': _n(k['miktar']).toDouble(), 'birim_id': _n(k['birim_id']).toInt(), 'birim': k['birim'], 'satir_maliyet': _n(k['satir_maliyet']).toDouble()});
+            final km = k as Map;
+            if (km['yarimamul'] == true || km['alt_recete_id'] != null) {
+              final miktar = _n(km['miktar']).toDouble();
+              // birim maliyeti once guncel listeden al (canli), yoksa satir/miktar
+              final ymRow = yarimamuller.firstWhere((x) => _n((x as Map)['id']).toInt() == _n(km['alt_recete_id']).toInt(), orElse: () => null);
+              final birimMal = ymRow != null ? _n((ymRow as Map)['birim_maliyet']).toDouble() : (miktar > 0 ? _n(km['satir_maliyet']).toDouble() / miktar : 0.0);
+              kalemler.add({'alt_recete_id': _n(km['alt_recete_id']).toInt(), 'malzeme': km['malzeme'], 'yarimamul': true, 'miktar': miktar, 'birim_id': _n(km['birim_id']).toInt(), 'birim': km['birim'], 'birim_maliyet': birimMal});
+            } else {
+              kalemler.add({'malzeme_id': _n(km['malzeme_id']).toInt(), 'malzeme': km['malzeme'], 'miktar': _n(km['miktar']).toDouble(), 'birim_id': _n(km['birim_id']).toInt(), 'birim': km['birim'], 'satir_maliyet': _n(km['satir_maliyet']).toDouble()});
+            }
           }
           fiyat = _n(res['fiyat']).toDouble();
           duzenleyebilir = res['duzenleyebilir'] == true;
@@ -335,12 +351,21 @@ class _ReceteEditorScreenState extends State<ReceteEditorScreen> {
   double get _maliyet {
     double t = 0;
     for (final k in kalemler) {
-      t += _n(k['miktar']) * _cevrim(k['malzeme_id'], k['birim_id']) * _malzemeMaliyet(k['malzeme_id']);
+      if (k['yarimamul'] == true) {
+        t += _n(k['miktar']) * _n(k['birim_maliyet']); // yari mamul: verim birimi basina maliyet
+      } else {
+        t += _n(k['miktar']) * _cevrim(k['malzeme_id'], k['birim_id']) * _malzemeMaliyet(k['malzeme_id']);
+      }
     }
     return t;
   }
 
   double get _fc => fiyat > 0 && _maliyet > 0 ? _maliyet / fiyat * 100 : 0;
+
+  // Bir kalemin satir maliyeti (malzeme veya yari mamul)
+  double _satir(Map k) => (k['yarimamul'] == true
+      ? _n(k['miktar']) * _n(k['birim_maliyet'])
+      : _n(k['miktar']) * _cevrim(k['malzeme_id'], k['birim_id']) * _malzemeMaliyet(k['malzeme_id'])).toDouble();
 
   @override
   Widget build(BuildContext context) {
@@ -432,12 +457,15 @@ class _ReceteEditorScreenState extends State<ReceteEditorScreen> {
 
   Widget _kalemKartMasaustu(TemaProvider t, int i) {
     final k = kalemler[i];
-    final satir = _n(k['miktar']) * _cevrim(k['malzeme_id'], k['birim_id']) * _malzemeMaliyet(k['malzeme_id']);
+    final satir = _satir(k);
     return MKart(
       padding: const EdgeInsets.all(14),
       child: Row(children: [
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(k['malzeme'].toString(), style: TextStyle(color: t.ink, fontWeight: FontWeight.w600, fontSize: 14)),
+          Row(children: [
+            Flexible(child: Text(k['malzeme'].toString(), overflow: TextOverflow.ellipsis, style: TextStyle(color: t.ink, fontWeight: FontWeight.w600, fontSize: 14))),
+            if (k['yarimamul'] == true) ...[const SizedBox(width: 6), Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1), decoration: BoxDecoration(color: t.mavi.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(6)), child: Text('yarı mamül', style: TextStyle(color: t.mavi, fontSize: 9, fontWeight: FontWeight.bold)))],
+          ]),
           Text('${_mik(_n(k['miktar']))} ${k['birim']}', style: TextStyle(color: t.sub, fontSize: 12.5)),
         ])),
         Text(_tl(satir), style: TextStyle(color: t.sub2, fontWeight: FontWeight.bold)),
@@ -472,13 +500,16 @@ class _ReceteEditorScreenState extends State<ReceteEditorScreen> {
 
   Widget _kalemKart(int i) {
     final k = kalemler[i];
-    final satir = _n(k['miktar']) * _cevrim(k['malzeme_id'], k['birim_id']) * _malzemeMaliyet(k['malzeme_id']);
+    final satir = _satir(k);
     return Container(
       margin: const EdgeInsets.only(top: 8), padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFF232B42))),
       child: Row(children: [
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(k['malzeme'].toString(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
+          Row(children: [
+            Flexible(child: Text(k['malzeme'].toString(), overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14))),
+            if (k['yarimamul'] == true) ...[const SizedBox(width: 6), Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1), decoration: BoxDecoration(color: _mavi.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(6)), child: const Text('yarı mamül', style: TextStyle(color: _mavi, fontSize: 9, fontWeight: FontWeight.bold)))],
+          ]),
           Text('${_mik(_n(k['miktar']))} ${k['birim']}', style: const TextStyle(color: _gri, fontSize: 12)),
         ])),
         Text(_tl(satir), style: const TextStyle(color: _gri, fontWeight: FontWeight.bold)),
@@ -499,47 +530,86 @@ class _ReceteEditorScreenState extends State<ReceteEditorScreen> {
       );
 
   Future<void> _kalemEkle() async {
-    if (malzemeler.isEmpty) { _uyar('Önce Stok ekranından malzeme ekleyin'); return; }
-    int malzemeId = _n((malzemeler.first as Map)['id']).toInt();
-    int birimId = _n((malzemeler.first as Map)['temel_birim_id']).toInt();
+    if (malzemeler.isEmpty && yarimamuller.isEmpty) { _uyar('Önce Stok ekranından malzeme ekleyin'); return; }
+    bool yariMod = false;
+    int malzemeId = malzemeler.isNotEmpty ? _n((malzemeler.first as Map)['id']).toInt() : 0;
+    int birimId = malzemeler.isNotEmpty ? _n((malzemeler.first as Map)['temel_birim_id']).toInt() : 0;
+    int ymId = yarimamuller.isNotEmpty ? _n((yarimamuller.first as Map)['id']).toInt() : 0;
     final miktarC = TextEditingController();
     final eklendi = await showModalBottomSheet<bool>(
       context: context, isScrollControlled: true, backgroundColor: _bg,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => StatefulBuilder(builder: (ctx, setS) => Padding(
-        padding: EdgeInsets.only(left: 16, right: 16, top: 16, bottom: MediaQuery.of(ctx).viewInsets.bottom + 16),
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 14), alignment: Alignment.center, decoration: BoxDecoration(color: const Color(0xFF2D3752), borderRadius: BorderRadius.circular(2))),
-          const Text('Malzeme Ekle', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 14),
-          _drop('Malzeme', malzemeId, {for (final m in malzemeler) _n((m as Map)['id']).toInt(): m['ad'].toString()}, (v) {
-            final m = malzemeler.firstWhere((x) => _n((x as Map)['id']).toInt() == v);
-            setS(() { malzemeId = v; birimId = _n((m as Map)['temel_birim_id']).toInt(); });
-          }),
-          const SizedBox(height: 10),
-          Row(children: [
-            Expanded(child: TextField(controller: miktarC, autofocus: true, keyboardType: const TextInputType.numberWithOptions(decimal: true), style: const TextStyle(color: Colors.white), decoration: _dec('Miktar (1 porsiyon)'))),
-            const SizedBox(width: 10),
-            Expanded(child: _drop('Birim', birimId, {for (final b in birimler) _n((b as Map)['id']).toInt(): b['kisaltma'].toString()}, (v) => setS(() => birimId = v))),
+      builder: (ctx) => StatefulBuilder(builder: (ctx, setS) {
+        Widget seg(String t, bool val) => Expanded(child: GestureDetector(
+              onTap: (val && yarimamuller.isEmpty) ? null : () => setS(() => yariMod = val),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(color: yariMod == val ? _mor1 : _card, borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFF2D3752))),
+                child: Text(t, textAlign: TextAlign.center, style: TextStyle(color: yariMod == val ? Colors.white : _gri, fontWeight: FontWeight.w600, fontSize: 13)),
+              ),
+            ));
+        final y = yarimamuller.firstWhere((x) => _n((x as Map)['id']).toInt() == ymId, orElse: () => null);
+        final vb = y == null ? '' : (y as Map)['verim_birim'].toString();
+        return Padding(
+          padding: EdgeInsets.only(left: 16, right: 16, top: 16, bottom: MediaQuery.of(ctx).viewInsets.bottom + 16),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 14), alignment: Alignment.center, decoration: BoxDecoration(color: const Color(0xFF2D3752), borderRadius: BorderRadius.circular(2))),
+            const Text('Reçeteye Ekle', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            Row(children: [seg('Malzeme', false), const SizedBox(width: 8), seg('Yarı Mamül', true)]),
+            if (yarimamuller.isEmpty)
+              Padding(padding: const EdgeInsets.only(top: 8), child: Text('Yarı mamül tanımlı değil — Reçeteler ekranındaki "Yarı Mamüller"den ekleyebilirsin.', style: const TextStyle(color: _gri, fontSize: 11))),
+            const SizedBox(height: 12),
+            if (!yariMod) ...[
+              _drop('Malzeme', malzemeId, {for (final m in malzemeler) _n((m as Map)['id']).toInt(): m['ad'].toString()}, (v) {
+                final m = malzemeler.firstWhere((x) => _n((x as Map)['id']).toInt() == v);
+                setS(() { malzemeId = v; birimId = _n((m as Map)['temel_birim_id']).toInt(); });
+              }),
+              const SizedBox(height: 10),
+              Row(children: [
+                Expanded(child: TextField(controller: miktarC, autofocus: true, keyboardType: const TextInputType.numberWithOptions(decimal: true), style: const TextStyle(color: Colors.white), decoration: _dec('Miktar (1 porsiyon)'))),
+                const SizedBox(width: 10),
+                Expanded(child: _drop('Birim', birimId, {for (final b in birimler) _n((b as Map)['id']).toInt(): b['kisaltma'].toString()}, (v) => setS(() => birimId = v))),
+              ]),
+            ] else ...[
+              _drop('Yarı Mamül', ymId, {for (final yy in yarimamuller) _n((yy as Map)['id']).toInt(): yy['ad'].toString()}, (v) => setS(() => ymId = v)),
+              const SizedBox(height: 10),
+              Row(children: [
+                Expanded(child: TextField(controller: miktarC, autofocus: true, keyboardType: const TextInputType.numberWithOptions(decimal: true), style: const TextStyle(color: Colors.white), decoration: _dec('Miktar${vb.isNotEmpty ? ' ($vb)' : ''}'))),
+                const SizedBox(width: 10),
+                Expanded(child: InputDecorator(decoration: _dec('Birim'), child: Text(vb.isEmpty ? '—' : vb, style: const TextStyle(color: Colors.white)))),
+              ]),
+            ],
+            const SizedBox(height: 14),
+            SizedBox(width: double.infinity, child: FilledButton(style: FilledButton.styleFrom(backgroundColor: _mor1, padding: const EdgeInsets.symmetric(vertical: 14)), onPressed: () => Navigator.pop(ctx, true), child: const Text('Ekle', style: TextStyle(fontWeight: FontWeight.bold)))),
           ]),
-          const SizedBox(height: 14),
-          SizedBox(width: double.infinity, child: FilledButton(style: FilledButton.styleFrom(backgroundColor: _mor1, padding: const EdgeInsets.symmetric(vertical: 14)), onPressed: () => Navigator.pop(ctx, true), child: const Text('Ekle', style: TextStyle(fontWeight: FontWeight.bold)))),
-        ]),
-      )),
+        );
+      }),
     );
     if (eklendi != true) return;
     final miktar = double.tryParse(miktarC.text.replaceAll(',', '.')) ?? 0;
     if (miktar <= 0) { _uyar('Geçerli miktar girin'); return; }
-    final malzeme = malzemeler.firstWhere((x) => _n((x as Map)['id']).toInt() == malzemeId) as Map;
-    final birim = birimler.firstWhere((x) => _n((x as Map)['id']).toInt() == birimId) as Map;
-    setState(() => kalemler.add({'malzeme_id': malzemeId, 'malzeme': malzeme['ad'], 'miktar': miktar, 'birim_id': birimId, 'birim': birim['kisaltma']}));
+    if (yariMod) {
+      if (ymId <= 0) { _uyar('Yarı mamül seçin'); return; }
+      if (kalemler.any((k) => k['yarimamul'] == true && _n(k['alt_recete_id']).toInt() == ymId)) { _uyar('Bu yarı mamül zaten ekli'); return; }
+      final y = yarimamuller.firstWhere((x) => _n((x as Map)['id']).toInt() == ymId) as Map;
+      setState(() => kalemler.add({'alt_recete_id': ymId, 'malzeme': y['ad'], 'yarimamul': true, 'miktar': miktar, 'birim_id': _n(y['verim_birim_id']).toInt(), 'birim': y['verim_birim'], 'birim_maliyet': _n(y['birim_maliyet']).toDouble()}));
+    } else {
+      if (malzemeId <= 0) { _uyar('Malzeme seçin'); return; }
+      if (kalemler.any((k) => k['yarimamul'] != true && _n(k['malzeme_id']).toInt() == malzemeId)) { _uyar('Bu malzeme zaten ekli'); return; }
+      final malzeme = malzemeler.firstWhere((x) => _n((x as Map)['id']).toInt() == malzemeId) as Map;
+      final birim = birimler.firstWhere((x) => _n((x as Map)['id']).toInt() == birimId) as Map;
+      setState(() => kalemler.add({'malzeme_id': malzemeId, 'malzeme': malzeme['ad'], 'miktar': miktar, 'birim_id': birimId, 'birim': birim['kisaltma']}));
+    }
   }
 
   Future<void> _kaydet() async {
     setState(() => kaydediliyor = true);
     final auth = context.read<AuthProvider>();
     try {
-      final gonder = kalemler.map((k) => {'malzeme_id': k['malzeme_id'], 'miktar': k['miktar'], 'birim_id': k['birim_id']}).toList();
+      final gonder = kalemler.map((k) => k['yarimamul'] == true
+          ? {'alt_recete_id': k['alt_recete_id'], 'miktar': k['miktar'], 'birim_id': k['birim_id']}
+          : {'malzeme_id': k['malzeme_id'], 'miktar': k['miktar'], 'birim_id': k['birim_id']}).toList();
       final res = await Api.receteKaydet(auth.token!, widget.urunId, gonder);
       if (!mounted) return;
       if (res['ok'] == 1) {
@@ -559,6 +629,353 @@ class _ReceteEditorScreenState extends State<ReceteEditorScreen> {
           value: items.containsKey(value) ? value : null, isDense: true, isExpanded: true, dropdownColor: _card, style: const TextStyle(color: Colors.white),
           items: items.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value, overflow: TextOverflow.ellipsis))).toList(),
           onChanged: (v) { if (v != null) onChanged(v); },
+        )),
+      );
+}
+
+// Ortak dropdown (yari mamul ekranlari icin)
+Widget _drop2(String label, int? value, Map<int, String> items, ValueChanged<int> onChanged) => InputDecorator(
+      decoration: _dec(label),
+      child: DropdownButtonHideUnderline(child: DropdownButton<int>(
+        value: items.containsKey(value) ? value : null, isDense: true, isExpanded: true, dropdownColor: _card, style: const TextStyle(color: Colors.white),
+        items: items.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value, overflow: TextOverflow.ellipsis))).toList(),
+        onChanged: (v) { if (v != null) onChanged(v); },
+      )),
+    );
+
+// ============================================================================
+// YARI MAMUL YONETIMI — liste
+// ============================================================================
+class YariMamulListScreen extends StatefulWidget {
+  const YariMamulListScreen({super.key});
+  @override
+  State<YariMamulListScreen> createState() => _YariMamulListScreenState();
+}
+
+class _YariMamulListScreenState extends State<YariMamulListScreen> {
+  List liste = [];
+  bool loading = true;
+  bool duzenleyebilir = false;
+
+  @override
+  void initState() { super.initState(); _yukle(); }
+
+  Future<void> _yukle() async {
+    final auth = context.read<AuthProvider>();
+    setState(() => loading = true);
+    try {
+      final res = await Api.yariMamuller(auth.token!);
+      if (!mounted) return;
+      setState(() { liste = (res['yarimamuller'] as List?) ?? []; duzenleyebilir = res['duzenleyebilir'] == true; loading = false; });
+    } on ApiYetkiHatasi { if (mounted) context.read<AuthProvider>().cikis(); }
+    catch (_) { if (mounted) setState(() => loading = false); }
+  }
+
+  Future<void> _ac([Map? y]) async {
+    final degisti = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => YariMamulEditorScreen(id: y == null ? null : _n(y['id']).toInt())));
+    if (degisti == true) _yukle();
+  }
+
+  Future<void> _sil(Map y) async {
+    final auth = context.read<AuthProvider>();
+    final onay = await showDialog<bool>(context: context, builder: (c) => AlertDialog(
+      backgroundColor: _card, title: const Text('Sil', style: TextStyle(color: Colors.white)),
+      content: Text('“${y['ad']}” silinsin mi?', style: const TextStyle(color: _gri)),
+      actions: [TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Vazgeç')), TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('Sil', style: TextStyle(color: _kirmizi)))],
+    ));
+    if (onay != true) return;
+    final res = await Api.yariMamulSil(auth.token!, _n(y['id']).toInt());
+    if (!mounted) return;
+    if (res['ok'] == 1) { _yukle(); } else { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['hata']?.toString() ?? 'Silinemedi'))); }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: _bg,
+      appBar: AppBar(backgroundColor: _bg, elevation: 0, iconTheme: const IconThemeData(color: Colors.white), title: const Text('Yarı Mamüller', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold))),
+      floatingActionButton: duzenleyebilir ? FloatingActionButton.extended(backgroundColor: _mor1, onPressed: () => _ac(), icon: const Icon(Icons.add, color: Colors.white), label: const Text('Yeni', style: TextStyle(color: Colors.white))) : null,
+      body: loading
+          ? const Center(child: CircularProgressIndicator(color: _mor1))
+          : liste.isEmpty
+              ? const Center(child: Padding(padding: EdgeInsets.all(28), child: Text('Henüz yarı mamül yok.\n\nSos, hamur, marine et gibi ara ürünleri buradan tanımlayın; sonra ürün reçetelerine ekleyin. Satışta hammaddesi otomatik düşer.', textAlign: TextAlign.center, style: TextStyle(color: _gri, fontSize: 13, height: 1.5))))
+              : RefreshIndicator(onRefresh: _yukle, color: _mor1, backgroundColor: _card, child: ListView(padding: const EdgeInsets.all(14), children: [
+                  for (final y in liste) _kart(y as Map),
+                  const SizedBox(height: 90),
+                ])),
+    );
+  }
+
+  Widget _kart(Map y) {
+    return GestureDetector(
+      onTap: () => _ac(y),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8), padding: const EdgeInsets.all(13),
+        decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFF232B42))),
+        child: Row(children: [
+          Container(width: 38, height: 38, decoration: BoxDecoration(color: _mavi.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.blender_outlined, color: _mavi, size: 20)),
+          const SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(y['ad'].toString(), style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 3),
+            Text('Verim ${_mik(_n(y['verim_miktar']))} ${y['verim_birim']} · ${y['kalem_sayisi']} bileşen · ${_tl(y['toplam_maliyet'])}', style: const TextStyle(color: _gri, fontSize: 12)),
+          ])),
+          if (duzenleyebilir) IconButton(onPressed: () => _sil(y), icon: const Icon(Icons.delete_outline, color: _gri, size: 20)),
+          const Icon(Icons.chevron_right, color: _gri, size: 20),
+        ]),
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// YARI MAMUL EDITORU — ad + verim + bilesenler (malzeme veya baska yari mamul)
+// ============================================================================
+class YariMamulEditorScreen extends StatefulWidget {
+  final int? id;
+  const YariMamulEditorScreen({super.key, this.id});
+  @override
+  State<YariMamulEditorScreen> createState() => _YariMamulEditorScreenState();
+}
+
+class _YariMamulEditorScreenState extends State<YariMamulEditorScreen> {
+  final adC = TextEditingController();
+  final verimC = TextEditingController(text: '1');
+  int verimBirimId = 0;
+  final List<Map<String, dynamic>> kalemler = [];
+  List malzemeler = [];
+  List yarimamuller = [];
+  List birimler = [];
+  bool loading = true;
+  bool kaydediliyor = false;
+
+  @override
+  void initState() { super.initState(); _yukle(); }
+
+  Future<void> _yukle() async {
+    final auth = context.read<AuthProvider>();
+    try {
+      final m = await Api.stokMeta(auth.token!);
+      final mal = await Api.malzemeler(auth.token!);
+      final ym = await Api.yariMamuller(auth.token!);
+      Map<String, dynamic>? detay;
+      if (widget.id != null) detay = await Api.yariMamulDetay(auth.token!, widget.id!);
+      if (!mounted) return;
+      setState(() {
+        birimler = (m['birimler'] as List?) ?? [];
+        malzemeler = (mal['malzemeler'] as List?) ?? [];
+        // kendini nesting listesinden cikar (dongu onleme — backend de engeller)
+        yarimamuller = ((ym['yarimamuller'] as List?) ?? []).where((x) => _n((x as Map)['id']).toInt() != (widget.id ?? -1)).toList();
+        verimBirimId = birimler.isNotEmpty ? _n((birimler.first as Map)['id']).toInt() : 0;
+        if (detay != null && detay['ok'] == 1) {
+          adC.text = detay['ad']?.toString() ?? '';
+          verimC.text = _mik(_n(detay['verim_miktar']));
+          verimBirimId = _n(detay['verim_birim_id']).toInt();
+          for (final k in (detay['kalemler'] as List?) ?? []) {
+            final km = k as Map;
+            if (km['yarimamul'] == true || km['alt_recete_id'] != null) {
+              final miktar = _n(km['miktar']).toDouble();
+              final ymRow = yarimamuller.firstWhere((x) => _n((x as Map)['id']).toInt() == _n(km['alt_recete_id']).toInt(), orElse: () => null);
+              final bm = ymRow != null ? _n((ymRow as Map)['birim_maliyet']).toDouble() : (miktar > 0 ? _n(km['satir_maliyet']).toDouble() / miktar : 0.0);
+              kalemler.add({'alt_recete_id': _n(km['alt_recete_id']).toInt(), 'malzeme': km['malzeme'], 'yarimamul': true, 'miktar': miktar, 'birim_id': _n(km['birim_id']).toInt(), 'birim': km['birim'], 'birim_maliyet': bm});
+            } else {
+              kalemler.add({'malzeme_id': _n(km['malzeme_id']).toInt(), 'malzeme': km['malzeme'], 'miktar': _n(km['miktar']).toDouble(), 'birim_id': _n(km['birim_id']).toInt(), 'birim': km['birim']});
+            }
+          }
+        }
+        loading = false;
+      });
+    } catch (_) { if (mounted) setState(() => loading = false); }
+  }
+
+  void _uyar(String m) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m))); }
+
+  double _malzemeMaliyet(int id) {
+    final m = malzemeler.firstWhere((x) => _n((x as Map)['id']).toInt() == id, orElse: () => null);
+    return m == null ? 0 : _n((m as Map)['guncel_maliyet']).toDouble();
+  }
+
+  double _cevrim(int malzemeId, int birimId) {
+    final m = malzemeler.firstWhere((x) => _n((x as Map)['id']).toInt() == malzemeId, orElse: () => null);
+    if (m == null) return 1;
+    final temel = _n((m as Map)['temel_birim_id']).toInt();
+    if (birimId == temel) return 1;
+    final b = birimler.firstWhere((x) => _n((x as Map)['id']).toInt() == birimId, orElse: () => null);
+    final t = birimler.firstWhere((x) => _n((x as Map)['id']).toInt() == temel, orElse: () => null);
+    if (b == null || t == null) return 1;
+    final bk = (b as Map)['kisaltma'].toString();
+    final tk = (t as Map)['kisaltma'].toString();
+    const genel = {'kg': {'g': 1000.0}, 'lt': {'ml': 1000.0}, 'g': {'kg': 0.001}, 'ml': {'lt': 0.001}};
+    return (genel[bk]?[tk]) ?? 1.0;
+  }
+
+  double _satir(Map k) => (k['yarimamul'] == true
+      ? _n(k['miktar']) * _n(k['birim_maliyet'])
+      : _n(k['miktar']) * _cevrim(k['malzeme_id'], k['birim_id']) * _malzemeMaliyet(k['malzeme_id'])).toDouble();
+
+  double get _maliyet { double t = 0; for (final k in kalemler) { t += _satir(k); } return t; }
+
+  Future<void> _kalemEkle() async {
+    if (malzemeler.isEmpty && yarimamuller.isEmpty) { _uyar('Önce Stok ekranından malzeme ekleyin'); return; }
+    bool yariMod = false;
+    int malzemeId = malzemeler.isNotEmpty ? _n((malzemeler.first as Map)['id']).toInt() : 0;
+    int birimId = malzemeler.isNotEmpty ? _n((malzemeler.first as Map)['temel_birim_id']).toInt() : 0;
+    int ymId = yarimamuller.isNotEmpty ? _n((yarimamuller.first as Map)['id']).toInt() : 0;
+    final miktarC = TextEditingController();
+    final eklendi = await showModalBottomSheet<bool>(
+      context: context, isScrollControlled: true, backgroundColor: _bg,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => StatefulBuilder(builder: (ctx, setS) {
+        Widget seg(String t, bool val) => Expanded(child: GestureDetector(
+              onTap: (val && yarimamuller.isEmpty) ? null : () => setS(() => yariMod = val),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(color: yariMod == val ? _mor1 : _card, borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFF2D3752))),
+                child: Text(t, textAlign: TextAlign.center, style: TextStyle(color: yariMod == val ? Colors.white : _gri, fontWeight: FontWeight.w600, fontSize: 13)),
+              ),
+            ));
+        final y = yarimamuller.firstWhere((x) => _n((x as Map)['id']).toInt() == ymId, orElse: () => null);
+        final vb = y == null ? '' : (y as Map)['verim_birim'].toString();
+        return Padding(
+          padding: EdgeInsets.only(left: 16, right: 16, top: 16, bottom: MediaQuery.of(ctx).viewInsets.bottom + 16),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 14), alignment: Alignment.center, decoration: BoxDecoration(color: const Color(0xFF2D3752), borderRadius: BorderRadius.circular(2))),
+            const Text('Bileşen Ekle', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            Row(children: [seg('Malzeme', false), const SizedBox(width: 8), seg('Yarı Mamül', true)]),
+            const SizedBox(height: 12),
+            if (!yariMod) ...[
+              _drop2('Malzeme', malzemeId, {for (final mm in malzemeler) _n((mm as Map)['id']).toInt(): mm['ad'].toString()}, (v) {
+                final mm = malzemeler.firstWhere((x) => _n((x as Map)['id']).toInt() == v);
+                setS(() { malzemeId = v; birimId = _n((mm as Map)['temel_birim_id']).toInt(); });
+              }),
+              const SizedBox(height: 10),
+              Row(children: [
+                Expanded(child: TextField(controller: miktarC, autofocus: true, keyboardType: const TextInputType.numberWithOptions(decimal: true), style: const TextStyle(color: Colors.white), decoration: _dec('Miktar'))),
+                const SizedBox(width: 10),
+                Expanded(child: _drop2('Birim', birimId, {for (final b in birimler) _n((b as Map)['id']).toInt(): b['kisaltma'].toString()}, (v) => setS(() => birimId = v))),
+              ]),
+            ] else ...[
+              _drop2('Yarı Mamül', ymId, {for (final yy in yarimamuller) _n((yy as Map)['id']).toInt(): yy['ad'].toString()}, (v) => setS(() => ymId = v)),
+              const SizedBox(height: 10),
+              Row(children: [
+                Expanded(child: TextField(controller: miktarC, autofocus: true, keyboardType: const TextInputType.numberWithOptions(decimal: true), style: const TextStyle(color: Colors.white), decoration: _dec('Miktar${vb.isNotEmpty ? ' ($vb)' : ''}'))),
+                const SizedBox(width: 10),
+                Expanded(child: InputDecorator(decoration: _dec('Birim'), child: Text(vb.isEmpty ? '—' : vb, style: const TextStyle(color: Colors.white)))),
+              ]),
+            ],
+            const SizedBox(height: 14),
+            SizedBox(width: double.infinity, child: FilledButton(style: FilledButton.styleFrom(backgroundColor: _mor1, padding: const EdgeInsets.symmetric(vertical: 14)), onPressed: () => Navigator.pop(ctx, true), child: const Text('Ekle', style: TextStyle(fontWeight: FontWeight.bold)))),
+          ]),
+        );
+      }),
+    );
+    if (eklendi != true) return;
+    final miktar = double.tryParse(miktarC.text.replaceAll(',', '.')) ?? 0;
+    if (miktar <= 0) { _uyar('Geçerli miktar girin'); return; }
+    if (yariMod) {
+      if (ymId <= 0) { _uyar('Yarı mamül seçin'); return; }
+      if (kalemler.any((k) => k['yarimamul'] == true && _n(k['alt_recete_id']).toInt() == ymId)) { _uyar('Bu yarı mamül zaten ekli'); return; }
+      final y = yarimamuller.firstWhere((x) => _n((x as Map)['id']).toInt() == ymId) as Map;
+      setState(() => kalemler.add({'alt_recete_id': ymId, 'malzeme': y['ad'], 'yarimamul': true, 'miktar': miktar, 'birim_id': _n(y['verim_birim_id']).toInt(), 'birim': y['verim_birim'], 'birim_maliyet': _n(y['birim_maliyet']).toDouble()}));
+    } else {
+      if (malzemeId <= 0) { _uyar('Malzeme seçin'); return; }
+      if (kalemler.any((k) => k['yarimamul'] != true && _n(k['malzeme_id']).toInt() == malzemeId)) { _uyar('Bu malzeme zaten ekli'); return; }
+      final malzeme = malzemeler.firstWhere((x) => _n((x as Map)['id']).toInt() == malzemeId) as Map;
+      final birim = birimler.firstWhere((x) => _n((x as Map)['id']).toInt() == birimId) as Map;
+      setState(() => kalemler.add({'malzeme_id': malzemeId, 'malzeme': malzeme['ad'], 'miktar': miktar, 'birim_id': birimId, 'birim': birim['kisaltma']}));
+    }
+  }
+
+  Future<void> _kaydet() async {
+    final ad = adC.text.trim();
+    if (ad.isEmpty) { _uyar('Yarı mamül adı girin (ör. Pizza Sosu)'); return; }
+    final verim = double.tryParse(verimC.text.replaceAll(',', '.')) ?? 0;
+    if (verim <= 0) { _uyar('Verim (kaç çıkıyor) 0’dan büyük olmalı'); return; }
+    if (verimBirimId <= 0) { _uyar('Verim birimi seçin'); return; }
+    if (kalemler.isEmpty) { _uyar('En az bir bileşen ekleyin (reçetesiz yarı mamül olmaz)'); return; }
+    setState(() => kaydediliyor = true);
+    final auth = context.read<AuthProvider>();
+    try {
+      final gonder = kalemler.map((k) => k['yarimamul'] == true
+          ? {'alt_recete_id': k['alt_recete_id'], 'miktar': k['miktar'], 'birim_id': k['birim_id']}
+          : {'malzeme_id': k['malzeme_id'], 'miktar': k['miktar'], 'birim_id': k['birim_id']}).toList();
+      final res = await Api.yariMamulKaydet(auth.token!, id: widget.id, ad: ad, verimMiktar: verim, verimBirimId: verimBirimId, kalemler: gonder);
+      if (!mounted) return;
+      if (res['ok'] == 1) { Navigator.of(context).pop(true); }
+      else { setState(() => kaydediliyor = false); _uyar(res['hata']?.toString() ?? 'Kaydedilemedi'); }
+    } catch (_) { if (mounted) { setState(() => kaydediliyor = false); _uyar('Bağlantı hatası'); } }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: _bg,
+      appBar: AppBar(backgroundColor: _bg, elevation: 0, iconTheme: const IconThemeData(color: Colors.white), title: Text(widget.id == null ? 'Yeni Yarı Mamül' : 'Yarı Mamül', style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold))),
+      body: loading
+          ? const Center(child: CircularProgressIndicator(color: _mor1))
+          : Column(children: [
+              Expanded(child: ListView(padding: const EdgeInsets.all(14), children: [
+                TextField(controller: adC, style: const TextStyle(color: Colors.white), decoration: _dec('Yarı mamül adı (ör. Pizza Sosu)')),
+                const SizedBox(height: 12),
+                Row(children: [
+                  Expanded(child: TextField(controller: verimC, keyboardType: const TextInputType.numberWithOptions(decimal: true), style: const TextStyle(color: Colors.white), decoration: _dec('Verim (kaç çıkıyor)'))),
+                  const SizedBox(width: 10),
+                  Expanded(child: _drop2('Verim birimi', verimBirimId, {for (final b in birimler) _n((b as Map)['id']).toInt(): b['kisaltma'].toString()}, (v) => setState(() => verimBirimId = v))),
+                ]),
+                const SizedBox(height: 6),
+                const Text('Örn: “5” + “lt” → bu reçete 5 litre çıkarır. Ürün reçetesine eklerken bu birimden (ml/lt) miktar girilir.', style: TextStyle(color: _gri, fontSize: 11)),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(gradient: const LinearGradient(colors: [_mor1, _mavi]), borderRadius: BorderRadius.circular(16)),
+                  child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                    const Text('Toplam Maliyet', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                    Text(_tl(_maliyet), style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                  ]),
+                ),
+                const SizedBox(height: 16),
+                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                  const Text('Bileşenler', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                  TextButton.icon(onPressed: _kalemEkle, icon: const Icon(Icons.add, color: _mavi, size: 18), label: const Text('Bileşen Ekle', style: TextStyle(color: _mavi))),
+                ]),
+                if (kalemler.isEmpty)
+                  const Padding(padding: EdgeInsets.symmetric(vertical: 16), child: Text('Bileşen ekleyin (malzeme veya başka bir yarı mamül).', style: TextStyle(color: _gri, fontSize: 13)))
+                else
+                  for (int i = 0; i < kalemler.length; i++) _kalemKart(i),
+                const SizedBox(height: 80),
+              ])),
+              _altBar(),
+            ]),
+    );
+  }
+
+  Widget _kalemKart(int i) {
+    final k = kalemler[i];
+    return Container(
+      margin: const EdgeInsets.only(top: 8), padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFF232B42))),
+      child: Row(children: [
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Flexible(child: Text(k['malzeme'].toString(), overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14))),
+            if (k['yarimamul'] == true) ...[const SizedBox(width: 6), Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1), decoration: BoxDecoration(color: _mavi.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(6)), child: const Text('yarı mamül', style: TextStyle(color: _mavi, fontSize: 9, fontWeight: FontWeight.bold)))],
+          ]),
+          Text('${_mik(_n(k['miktar']))} ${k['birim']}', style: const TextStyle(color: _gri, fontSize: 12)),
+        ])),
+        Text(_tl(_satir(k)), style: const TextStyle(color: _gri, fontWeight: FontWeight.bold)),
+        IconButton(padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 36), onPressed: () => setState(() => kalemler.removeAt(i)), icon: const Icon(Icons.close, color: _gri, size: 18)),
+      ]),
+    );
+  }
+
+  Widget _altBar() => Container(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+        decoration: const BoxDecoration(color: _card, border: Border(top: BorderSide(color: Color(0xFF232B42)))),
+        child: SizedBox(width: double.infinity, child: FilledButton(
+          style: FilledButton.styleFrom(backgroundColor: _mor1, padding: const EdgeInsets.symmetric(vertical: 14)),
+          onPressed: kaydediliyor ? null : _kaydet,
+          child: kaydediliyor ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Text('Yarı Mamülü Kaydet', style: TextStyle(fontWeight: FontWeight.bold)),
         )),
       );
 }
