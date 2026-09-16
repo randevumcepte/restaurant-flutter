@@ -188,7 +188,9 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
   Widget _kanvas(TemaProvider t) {
     return LayoutBuilder(builder: (ctx, c) {
       final w = c.maxWidth - 24;
-      double s(num v) => v / 1000 * w;
+      final h = (c.maxHeight - 24).clamp(240.0, 100000.0); // mevcut yüksekliği DOLDUR (alt boşluk kalmasın)
+      double sx(num v) => v / 1000 * w;
+      double sy(num v) => v / 1000 * h;
       return Padding(
         padding: const EdgeInsets.all(12),
         child: ClipRect(
@@ -199,7 +201,7 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
             minScale: 0.9, maxScale: 5,
             boundaryMargin: const EdgeInsets.all(120),
             child: SizedBox(
-              width: w, height: w,
+              width: w, height: h,
               child: Stack(clipBehavior: Clip.none, children: [
               // Zemin (dokununca seçim bırak)
               Positioned.fill(child: GestureDetector(
@@ -209,16 +211,16 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
                   parselDolgu: const Color(0xFF0EA5E9).withValues(alpha: 0.10),
                   parselCizgi: const Color(0xFF0EA5E9),
                   bos: t.koyu ? const Color(0xFF0E1526) : const Color(0xFFF1F5F9),
-                  pts: (parsel[aktifKat] ?? const []).map((p) => Offset(s(p[0]).toDouble(), s(p[1]).toDouble())).toList(),
+                  pts: (parsel[aktifKat] ?? const []).map((p) => Offset(sx(p[0]).toDouble(), sy(p[1]).toDouble())).toList(),
                 )),
               )),
               for (int i = 0; i < bolgeler.length; i++)
-                if (_n(bolgeler[i]['kat']).toInt() == aktifKat) _bolgeWidget(t, i, s, w),
+                if (_n(bolgeler[i]['kat']).toInt() == aktifKat) _bolgeWidget(t, i, sx, sy, w, h),
               for (int i = 0; i < noktalar.length; i++)
-                if (_n(noktalar[i]['kat']).toInt() == aktifKat) _noktaWidget(t, i, s, w),
+                if (_n(noktalar[i]['kat']).toInt() == aktifKat) _noktaWidget(t, i, sx, sy, w, h),
               for (final e in masaYer.entries)
-                if (_n(e.value['kat']).toInt() == aktifKat) _masaWidget(t, e.key, s, w),
-              for (int i = 0; i < (parsel[aktifKat]?.length ?? 0); i++) _koseTutamak(t, i, s, w),
+                if (_n(e.value['kat']).toInt() == aktifKat) _masaWidget(t, e.key, sx, sy, w, h),
+              for (int i = 0; i < (parsel[aktifKat]?.length ?? 0); i++) _koseTutamak(t, i, sx, sy, w, h),
               ]),
             ),
           ),
@@ -229,16 +231,16 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
 
   bool _sec(String tur, dynamic k) => secili != null && secili!['tur'] == tur && secili!['anahtar'] == k;
 
-  Widget _koseTutamak(TemaProvider t, int i, double Function(num) s, double cw) {
+  Widget _koseTutamak(TemaProvider t, int i, double Function(num) sx, double Function(num) sy, double cw, double ch) {
     final pt = parsel[aktifKat]![i];
     final sc = _sec('kose', i);
     return Positioned(
-      left: s(pt[0]) - 13, top: s(pt[1]) - 13,
+      left: sx(pt[0]) - 13, top: sy(pt[1]) - 13,
       child: GestureDetector(
         onTap: () => setState(() => secili = {'tur': 'kose', 'anahtar': i}),
         onPanUpdate: (d) => setState(() {
           pt[0] = (pt[0] + d.delta.dx / cw * 1000).clamp(0, 1000);
-          pt[1] = (pt[1] + d.delta.dy / cw * 1000).clamp(0, 1000);
+          pt[1] = (pt[1] + d.delta.dy / ch * 1000).clamp(0, 1000);
         }),
         child: Container(width: 26, height: 26, decoration: BoxDecoration(
           color: const Color(0xFF0EA5E9), shape: BoxShape.circle,
@@ -247,21 +249,21 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
     );
   }
 
-  Widget _bolgeWidget(TemaProvider t, int i, double Function(num) s, double cw) {
+  Widget _bolgeWidget(TemaProvider t, int i, double Function(num) sx, double Function(num) sy, double cw, double ch) {
     final b = bolgeler[i];
     final sc = _sec('bolge', i);
     const renk = Color(0xFF0EA5E9);
     return Positioned(
-      left: s(_n(b['x'])), top: s(_n(b['y'])),
+      left: sx(_n(b['x'])), top: sy(_n(b['y'])),
       child: GestureDetector(
         onTap: () => setState(() => secili = {'tur': 'bolge', 'anahtar': i}),
         onLongPress: () => _sil('bolge', i),
         onPanUpdate: (d) => setState(() {
           b['x'] = (_n(b['x']) + d.delta.dx / cw * 1000).clamp(0, 1000);
-          b['y'] = (_n(b['y']) + d.delta.dy / cw * 1000).clamp(0, 1000);
+          b['y'] = (_n(b['y']) + d.delta.dy / ch * 1000).clamp(0, 1000);
         }),
         child: Container(
-          width: s(_n(b['w'])), height: s(_n(b['h'])),
+          width: sx(_n(b['w'])), height: sy(_n(b['h'])),
           decoration: BoxDecoration(color: renk.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10),
               border: Border.all(color: sc ? renk : renk.withValues(alpha: 0.5), width: sc ? 2 : 1.2)),
           child: Stack(children: [
@@ -269,7 +271,7 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
             if (sc) Positioned(right: 0, bottom: 0, child: GestureDetector(
               onPanUpdate: (d) => setState(() {
                 b['w'] = (_n(b['w']) + d.delta.dx / cw * 1000).clamp(90, 1000);
-                b['h'] = (_n(b['h']) + d.delta.dy / cw * 1000).clamp(70, 1000);
+                b['h'] = (_n(b['h']) + d.delta.dy / ch * 1000).clamp(70, 1000);
               }),
               child: Container(width: 26, height: 26, decoration: BoxDecoration(color: renk, borderRadius: BorderRadius.circular(6)),
                   child: const Icon(Icons.open_in_full, size: 15, color: Colors.white)))),
@@ -279,18 +281,18 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
     );
   }
 
-  Widget _noktaWidget(TemaProvider t, int i, double Function(num) s, double cw) {
+  Widget _noktaWidget(TemaProvider t, int i, double Function(num) sx, double Function(num) sy, double cw, double ch) {
     final nk = noktalar[i];
     final def = _tipler[nk['tip']?.toString() ?? 'diger'] ?? _tipler['diger']!;
     final sc = _sec('nokta', i);
     return Positioned(
-      left: s(_n(nk['x'])) - 30, top: s(_n(nk['y'])) - 28,
+      left: sx(_n(nk['x'])) - 30, top: sy(_n(nk['y'])) - 28,
       child: GestureDetector(
         onTap: () => setState(() => secili = {'tur': 'nokta', 'anahtar': i}),
         onLongPress: () => _sil('nokta', i),
         onPanUpdate: (d) => setState(() {
           nk['x'] = (_n(nk['x']) + d.delta.dx / cw * 1000).clamp(0, 1000);
-          nk['y'] = (_n(nk['y']) + d.delta.dy / cw * 1000).clamp(0, 1000);
+          nk['y'] = (_n(nk['y']) + d.delta.dy / ch * 1000).clamp(0, 1000);
         }),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Container(padding: const EdgeInsets.all(9),
@@ -305,21 +307,21 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
     );
   }
 
-  Widget _masaWidget(TemaProvider t, String mid, double Function(num) s, double cw) {
+  Widget _masaWidget(TemaProvider t, String mid, double Function(num) sx, double Function(num) sy, double cw, double ch) {
     final yer = masaYer[mid]!;
     final masa = masalar.firstWhere((m) => '${m['id']}' == mid, orElse: () => <String, dynamic>{'ad': mid, 'sekil': 'kare'});
     final yuvarlak = (masa['sekil']?.toString() ?? 'kare') == 'yuvarlak';
     final sc = _sec('masa', mid);
     final boyV = _n(yer['boy']) <= 0 ? 170.0 : _n(yer['boy']).toDouble();
-    final boyut = s(boyV).clamp(28.0, cw);
+    final boyut = sx(boyV).clamp(28.0, cw);
     return Positioned(
-      left: s(_n(yer['x'])) - boyut / 2, top: s(_n(yer['y'])) - boyut / 2,
+      left: sx(_n(yer['x'])) - boyut / 2, top: sy(_n(yer['y'])) - boyut / 2,
       child: GestureDetector(
         onTap: () => setState(() => secili = {'tur': 'masa', 'anahtar': mid}),
         onLongPress: () => _sil('masa', mid),
         onPanUpdate: (d) => setState(() {
           yer['x'] = (_n(yer['x']) + d.delta.dx / cw * 1000).clamp(0, 1000);
-          yer['y'] = (_n(yer['y']) + d.delta.dy / cw * 1000).clamp(0, 1000);
+          yer['y'] = (_n(yer['y']) + d.delta.dy / ch * 1000).clamp(0, 1000);
         }),
         child: Stack(clipBehavior: Clip.none, children: [
           Container(
