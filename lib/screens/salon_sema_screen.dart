@@ -28,6 +28,7 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
   List<Map<String, dynamic>> masalar = [];          // sunucu: {id,ad,kapasite,sekil}
 
   Map<String, dynamic>? secili; // {tur: masa|bolge|nokta|kose, anahtar}
+  final TransformationController _tc = TransformationController();
 
   num _n(dynamic v) => v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0);
 
@@ -35,6 +36,20 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
   void initState() {
     super.initState();
     _yukle();
+  }
+
+  @override
+  void dispose() {
+    _tc.dispose();
+    super.dispose();
+  }
+
+  void _zoom(double f) {
+    final m = _tc.value.clone()..scaleByDouble(f, f, 1, 1);
+    // aşırıya kaçmasın
+    final o = m.getMaxScaleOnAxis();
+    if (o < 0.9 || o > 5) return;
+    _tc.value = m;
   }
 
   Future<void> _yukle() async {
@@ -114,6 +129,8 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
         iconTheme: IconThemeData(color: t.ink),
         title: Text('Salon Şeması', style: TextStyle(color: t.ink, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
         actions: [
+          IconButton(tooltip: 'Uzaklaş', onPressed: () => _zoom(0.8), icon: Icon(Icons.zoom_out, color: t.sub)),
+          IconButton(tooltip: 'Yakınlaş', onPressed: () => _zoom(1.25), icon: Icon(Icons.zoom_in, color: t.sub)),
           IconButton(tooltip: 'Bu katı temizle', onPressed: _katiTemizle, icon: Icon(Icons.layers_clear_outlined, color: t.sub)),
           TextButton.icon(onPressed: mesgul ? null : _kaydet, icon: Icon(Icons.save_outlined, color: t.mor1, size: 20),
               label: Text('Kaydet', style: TextStyle(color: t.mor1, fontWeight: FontWeight.bold))),
@@ -176,8 +193,9 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
         padding: const EdgeInsets.all(12),
         child: ClipRect(
           child: InteractiveViewer(
-            panEnabled: true,           // boşlukta tek parmak = kaydır
-            scaleEnabled: true,         // iki parmak = yakınlaştır (parsel detay için)
+            transformationController: _tc,
+            panEnabled: false,          // tek parmak = öğe/köşe TAŞI (kanvas kaymasın)
+            scaleEnabled: true,         // iki parmak = yakınlaştır + kaydır (parsel detay)
             minScale: 0.9, maxScale: 5,
             boundaryMargin: const EdgeInsets.all(120),
             child: SizedBox(
