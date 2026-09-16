@@ -51,12 +51,12 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
     try {
       final p = await SharedPreferences.getInstance();
       final v = p.getDouble('isi_masa_olcek') ?? 1.0;
-      if (mounted) setState(() => _masaOlcek = v.clamp(0.4, 3.0));
+      if (mounted) setState(() => _masaOlcek = v.clamp(0.3, 3.0));
     } catch (_) {}
   }
 
   void _olcekAyarla(double d) {
-    setState(() => _masaOlcek = (_masaOlcek + d).clamp(0.4, 3.0));
+    setState(() => _masaOlcek = (_masaOlcek + d).clamp(0.3, 3.0));
     SharedPreferences.getInstance().then((p) => p.setDouble('isi_masa_olcek', _masaOlcek)).catchError((_) => false);
   }
 
@@ -689,7 +689,7 @@ class _SemaPainter extends CustomPainter {
     canvas.save();
     canvas.clipPath(zemin);
     // soğuk mavi taban (en az yürünen yerler mavi)
-    canvas.drawRect(Offset.zero & size, Paint()..color = const Color(0xFF1E40AF).withValues(alpha: 0.32));
+    canvas.drawRect(Offset.zero & size, Paint()..color = const Color(0xFF1E40AF).withValues(alpha: 0.26));
 
     double avg = 0;
     for (final m in tablolar) { avg += m.size; }
@@ -715,16 +715,26 @@ class _SemaPainter extends CustomPainter {
         segs.add([nk.c.dx, nk.c.dy, sirali[k].c.dx, sirali[k].c.dy, 0.72 + 0.28 * sirali[k].o]);
       }
     }
-    // düşükten yükseğe çiz → sıcak koridorlar üstte
+    // düşükten yükseğe çiz → sıcak koridorlar üstte (gamma ile orta değerler yükseltilir)
     segs.sort((p, q) => p[4].compareTo(q[4]));
-    final sw = (avg * 0.5).clamp(10.0, 40.0);
+    final sw = (avg * 0.62).clamp(12.0, 48.0);
     for (final s in segs) {
+      final w = math.pow(s[4].clamp(0.0, 1.0), 0.6).toDouble(); // ısıyı belirginleştir
       final p = Paint()
-        ..color = _jet5(s[4]).withValues(alpha: 0.9)
+        ..color = _jet5(w).withValues(alpha: 0.95)
         ..strokeWidth = sw
         ..strokeCap = StrokeCap.round
         ..maskFilter = MaskFilter.blur(BlurStyle.normal, sw * 0.42);
       canvas.drawLine(Offset(s[0], s[1]), Offset(s[2], s[3]), p);
+    }
+    // yoğun masalara ısı halesi (veri belirgin çıksın; masa görseli üstte örtecek)
+    for (final m in tablolar) {
+      if (m.o < 0.12) continue;
+      final w = math.pow(m.o, 0.6).toDouble();
+      final rad = avg * (0.75 + m.o * 0.9);
+      final sh = RadialGradient(colors: [_jet5(w).withValues(alpha: 0.7), _jet5(w).withValues(alpha: 0.0)])
+          .createShader(Rect.fromCircle(center: m.c, radius: rad));
+      canvas.drawCircle(m.c, rad, Paint()..shader = sh);
     }
     canvas.restore();
   }
@@ -813,7 +823,7 @@ class _SemaPainter extends CustomPainter {
     // COMBO GÖRSEL: masa+sandalye tek PNG → onu bas (ayrı sandalye çizme), boyut ayarıyla ölçekli
     final combo = m.yuvarlak ? gorsel['masa_yuvarlak'] : gorsel['masa_kare'];
     if (combo != null) {
-      final w = s * 1.85 * masaOlcek;
+      final w = s * 1.3 * masaOlcek;
       final h = w * combo.height / combo.width; // en-boy oranını koru
       final rect = Rect.fromCenter(center: m.c, width: w, height: h);
       canvas.drawRRect(
