@@ -554,16 +554,19 @@ class _ReceteEditorScreenState extends State<ReceteEditorScreen> {
           padding: EdgeInsets.only(left: 16, right: 16, top: 16, bottom: MediaQuery.of(ctx).viewInsets.bottom + 16),
           child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
             Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 14), alignment: Alignment.center, decoration: BoxDecoration(color: const Color(0xFF2D3752), borderRadius: BorderRadius.circular(2))),
-            const Text('Reçeteye Ekle', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+            Row(children: [
+              const Expanded(child: Text('Reçeteye Ekle', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))),
+              GestureDetector(onTap: () => Navigator.pop(ctx), child: const Icon(Icons.close, color: _gri, size: 22)),
+            ]),
             const SizedBox(height: 12),
             Row(children: [seg('Malzeme', false), const SizedBox(width: 8), seg('Yarı Mamül', true)]),
             if (yarimamuller.isEmpty)
               Padding(padding: const EdgeInsets.only(top: 8), child: Text('Yarı mamül tanımlı değil — Reçeteler ekranındaki "Yarı Mamüller"den ekleyebilirsin.', style: const TextStyle(color: _gri, fontSize: 11))),
             const SizedBox(height: 12),
             if (!yariMod) ...[
-              _drop('Malzeme', malzemeId, {for (final m in malzemeler) _n((m as Map)['id']).toInt(): m['ad'].toString()}, (v) {
-                final m = malzemeler.firstWhere((x) => _n((x as Map)['id']).toInt() == v);
-                setS(() { malzemeId = v; birimId = _n((m as Map)['temel_birim_id']).toInt(); });
+              _secField('Malzeme', {for (final m in malzemeler) _n((m as Map)['id']).toInt(): m['ad'].toString()}[malzemeId] ?? '', () async {
+                final v = await _secimPicker(ctx, 'Malzeme seç', {for (final m in malzemeler) _n((m as Map)['id']).toInt(): m['ad'].toString()});
+                if (v != null) { final m = malzemeler.firstWhere((x) => _n((x as Map)['id']).toInt() == v); setS(() { malzemeId = v; birimId = _n((m as Map)['temel_birim_id']).toInt(); }); }
               }),
               const SizedBox(height: 10),
               Row(children: [
@@ -572,7 +575,10 @@ class _ReceteEditorScreenState extends State<ReceteEditorScreen> {
                 Expanded(child: _drop('Birim', birimId, {for (final b in birimler) _n((b as Map)['id']).toInt(): b['kisaltma'].toString()}, (v) => setS(() => birimId = v))),
               ]),
             ] else ...[
-              _drop('Yarı Mamül', ymId, {for (final yy in yarimamuller) _n((yy as Map)['id']).toInt(): yy['ad'].toString()}, (v) => setS(() => ymId = v)),
+              _secField('Yarı Mamül', {for (final yy in yarimamuller) _n((yy as Map)['id']).toInt(): yy['ad'].toString()}[ymId] ?? '', () async {
+                final v = await _secimPicker(ctx, 'Yarı mamül seç', {for (final yy in yarimamuller) _n((yy as Map)['id']).toInt(): yy['ad'].toString()});
+                if (v != null) setS(() => ymId = v);
+              }),
               const SizedBox(height: 10),
               Row(children: [
                 Expanded(child: TextField(controller: miktarC, autofocus: true, keyboardType: const TextInputType.numberWithOptions(decimal: true), style: const TextStyle(color: Colors.white), decoration: _dec('Miktar${vb.isNotEmpty ? ' ($vb)' : ''}'))),
@@ -641,6 +647,49 @@ Widget _drop2(String label, int? value, Map<int, String> items, ValueChanged<int
         items: items.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value, overflow: TextOverflow.ellipsis))).toList(),
         onChanged: (v) { if (v != null) onChanged(v); },
       )),
+    );
+
+// Aranabilir secim: alt tabaka + arama kutusu + filtreli liste. Secilen id doner (yoksa null).
+Future<int?> _secimPicker(BuildContext context, String baslik, Map<int, String> items) {
+  final entries = items.entries.toList();
+  String q = '';
+  return showModalBottomSheet<int>(
+    context: context, isScrollControlled: true, backgroundColor: _bg,
+    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+    builder: (ctx) => StatefulBuilder(builder: (ctx, setS) {
+      final f = q.trim().toLowerCase();
+      final filt = f.isEmpty ? entries : entries.where((e) => e.value.toLowerCase().contains(f)).toList();
+      return Padding(
+        padding: EdgeInsets.only(left: 16, right: 16, top: 12, bottom: MediaQuery.of(ctx).viewInsets.bottom + 12),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Row(children: [
+            Expanded(child: Text(baslik, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold))),
+            IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close, color: _gri)),
+          ]),
+          TextField(autofocus: true, onChanged: (v) => setS(() => q = v), style: const TextStyle(color: Colors.white),
+              decoration: _dec('Ara').copyWith(prefixIcon: const Icon(Icons.search, color: _gri))),
+          const SizedBox(height: 8),
+          Flexible(child: ListView(shrinkWrap: true, children: [
+            for (final e in filt)
+              ListTile(dense: true, title: Text(e.value, style: const TextStyle(color: Colors.white)), onTap: () => Navigator.pop(ctx, e.key)),
+            if (filt.isEmpty) const Padding(padding: EdgeInsets.all(16), child: Center(child: Text('Eşleşme yok', style: TextStyle(color: _gri)))),
+          ])),
+        ]),
+      );
+    }),
+  );
+}
+
+// "Dokun-seç" alani (dropdown yerine; aranabilir picker acar)
+Widget _secField(String label, String value, VoidCallback onTap) => GestureDetector(
+      onTap: onTap,
+      child: InputDecorator(
+        decoration: _dec(label),
+        child: Row(children: [
+          Expanded(child: Text(value.isEmpty ? 'Seç' : value, overflow: TextOverflow.ellipsis, style: TextStyle(color: value.isEmpty ? _gri : Colors.white))),
+          const Icon(Icons.arrow_drop_down, color: _gri),
+        ]),
+      ),
     );
 
 // ============================================================================
@@ -840,14 +889,17 @@ class _YariMamulEditorScreenState extends State<YariMamulEditorScreen> {
           padding: EdgeInsets.only(left: 16, right: 16, top: 16, bottom: MediaQuery.of(ctx).viewInsets.bottom + 16),
           child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
             Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 14), alignment: Alignment.center, decoration: BoxDecoration(color: const Color(0xFF2D3752), borderRadius: BorderRadius.circular(2))),
-            const Text('Bileşen Ekle', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+            Row(children: [
+              const Expanded(child: Text('Bileşen Ekle', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))),
+              GestureDetector(onTap: () => Navigator.pop(ctx), child: const Icon(Icons.close, color: _gri, size: 22)),
+            ]),
             const SizedBox(height: 12),
             Row(children: [seg('Malzeme', false), const SizedBox(width: 8), seg('Yarı Mamül', true)]),
             const SizedBox(height: 12),
             if (!yariMod) ...[
-              _drop2('Malzeme', malzemeId, {for (final mm in malzemeler) _n((mm as Map)['id']).toInt(): mm['ad'].toString()}, (v) {
-                final mm = malzemeler.firstWhere((x) => _n((x as Map)['id']).toInt() == v);
-                setS(() { malzemeId = v; birimId = _n((mm as Map)['temel_birim_id']).toInt(); });
+              _secField('Malzeme', {for (final mm in malzemeler) _n((mm as Map)['id']).toInt(): mm['ad'].toString()}[malzemeId] ?? '', () async {
+                final v = await _secimPicker(ctx, 'Malzeme seç', {for (final mm in malzemeler) _n((mm as Map)['id']).toInt(): mm['ad'].toString()});
+                if (v != null) { final mm = malzemeler.firstWhere((x) => _n((x as Map)['id']).toInt() == v); setS(() { malzemeId = v; birimId = _n((mm as Map)['temel_birim_id']).toInt(); }); }
               }),
               const SizedBox(height: 10),
               Row(children: [
@@ -856,7 +908,10 @@ class _YariMamulEditorScreenState extends State<YariMamulEditorScreen> {
                 Expanded(child: _drop2('Birim', birimId, {for (final b in birimler) _n((b as Map)['id']).toInt(): b['kisaltma'].toString()}, (v) => setS(() => birimId = v))),
               ]),
             ] else ...[
-              _drop2('Yarı Mamül', ymId, {for (final yy in yarimamuller) _n((yy as Map)['id']).toInt(): yy['ad'].toString()}, (v) => setS(() => ymId = v)),
+              _secField('Yarı Mamül', {for (final yy in yarimamuller) _n((yy as Map)['id']).toInt(): yy['ad'].toString()}[ymId] ?? '', () async {
+                final v = await _secimPicker(ctx, 'Yarı mamül seç', {for (final yy in yarimamuller) _n((yy as Map)['id']).toInt(): yy['ad'].toString()});
+                if (v != null) setS(() => ymId = v);
+              }),
               const SizedBox(height: 10),
               Row(children: [
                 Expanded(child: TextField(controller: miktarC, autofocus: true, keyboardType: const TextInputType.numberWithOptions(decimal: true), style: const TextStyle(color: Colors.white), decoration: _dec('Miktar${vb.isNotEmpty ? ' ($vb)' : ''}'))),
