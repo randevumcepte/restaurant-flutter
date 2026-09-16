@@ -44,6 +44,16 @@ class _HomeScreenState extends State<HomeScreen> {
   // sol sabit menu KALIR (SepetTakip gibi).
   final GlobalKey<NavigatorState> _icerikNav = GlobalKey<NavigatorState>();
 
+  // TELEFON govde ic navigator — alt cekilen sayfalar (Garson Perf., Salon Sema, ...)
+  // BUNUN icinde acilir; boylece alt bar + mikrofon HER SAYFADA kalir.
+  final GlobalKey<NavigatorState> _govdeNav = GlobalKey<NavigatorState>();
+
+  // Alt bardan sekme sec: once acik alt sayfayi kapat, sonra sekmeye gec.
+  void _sekmeSec(int i) {
+    _govdeNav.currentState?.popUntil((r) => r.isFirst);
+    anaSekme.value = i;
+  }
+
   static const _bar = Colors.white; // beyaz bar -> belirgin, koyu app uzerinde ayrisir
   static const _secili = Color(0xFF7C3AED); // mor vurgu
   static const _pasif = Color(0xFF94A3B8);
@@ -118,12 +128,26 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    // ---- TELEFON: mevcut alt bar + mikrofon ----
-    return Scaffold(
-      body: IndexedStack(index: _index, children: ekranlar),
-      floatingActionButton: patron ? _mikrofon() : null,
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: patron ? _patronBar() : _personelBar(),
+    // ---- TELEFON: alt bar + mikrofon HER SAYFADA (govde ic navigator) ----
+    // Alt cekilen sayfalar bu ic navigator'da acilir; dis Scaffold'un alt bar'i
+    // ve mikrofonu kalici kalir (daha kullanisli). Geri tusu once ic sayfayi kapatir.
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        final nav = _govdeNav.currentState;
+        if (nav != null && nav.canPop()) { nav.pop(); return; }
+        if (_index != 0) { anaSekme.value = 0; return; } // koke don
+      },
+      child: Scaffold(
+        body: Navigator(
+          key: _govdeNav,
+          onGenerateRoute: (s) => MaterialPageRoute(builder: (_) => _TabGovde(ekranlar: ekranlar)),
+        ),
+        floatingActionButton: patron ? _mikrofon() : null,
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+        bottomNavigationBar: patron ? _patronBar() : _personelBar(),
+      ),
     );
   }
 
@@ -209,7 +233,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final renk = secili ? _secili : _pasif;
     return Expanded(
       child: InkWell(
-        onTap: () => anaSekme.value = i,
+        onTap: () => _sekmeSec(i),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,

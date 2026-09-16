@@ -31,7 +31,9 @@ class _DetayScreenState extends State<DetayScreen> {
   final _f = NumberFormat.decimalPattern('tr');
 
   // Tema-duyarli yuzey/yazi renkleri
-  TemaProvider get _t => context.watch<TemaProvider>();
+  // read (watch DEĞİL): _t modal/dialog builder'larinda da kullaniliyor; watch build DISINDA hata firlatip
+  // Birlestir/Bol/Ayir'i cokertiyordu. Detay ayri route, kendi icinde tema toggle'i yok -> read yeterli.
+  TemaProvider get _t => context.read<TemaProvider>();
   Color get _bg => _t.bg;
   Color get _card => _t.card;
   Color get _card2 => _t.card2;

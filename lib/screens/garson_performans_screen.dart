@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -25,6 +26,7 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
   Map<String, dynamic> isi = {};
   Map<String, dynamic> sema = {}; // salon_sema veri (parsel/bolge/nokta/masa konum) — ısı zemini
   final Map<String, String> _sekil = {}; // masa id -> kare|yuvarlak
+  final Map<String, int> _kapasite = {}; // masa id -> kişi/sandalye sayısı
   bool _semaAlindi = false;
 
   num _n(dynamic v) => v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0);
@@ -53,6 +55,8 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
           if (sres['ok'] == 1 && sres['veri'] is Map) sema = Map<String, dynamic>.from(sres['veri']);
           for (final m in ((sres['masalar'] as List?) ?? [])) {
             _sekil['${m['id']}'] = (m['sekil']?.toString() ?? 'kare');
+            final kap = int.tryParse('${m['kapasite'] ?? ''}') ?? 4;
+            _kapasite['${m['id']}'] = kap.clamp(1, 12);
           }
         } catch (_) {}
       }
@@ -355,7 +359,7 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
         final boyV = _n(yer['boy']) <= 0 ? 150.0 : _n(yer['boy']).toDouble();
         final size = sx(boyV).clamp(32.0, 88.0);
         tablolar.add(_Masa(Offset(sx(_n(yer['x'])), sy(_n(yer['y'])).toDouble()), size, o.toDouble(),
-            _sicaklik(o.toDouble()), (_sekil[id] ?? 'kare') == 'yuvarlak', adMap[id] ?? ''));
+            _sicaklik(o.toDouble()), (_sekil[id] ?? 'kare') == 'yuvarlak', adMap[id] ?? '', _kapasite[id] ?? 4));
       });
       return ClipRRect(
         borderRadius: BorderRadius.circular(14),
@@ -454,10 +458,12 @@ class _Masa {
   final Color renk;
   final bool yuvarlak;
   final String ad;
-  _Masa(this.c, this.size, this.o, this.renk, this.yuvarlak, this.ad);
+  final int kapasite; // sandalye sayısı
+  _Masa(this.c, this.size, this.o, this.renk, this.yuvarlak, this.ad, this.kapasite);
 }
 
-/// Salon şemasını "resimli" çizer: ahşap/karo zemin + kenar yeşillik + masa+sandalye + ısı.
+/// KUŞBAKIŞI GERÇEKÇİ SALON: ahşap zemin + gerçekçi masa/sandalye/saksı;
+/// ÜSTTE ısı yarı saydam cam katman gibi geçer (mobilya altından görünür).
 class _SemaPainter extends CustomPainter {
   final bool koyu;
   final List<Offset> parsel;
@@ -465,117 +471,194 @@ class _SemaPainter extends CustomPainter {
   final List<_Masa> tablolar;
   _SemaPainter({required this.koyu, required this.parsel, required this.zones, required this.tablolar});
 
-  static const _wood = Color(0xFF8B5E3C);
-  static const _woodK = Color(0xFF5B3D26); // sandalye (koyu ahşap)
+  Color _jet(double o) {
+    o = o.clamp(0, 1);
+    if (o < 0.5) return Color.lerp(const Color(0xFF22C55E), const Color(0xFFF59E0B), o / 0.5)!;
+    return Color.lerp(const Color(0xFFF59E0B), const Color(0xFFEF4444), (o - 0.5) / 0.5)!;
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
     final rr = RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(14));
-    canvas.save();
     canvas.clipRRect(rr);
 
-    // Zemin path (parsel varsa onun şekli, yoksa tüm alan)
     Path zemin;
     if (parsel.length >= 3) {
       zemin = Path()..moveTo(parsel[0].dx, parsel[0].dy);
       for (var i = 1; i < parsel.length; i++) { zemin.lineTo(parsel[i].dx, parsel[i].dy); }
       zemin.close();
     } else {
-      zemin = Path()..addRect(Offset.zero & size);
+      zemin = Path()..addRRect(rr);
     }
-    // arka plan (salon dışı)
-    canvas.drawRect(Offset.zero & size, Paint()..color = koyu ? const Color(0xFF0B1020) : const Color(0xFFDDE6D8));
-    // zemin (karo gradient)
+
+    // --- salon dışı (koyu) ---
+    canvas.drawRect(Offset.zero & size, Paint()..color = koyu ? const Color(0xFF0B1020) : const Color(0xFFCBD5E1));
+
+    // --- ZEMİN: sıcak ahşap parke ---
     canvas.save();
     canvas.clipPath(zemin);
-    final zg = LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
-        colors: koyu ? const [Color(0xFF2A3550), Color(0xFF1E2740)] : const [Color(0xFFEDF1F7), Color(0xFFDCE3EF)]);
+    final zg = const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
+        colors: [Color(0xFFE4CBA0), Color(0xFFD3B183)]);
     canvas.drawRect(Offset.zero & size, Paint()..shader = zg.createShader(Offset.zero & size));
-    // karo çizgileri
-    final kp = Paint()..color = (koyu ? Colors.white : Colors.black).withValues(alpha: 0.04)..strokeWidth = 1;
-    for (double x = 0; x < size.width; x += size.width / 14) { canvas.drawLine(Offset(x, 0), Offset(x, size.height), kp); }
-    for (double y = 0; y < size.height; y += size.width / 14) { canvas.drawLine(Offset(0, y), Offset(size.width, y), kp); }
+    // parke tahtaları
+    final plank = Paint()..color = const Color(0xFF9C7B54).withValues(alpha: 0.22)..strokeWidth = 1.2;
+    for (double y = 0; y < size.height; y += size.width / 16) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), plank);
+    }
+    final segw = size.width / 8;
+    for (double y = 0; y < size.height; y += size.width / 16) {
+      final off = ((y ~/ (size.width / 16)) % 2) * segw / 2;
+      for (double x = off; x < size.width; x += segw) {
+        canvas.drawLine(Offset(x, y), Offset(x, y + size.width / 16), plank);
+      }
+    }
     canvas.restore();
 
-    // parsel dış çizgisi (duvar)
-    if (parsel.length >= 3) {
-      canvas.drawPath(zemin, Paint()..color = const Color(0xFF334155)..style = PaintingStyle.stroke..strokeWidth = 4);
-      canvas.drawPath(zemin, Paint()..color = const Color(0xFF64748B)..style = PaintingStyle.stroke..strokeWidth = 1.5);
-    }
-
-    // bölgeler (hafif ayraç)
+    // --- bölge zeminleri (hafif farklı ton + etiket kutusu üstte widget) ---
     for (final z in zones) {
-      canvas.drawRRect(RRect.fromRectAndRadius(z, const Radius.circular(10)),
-          Paint()..color = const Color(0xFF38BDF8).withValues(alpha: 0.05));
-      canvas.drawRRect(RRect.fromRectAndRadius(z, const Radius.circular(10)),
-          Paint()..color = const Color(0xFF38BDF8).withValues(alpha: 0.25)..style = PaintingStyle.stroke..strokeWidth = 1);
+      final rz = RRect.fromRectAndRadius(z, const Radius.circular(12));
+      canvas.drawRRect(rz, Paint()..color = const Color(0xFFFFFFFF).withValues(alpha: 0.06));
+      canvas.drawRRect(rz, Paint()..color = const Color(0xFF7C5A3A).withValues(alpha: 0.35)..style = PaintingStyle.stroke..strokeWidth = 1.4);
     }
 
-    // kenar yeşillik (parsel kenarları boyunca saksılar)
+    // --- kenar yeşillik (saksılar) ---
     if (parsel.length >= 2) {
       final cx = parsel.map((p) => p.dx).reduce((a, b) => a + b) / parsel.length;
       final cy = parsel.map((p) => p.dy).reduce((a, b) => a + b) / parsel.length;
       final merkez = Offset(cx, cy);
       for (var i = 0; i < parsel.length; i++) {
         final a = parsel[i], b = parsel[(i + 1) % parsel.length];
-        final uz = (b - a).distance;
-        final adet = (uz / 46).floor().clamp(1, 40);
+        final adet = ((b - a).distance / 52).floor().clamp(1, 30);
         for (var k = 0; k <= adet; k++) {
-          final t = k / (adet == 0 ? 1 : adet);
-          var p = Offset.lerp(a, b, t)!;
-          final ic = (merkez - p);
-          final n = ic.distance == 0 ? const Offset(0, 0) : ic / ic.distance;
-          p = p + n * 9; // biraz içeri
+          var p = Offset.lerp(a, b, k / (adet == 0 ? 1 : adet))!;
+          final ic = merkez - p;
+          if (ic.distance > 0) p = p + (ic / ic.distance) * 12;
           _saksi(canvas, p);
         }
       }
     }
 
-    // MASALAR: ısı glow -> sandalyeler -> masa üstü
+    // --- MASALAR + SANDALYELER (doğal, ısıyla boyanmadan) ---
+    for (final m in tablolar) { _masaCiz(canvas, m); }
+
+    // --- ISI: EN ÜSTTE yarı saydam cam katman ---
+    canvas.saveLayer(Offset.zero & size, Paint()..color = Colors.white.withValues(alpha: 0.55));
+    canvas.save();
+    canvas.clipPath(zemin);
+    // soğuk mavi taban wash
+    canvas.drawRect(Offset.zero & size, Paint()..color = const Color(0xFF2563EB).withValues(alpha: 0.22));
+    // additif sıcak lekeler
+    canvas.saveLayer(Offset.zero & size, Paint());
     for (final m in tablolar) {
-      if (m.o > 0.02) {
-        final rad = m.size * (1.1 + m.o * 0.9);
-        final sh = RadialGradient(colors: [m.renk.withValues(alpha: 0.5 * m.o + 0.12), m.renk.withValues(alpha: 0)])
-            .createShader(Rect.fromCircle(center: m.c, radius: rad));
-        canvas.drawCircle(m.c, rad, Paint()..shader = sh);
-      }
-      _masaCiz(canvas, m);
+      if (m.o <= 0.02) continue;
+      final rad = m.size * (2.3 + m.o * 1.7);
+      final renk = _jet(m.o);
+      final sh = RadialGradient(colors: [renk.withValues(alpha: 0.9), renk.withValues(alpha: 0.0)])
+          .createShader(Rect.fromCircle(center: m.c, radius: rad));
+      canvas.drawCircle(m.c, rad, Paint()..shader = sh..blendMode = BlendMode.plus);
     }
     canvas.restore();
+    canvas.restore();
+    canvas.restore();
+
+    // --- duvar (en üstte, keskin) ---
+    if (parsel.length >= 3) {
+      canvas.drawPath(zemin, Paint()..color = const Color(0xFF5B4632)..style = PaintingStyle.stroke..strokeWidth = 5);
+      canvas.drawPath(zemin, Paint()..color = const Color(0xFF8A6B49)..style = PaintingStyle.stroke..strokeWidth = 2);
+    }
   }
 
   void _saksi(Canvas canvas, Offset p) {
-    canvas.drawCircle(p, 6, Paint()..color = const Color(0xFF1B5E20));
-    canvas.drawCircle(p + const Offset(-2.5, -1), 3.2, Paint()..color = const Color(0xFF388E3C));
-    canvas.drawCircle(p + const Offset(2.5, 1), 3.0, Paint()..color = const Color(0xFF43A047));
-    canvas.drawCircle(p + const Offset(0, -2.5), 2.6, Paint()..color = const Color(0xFF66BB6A));
+    canvas.drawCircle(p + const Offset(1.5, 2), 7, Paint()..color = Colors.black.withValues(alpha: 0.18)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3));
+    canvas.drawCircle(p, 7, Paint()..color = const Color(0xFF14532D));
+    canvas.drawCircle(p + const Offset(-2.6, -1.4), 3.6, Paint()..color = const Color(0xFF2E7D32));
+    canvas.drawCircle(p + const Offset(2.6, 1.2), 3.3, Paint()..color = const Color(0xFF43A047));
+    canvas.drawCircle(p + const Offset(0.4, -2.8), 2.8, Paint()..color = const Color(0xFF66BB6A));
+  }
+
+  // Kapasiteyi 4 kenara dağıt: fazlalık önce üst/alt sonra sağ/sol
+  List<int> _dagit(int n) {
+    final b = n ~/ 4, r = n % 4;
+    final s = [b, b, b, b]; // üst, sağ, alt, sol
+    const order = [0, 2, 1, 3];
+    for (var i = 0; i < r; i++) { s[order[i]]++; }
+    return s;
+  }
+
+  // Tek sandalye çiz (lokal koord, dikey=radial derinlik). ch=derinlik, cw=genişlik.
+  void _chair(Canvas canvas, Offset c, double cw, double ch) {
+    final r = Rect.fromCenter(center: c, width: cw, height: ch);
+    canvas.drawRRect(RRect.fromRectAndRadius(r.shift(const Offset(0, 2)), const Radius.circular(4)),
+        Paint()..color = Colors.black.withValues(alpha: 0.22)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2));
+    canvas.drawRRect(RRect.fromRectAndRadius(r, const Radius.circular(4)),
+        Paint()..shader = const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
+            colors: [Color(0xFF6B4A30), Color(0xFF4A3220)]).createShader(r));
+    final hl = Rect.fromLTWH(r.left + 1.5, r.top + 1.5, r.width - 3, r.height * 0.34);
+    canvas.drawRRect(RRect.fromRectAndRadius(hl, const Radius.circular(2)),
+        Paint()..color = Colors.white.withValues(alpha: 0.10));
   }
 
   void _masaCiz(Canvas canvas, _Masa m) {
     final s = m.size;
-    final ust = Color.lerp(_wood, m.renk, m.o * 0.8)!; // yoğunsa kızarır
-    final chairColor = Color.lerp(_woodK, m.renk, m.o * 0.5)!;
-    final g = s * 0.16; // sandalye mesafesi
-    final cw = s * 0.5, ch = s * 0.26; // sandalye ölçüsü
-    final cp = Paint()..color = chairColor;
-    // 4 yön sandalye (yuvarlak masada da 4 sandalye yeterli)
-    void chairH(double cy) => canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center: Offset(m.c.dx, cy), width: cw, height: ch), const Radius.circular(5)), cp);
-    void chairV(double cx) => canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center: Offset(cx, m.c.dy), width: ch, height: cw), const Radius.circular(5)), cp);
-    chairH(m.c.dy - s / 2 - g);
-    chairH(m.c.dy + s / 2 + g);
-    chairV(m.c.dx - s / 2 - g);
-    chairV(m.c.dx + s / 2 + g);
-    // masa gölgesi + üstü
-    final golge = Paint()..color = Colors.black.withValues(alpha: 0.25)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+    final g = s * 0.13;                     // masa-sandalye boşluğu
+    final ch = (s * 0.26).clamp(6.0, 24.0); // sandalye derinliği
+    final n = m.kapasite < 1 ? 4 : (m.kapasite > 12 ? 12 : m.kapasite);
+
+    if (m.yuvarlak) {
+      // yuvarlak masa: sandalyeleri çevreye eşit dağıt (merkeze dönük)
+      final rr = s / 2 + g + ch / 2;
+      final cw = (2 * math.pi * rr / n * 0.7).clamp(8.0, s * 0.6);
+      for (var i = 0; i < n; i++) {
+        final ang = (2 * math.pi * i / n) - math.pi / 2;
+        canvas.save();
+        canvas.translate(m.c.dx + math.cos(ang) * rr, m.c.dy + math.sin(ang) * rr);
+        canvas.rotate(ang + math.pi / 2);
+        _chair(canvas, Offset.zero, cw, ch);
+        canvas.restore();
+      }
+    } else {
+      // kare/dikdörtgen masa: 4 kenara dağıt
+      final d = _dagit(n); // üst, sağ, alt, sol
+      // üst & alt (yatay sandalye)
+      for (final side in [0, 2]) {
+        final cnt = d[side];
+        if (cnt == 0) continue;
+        final cw = (s / cnt * 0.82).clamp(7.0, s * 0.6);
+        final y = side == 0 ? m.c.dy - s / 2 - g - ch / 2 : m.c.dy + s / 2 + g + ch / 2;
+        for (var k = 0; k < cnt; k++) {
+          final x = m.c.dx - s / 2 + s / cnt * (k + 0.5);
+          _chair(canvas, Offset(x, y), cw, ch);
+        }
+      }
+      // sağ & sol (dikey sandalye => cw/ch yer değiştirir)
+      for (final side in [1, 3]) {
+        final cnt = d[side];
+        if (cnt == 0) continue;
+        final chH = (s / cnt * 0.82).clamp(7.0, s * 0.6);
+        final x = side == 1 ? m.c.dx + s / 2 + g + ch / 2 : m.c.dx - s / 2 - g - ch / 2;
+        for (var k = 0; k < cnt; k++) {
+          final y = m.c.dy - s / 2 + s / cnt * (k + 0.5);
+          _chair(canvas, Offset(x, y), ch, chH);
+        }
+      }
+    }
+
+    // masa gölgesi
+    final golge = Paint()..color = Colors.black.withValues(alpha: 0.28)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
+    // masa ahşap üstü: merkez highlight -> koyu kenar (radial => 3B his)
+    final woodSh = RadialGradient(colors: const [Color(0xFFC08A54), Color(0xFF7A5230), Color(0xFF5B3D26)], stops: const [0.0, 0.7, 1.0])
+        .createShader(Rect.fromCircle(center: m.c, radius: s / 2));
     if (m.yuvarlak) {
       canvas.drawCircle(m.c + const Offset(0, 3), s / 2, golge);
-      canvas.drawCircle(m.c, s / 2, Paint()..color = ust);
-      canvas.drawCircle(m.c, s / 2, Paint()..color = Colors.white.withValues(alpha: 0.22)..style = PaintingStyle.stroke..strokeWidth = 1.5);
+      canvas.drawCircle(m.c, s / 2, Paint()..shader = woodSh);
+      canvas.drawCircle(m.c, s / 2, Paint()..color = const Color(0xFF3D2817)..style = PaintingStyle.stroke..strokeWidth = 1.5);
+      canvas.drawCircle(m.c, s * 0.20, Paint()..color = Colors.white.withValues(alpha: 0.10)); // tabak iması
     } else {
       final rect = Rect.fromCenter(center: m.c, width: s, height: s);
       canvas.drawRRect(RRect.fromRectAndRadius(rect.shift(const Offset(0, 3)), const Radius.circular(8)), golge);
-      canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(8)), Paint()..color = ust);
-      canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(8)), Paint()..color = Colors.white.withValues(alpha: 0.22)..style = PaintingStyle.stroke..strokeWidth = 1.5);
+      canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(8)), Paint()..shader = woodSh);
+      canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(8)), Paint()..color = const Color(0xFF3D2817)..style = PaintingStyle.stroke..strokeWidth = 1.5);
+      canvas.drawCircle(m.c, s * 0.18, Paint()..color = Colors.white.withValues(alpha: 0.10));
     }
   }
 
