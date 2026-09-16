@@ -326,8 +326,9 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
     final nk = noktalar[i];
     final def = _tipler[nk['tip']?.toString() ?? 'diger'] ?? _tipler['diger']!;
     final sc = _sec('nokta', i);
+    final nbo = _n(nk['boy']) <= 0 ? 58.0 : _n(nk['boy']).toDouble();
     return Positioned(
-      left: sx(_n(nk['x'])) - 30, top: sy(_n(nk['y'])) - 28,
+      left: sx(_n(nk['x'])) - nbo / 2, top: sy(_n(nk['y'])) - nbo / 2,
       child: GestureDetector(
         onTap: () => setState(() => secili = {'tur': 'nokta', 'anahtar': i}),
         onLongPress: () => _sil('nokta', i),
@@ -337,10 +338,10 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
           nk['y'] = (_n(nk['y']) + d.delta.dy / ch * 1000).clamp(0, 1000);
         }),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          // Görsel kütüphanesi: assets/sema/<tip>.png varsa gerçek görsel, yoksa ikon rozeti
+          // Görsel kütüphanesi: assets/sema/<tip>.png varsa gerçek görsel (boyutlanabilir), yoksa ikon rozeti
           Container(
             decoration: sc ? BoxDecoration(borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white, width: 2.5)) : null,
-            child: Image.asset('assets/sema/${nk['tip'] ?? 'diger'}.png', width: 58, fit: BoxFit.contain,
+            child: Image.asset('assets/sema/${nk['tip'] ?? 'diger'}.png', width: nbo, fit: BoxFit.contain,
               errorBuilder: (_, _, _) => Container(padding: const EdgeInsets.all(9),
                 decoration: BoxDecoration(color: def[1] as Color, borderRadius: BorderRadius.circular(12),
                     boxShadow: [BoxShadow(color: (def[1] as Color).withValues(alpha: 0.4), blurRadius: 6)]),
@@ -430,6 +431,13 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
           IconButton(tooltip: 'Küçült', visualDensity: VisualDensity.compact, onPressed: () => _masaBoy(secili!['anahtar'] as String, 0.82),
               icon: Icon(Icons.remove_circle_outline, color: t.mor1)),
           IconButton(tooltip: 'Büyült', visualDensity: VisualDensity.compact, onPressed: () => _masaBoy(secili!['anahtar'] as String, 1.22),
+              icon: Icon(Icons.add_circle_outline, color: t.mor1)),
+        ],
+        if (tur == 'nokta') ...[
+          Text('Boyut', style: TextStyle(color: t.sub, fontSize: 12)),
+          IconButton(tooltip: 'Küçült', visualDensity: VisualDensity.compact, onPressed: () => _noktaBoy(secili!['anahtar'] as int, 0.85),
+              icon: Icon(Icons.remove_circle_outline, color: t.mor1)),
+          IconButton(tooltip: 'Büyült', visualDensity: VisualDensity.compact, onPressed: () => _noktaBoy(secili!['anahtar'] as int, 1.18),
               icon: Icon(Icons.add_circle_outline, color: t.mor1)),
         ],
         if (adDegisir)
@@ -566,6 +574,13 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
     _gecmisKaydet();
     final cur = _n(yer['boy']) <= 0 ? 170.0 : _n(yer['boy']).toDouble();
     setState(() => yer['boy'] = (cur * f).clamp(90, 700));
+  }
+
+  void _noktaBoy(int i, double f) {
+    _gecmisKaydet();
+    final nk = noktalar[i];
+    final cur = _n(nk['boy']) <= 0 ? 58.0 : _n(nk['boy']).toDouble();
+    setState(() => nk['boy'] = (cur * f).clamp(28, 220));
   }
 
   void _tumMasalariKaldir() { _gecmisKaydet(); setState(() { masaYer.clear(); secili = null; }); }

@@ -430,6 +430,8 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
             tablolar: tablolar,
             gorsel: _gorsel,
             masaOlcek: _masaOlcek,
+            noktalar: noktalar.map((nk) => _Nokta(
+                Offset(sx(_n(nk['x'])), sy(_n(nk['y'])).toDouble()), nk['tip']?.toString() ?? 'diger')).toList(),
           ))),
           for (final b in zones)
             Positioned(left: sx(_n(b['x'])) + 6, top: sy(_n(b['y'])) + 4,
@@ -448,8 +450,8 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
   Widget _semaNokta(TemaProvider t, Map<String, dynamic> nk, double Function(num) sx, double Function(num) sy) {
     final tip = nk['tip']?.toString() ?? 'diger';
     final def = _tip[tip] ?? _tip['diger']!;
-    // Kütüphanede assets/sema/<tip>.png varsa gerçek görseli (büyük), yoksa ikon rozeti.
-    const kutu = 66.0;
+    // Kütüphanede assets/sema/<tip>.png varsa gerçek görseli, yoksa ikon rozeti. Boyut şemadan.
+    final kutu = _n(nk['boy']) <= 0 ? 66.0 : _n(nk['boy']).toDouble();
     final gorsel = Image.asset('assets/sema/$tip.png', width: kutu, fit: BoxFit.contain,
         errorBuilder: (_, _, _) => Container(
             padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: def[1] as Color, borderRadius: BorderRadius.circular(9)),
@@ -530,6 +532,12 @@ class _Masa {
   _Masa(this.c, this.size, this.o, this.renk, this.yuvarlak, this.ad, this.kapasite);
 }
 
+class _Nokta {
+  final Offset c;
+  final String tip; // giris/mutfak/bar/...
+  _Nokta(this.c, this.tip);
+}
+
 /// KUŞBAKIŞI GERÇEKÇİ SALON: ahşap zemin + gerçekçi masa/sandalye/saksı;
 /// ÜSTTE ısı yarı saydam cam katman gibi geçer (mobilya altından görünür).
 class _SemaPainter extends CustomPainter {
@@ -539,12 +547,18 @@ class _SemaPainter extends CustomPainter {
   final List<_Masa> tablolar;
   final Map<String, ui.Image> gorsel; // görsel kütüphanesi (assets/sema/*)
   final double masaOlcek; // masa görseli ölçek çarpanı
-  _SemaPainter({required this.koyu, required this.parsel, required this.zones, required this.tablolar, required this.gorsel, this.masaOlcek = 1.0});
+  final List<_Nokta> noktalar; // servis noktaları (giriş/mutfak/bar) — koridor arter + ok yönü
+  _SemaPainter({required this.koyu, required this.parsel, required this.zones, required this.tablolar, required this.gorsel, this.masaOlcek = 1.0, this.noktalar = const []});
 
-  Color _jet(double o) {
+  // Tam jet renk skalası: mavi(soğuk) → cyan → yeşil → sarı → turuncu → kırmızı(sıcak)
+  Color _jet5(double o) {
     o = o.clamp(0, 1);
-    if (o < 0.5) return Color.lerp(const Color(0xFF22C55E), const Color(0xFFF59E0B), o / 0.5)!;
-    return Color.lerp(const Color(0xFFF59E0B), const Color(0xFFEF4444), (o - 0.5) / 0.5)!;
+    const stops = [0.0, 0.3, 0.5, 0.7, 0.85, 1.0];
+    const cols = [Color(0xFF1D4ED8), Color(0xFF06B6D4), Color(0xFF22C55E), Color(0xFFEAB308), Color(0xFFF97316), Color(0xFFEF4444)];
+    for (var i = 0; i < stops.length - 1; i++) {
+      if (o <= stops[i + 1]) return Color.lerp(cols[i], cols[i + 1], (o - stops[i]) / (stops[i + 1] - stops[i]))!;
+    }
+    return cols.last;
   }
 
   // Bir görseli hedef dikdörtgene orantılı (contain) çiz.
@@ -605,6 +619,9 @@ class _SemaPainter extends CustomPainter {
       canvas.drawRRect(rz, Paint()..color = const Color(0xFF7C5A3A).withValues(alpha: 0.35)..style = PaintingStyle.stroke..strokeWidth = 1.4);
     }
 
+    // --- ISI: masalar arası KORİDOR ağı (referans gibi — her yer sarı olmaz; masalar üstte koyu) ---
+    _isiAgCiz(canvas, size, zemin);
+
     // --- kenar yeşillik (saksılar) ---
     if (parsel.length >= 2) {
       final cx = parsel.map((p) => p.dx).reduce((a, b) => a + b) / parsel.length;
@@ -622,34 +639,110 @@ class _SemaPainter extends CustomPainter {
       }
     }
 
-    // --- MASALAR + SANDALYELER (doğal, ısıyla boyanmadan) ---
+    // --- MASALAR + SANDALYELER (ısının ÜSTÜNDE — masalar koyu kalır, ısı koridorlarda) ---
     for (final m in tablolar) { _masaCiz(canvas, m); }
 
-    // --- ISI: EN ÜSTTE yarı saydam cam katman ---
-    canvas.saveLayer(Offset.zero & size, Paint()..color = Colors.white.withValues(alpha: 0.55));
-    canvas.save();
-    canvas.clipPath(zemin);
-    // soğuk mavi taban wash
-    canvas.drawRect(Offset.zero & size, Paint()..color = const Color(0xFF2563EB).withValues(alpha: 0.22));
-    // additif sıcak lekeler
-    canvas.saveLayer(Offset.zero & size, Paint());
-    for (final m in tablolar) {
-      if (m.o <= 0.02) continue;
-      final rad = m.size * (2.3 + m.o * 1.7);
-      final renk = _jet(m.o);
-      final sh = RadialGradient(colors: [renk.withValues(alpha: 0.9), renk.withValues(alpha: 0.0)])
-          .createShader(Rect.fromCircle(center: m.c, radius: rad));
-      canvas.drawCircle(m.c, rad, Paint()..shader = sh..blendMode = BlendMode.plus);
-    }
-    canvas.restore();
-    canvas.restore();
-    canvas.restore();
-
-    // --- duvar (en üstte, keskin) ---
+    // --- duvar (keskin) ---
     if (parsel.length >= 3) {
       canvas.drawPath(zemin, Paint()..color = const Color(0xFF5B4632)..style = PaintingStyle.stroke..strokeWidth = 5);
       canvas.drawPath(zemin, Paint()..color = const Color(0xFF8A6B49)..style = PaintingStyle.stroke..strokeWidth = 2);
     }
+
+    // --- YÖN OKLARI (garson nereye ilerlemiş): en üstte beyaz kesikli ---
+    _oklariCiz(canvas, size);
+  }
+
+  // Masalar arası koridor ısı ağı + servis noktalarına arter (referans infografik mantığı)
+  void _isiAgCiz(Canvas canvas, Size size, Path zemin) {
+    if (tablolar.isEmpty) return;
+    canvas.save();
+    canvas.clipPath(zemin);
+    // soğuk mavi taban (en az yürünen yerler mavi)
+    canvas.drawRect(Offset.zero & size, Paint()..color = const Color(0xFF1E40AF).withValues(alpha: 0.32));
+
+    double avg = 0;
+    for (final m in tablolar) { avg += m.size; }
+    avg /= tablolar.length;
+    final maxGap = avg * 2.7;
+    final segs = <List<double>>[]; // ax, ay, bx, by, w
+    // komşu masalar arası (grid koridorları)
+    for (var i = 0; i < tablolar.length; i++) {
+      for (var j = i + 1; j < tablolar.length; j++) {
+        final a = tablolar[i].c, b = tablolar[j].c;
+        final d = (a - b).distance;
+        if (d > maxGap) continue;
+        final dx = (a.dx - b.dx).abs(), dy = (a.dy - b.dy).abs();
+        if (dx > avg * 0.8 && dy > avg * 0.8) continue; // sadece yatay/dikey hizalı komşu
+        segs.add([a.dx, a.dy, b.dx, b.dy, (tablolar[i].o + tablolar[j].o) / 2]);
+      }
+    }
+    // servis noktaları -> en yakın 2 masa (giriş/mutfak/bar arterleri sıcak)
+    for (final nk in noktalar) {
+      if (nk.tip != 'giris' && nk.tip != 'mutfak' && nk.tip != 'bar') continue;
+      final sirali = [...tablolar]..sort((x, y) => (nk.c - x.c).distance.compareTo((nk.c - y.c).distance));
+      for (var k = 0; k < sirali.length && k < 2; k++) {
+        segs.add([nk.c.dx, nk.c.dy, sirali[k].c.dx, sirali[k].c.dy, 0.72 + 0.28 * sirali[k].o]);
+      }
+    }
+    // düşükten yükseğe çiz → sıcak koridorlar üstte
+    segs.sort((p, q) => p[4].compareTo(q[4]));
+    final sw = (avg * 0.5).clamp(10.0, 40.0);
+    for (final s in segs) {
+      final p = Paint()
+        ..color = _jet5(s[4]).withValues(alpha: 0.9)
+        ..strokeWidth = sw
+        ..strokeCap = StrokeCap.round
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, sw * 0.42);
+      canvas.drawLine(Offset(s[0], s[1]), Offset(s[2], s[3]), p);
+    }
+    canvas.restore();
+  }
+
+  // Yön okları: giriş→merkez, mutfak→merkez, merkez→bar, merkez→en yoğun masa
+  void _oklariCiz(Canvas canvas, Size size) {
+    if (tablolar.isEmpty) return;
+    double sx = 0, sy = 0, sw = 0;
+    _Masa? sicak;
+    for (final m in tablolar) {
+      final w = 0.12 + m.o;
+      sx += m.c.dx * w; sy += m.c.dy * w; sw += w;
+      if (sicak == null || m.o > sicak.o) sicak = m;
+    }
+    final merkez = Offset(sx / sw, sy / sw);
+    Offset? nk(String tip) {
+      for (final n in noktalar) { if (n.tip == tip) return n.c; }
+      return null;
+    }
+    final giris = nk('giris'), mutfak = nk('mutfak'), bar = nk('bar');
+    if (giris != null) _dashArrow(canvas, giris, merkez);
+    if (mutfak != null) _dashArrow(canvas, mutfak, merkez);
+    if (bar != null) _dashArrow(canvas, merkez, bar);
+    if (sicak != null && (sicak.c - merkez).distance > 30) _dashArrow(canvas, merkez, sicak.c);
+  }
+
+  void _dashArrow(Canvas canvas, Offset a, Offset b) {
+    final total = (b - a).distance;
+    if (total < 16) return;
+    final dir = (b - a) / total;
+    final perp = Offset(-dir.dy, dir.dx);
+    const headLen = 13.0, halfW = 7.0, dash = 11.0, gap = 7.0;
+    final govde = Paint()..color = Colors.white.withValues(alpha: 0.94)..strokeWidth = 2.4..strokeCap = StrokeCap.round;
+    final golge = Paint()..color = Colors.black.withValues(alpha: 0.4)..strokeWidth = 4.4..strokeCap = StrokeCap.round..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
+    double tt = 0;
+    final govdeSon = total - headLen;
+    while (tt < govdeSon) {
+      final s = a + dir * tt;
+      final e = a + dir * math.min(tt + dash, govdeSon);
+      canvas.drawLine(s, e, golge);
+      canvas.drawLine(s, e, govde);
+      tt += dash + gap;
+    }
+    // ok başı
+    final base = b - dir * headLen;
+    final head = Path()..moveTo(b.dx, b.dy)..lineTo(base.dx + perp.dx * halfW, base.dy + perp.dy * halfW)
+      ..lineTo(base.dx - perp.dx * halfW, base.dy - perp.dy * halfW)..close();
+    canvas.drawPath(head, Paint()..color = Colors.black.withValues(alpha: 0.35)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2));
+    canvas.drawPath(head, Paint()..color = Colors.white.withValues(alpha: 0.95));
   }
 
   void _saksi(Canvas canvas, Offset p) {
