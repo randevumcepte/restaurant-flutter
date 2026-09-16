@@ -157,30 +157,35 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
           for (final g in garsonlar) _isiChip(t, g['id'] as int, g['ad']?.toString() ?? ''),
         ])),
         const SizedBox(height: 12),
-        if (!veriVar)
-          Padding(padding: const EdgeInsets.symmetric(vertical: 20), child: Center(child: Text(
-            'Bu dönemde bu seçim için masa aktivitesi yok.', textAlign: TextAlign.center, style: TextStyle(color: t.sub, fontSize: 13))))
-        else ...[
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: t.card2, borderRadius: BorderRadius.circular(12)),
-            child: Row(children: [
-              Icon(Icons.local_fire_department, color: _sicaklik(1), size: 24),
-              const SizedBox(width: 10),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('En yoğun masa: ${enMasa?['ad'] ?? '-'}', style: TextStyle(color: t.ink, fontSize: 14.5, fontWeight: FontWeight.w900)),
-                Text('${bolgeAd(enBolge)} · ${_n(enMasa?['agirlik']).toInt()} işlem', style: TextStyle(color: t.sub, fontSize: 12)),
-              ])),
-              _mesafeRozet(t),
-            ]),
-          ),
-          const SizedBox(height: 14),
-          if (semaVar)
-            _semaHarita(t, agir, adMap, maxA)
-          else
-            for (final b in bolgeler) ..._bolgeBlok(t, b, masalar, maxA, bolgeTop[_n(b['id']).toInt()] ?? 0),
-          const SizedBox(height: 8),
-          _lejant(t),
+        // Özet / bilgi kutusu
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(color: t.card2, borderRadius: BorderRadius.circular(12)),
+          child: Row(children: [
+            Icon(veriVar ? Icons.local_fire_department : Icons.info_outline, color: veriVar ? _sicaklik(1) : t.sub, size: 24),
+            const SizedBox(width: 10),
+            Expanded(child: veriVar
+                ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('En yoğun masa: ${enMasa?['ad'] ?? '-'}', style: TextStyle(color: t.ink, fontSize: 14.5, fontWeight: FontWeight.w900)),
+                    Text('${bolgeAd(enBolge)} · ${_n(enMasa?['agirlik']).toInt()} işlem', style: TextStyle(color: t.sub, fontSize: 12)),
+                  ])
+                : Text('Bu dönemde sipariş yok — masalara sipariş girilince ısı burada belirir.', style: TextStyle(color: t.sub, fontSize: 12.5, height: 1.3))),
+            if (veriVar) _mesafeRozet(t),
+          ]),
+        ),
+        const SizedBox(height: 14),
+        // Harita: şema varsa HER ZAMAN kroki (aktivite yoksa masalar soğuk); şema yoksa ızgara ya da uyarı
+        if (semaVar)
+          _semaHarita(t, agir, adMap, maxA)
+        else if (veriVar)
+          ...[for (final b in bolgeler) ..._bolgeBlok(t, b, masalar, maxA, bolgeTop[_n(b['id']).toInt()] ?? 0)]
+        else
+          Padding(padding: const EdgeInsets.symmetric(vertical: 16), child: Center(child: Text(
+            'Salon şemasını "Salon Şeması" ekranından çizip kaydedersen, ısı haritası buraya salon planının üzerinde gelir.',
+            textAlign: TextAlign.center, style: TextStyle(color: t.sub, fontSize: 12.5, height: 1.4)))),
+        const SizedBox(height: 8),
+        if (semaVar || veriVar) _lejant(t),
+        if (veriVar) ...[
           const SizedBox(height: 12),
           ..._gozlemler(t, bolgeler, bolgeTop, enBolge, bolgeAd, enMasa),
         ],
