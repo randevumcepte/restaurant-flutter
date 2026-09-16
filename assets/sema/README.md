@@ -3,29 +3,30 @@
 Buraya PNG bırak → Garson Performansı ısı haritası o parçayı **gerçek görselle** çizer.
 Dosya yoksa otomatik olarak mevcut çizim (vektör) kullanılır. Yani istediğin kadarını ver.
 
-## Dosya isimleri (AYNEN bu adlarla koy)
+## EN ÖNEMLİ: combo masa görseli (masa + sandalyeler tek PNG)
 
-| Dosya                 | Ne                          | Not |
-|-----------------------|-----------------------------|-----|
-| `masa_yuvarlak.png`   | Yuvarlak masa (üstten)      | Kare tuval içine ortalı |
-| `masa_kare.png`       | Kare/dikdörtgen masa (üstten)| Kare tuval |
-| `sandalye.png`        | TEK sandalye (üstten)       | Sırtı YUKARI baksın → sistem döndürür |
-| `zemin.png`           | Zemin dokusu (parke/mermer) | Tekrarlanır (seamless/tileable olsun) |
-| `saksi.png`           | Saksı/bitki (üstten)        | Küçük |
-| `bar.png`             | Bar (üstten)                | Landmark |
-| `mutfak.png`          | Mutfak                      | Landmark |
-| `kasa.png`            | Kasa                        | Landmark |
-| `giris.png`           | Giriş kapısı                | Landmark |
-| `wc.png`              | WC                          | Landmark |
-| `otopark.png`         | Otopark                     | Landmark |
-| `depo.png`            | Depo                        | Landmark |
+Isı haritası için detay şart değil. En pratik yol: **masa + 4 sandalyesi birlikte tek kare PNG**.
+Bu görsel her masaya basılır ve ekrandaki **− / +** boyut ayarıyla büyütülüp küçültülür (kalıcı).
+
+| Dosya                 | Ne                                   | Not |
+|-----------------------|--------------------------------------|-----|
+| `masa_kare.png`       | **Kare masa + 4 sandalye** (üstten)  | ANA görsel. Kare tuval, ortalı |
+| `masa_yuvarlak.png`   | Yuvarlak masa + sandalyeler (üstten) | Opsiyonel; yoksa masa_kare kullanılır değil → yuvarlak masalar vektör |
+
+> masa_kare.png / masa_yuvarlak.png **varsa** o masada ayrı sandalye çizilmez (görsel zaten içeriyor).
+> Yoksa sistem vektör masa + kapasiteye göre sandalye çizer.
+
+## Opsiyonel (istersen)
+| Dosya | Ne |
+|-------|-----|
+| `zemin.png` | Zemin dokusu (parke/mermer), tekrarlanır — seamless olsun |
+| `saksi.png` | Saksı/bitki |
+| `bar.png` `mutfak.png` `kasa.png` `giris.png` `wc.png` `otopark.png` `depo.png` | Landmark noktaları |
 
 ## Kurallar
-- **Şeffaf arka plan** (transparent PNG) — masa/sandalye/landmark için şart.
-- **Üstten (kuşbakışı)** görünüm — yandan değil.
-- Kare tuval (ör. 512×512) önerilir; masa görseli tuvale ortalı olsun.
-- `sandalye.png`: sırt/arkalık görselin ÜST kenarına baksın. Sistem her masada
-  otomatik döndürür (yuvarlakta çevreye, karede 4 kenara).
-- `zemin.png`: kenarları birleşen (seamless) doku olursa döşemede dikiş görünmez.
+- **Şeffaf arka plan** (transparent PNG).
+- **Üstten (kuşbakışı)** görünüm.
+- Kare tuval (ör. 512×512), görsel ortalı.
+- Boyut ekrandan − / + ile ayarlanır; sen tek görsel ver, ölçeği uygulamadan tuttururuz.
 
-Dosyaları koyduktan sonra bana "koydum" de → tekrar build alıp kurarım.
+Dosyaları koyduktan sonra bana "koydum" de → build alıp kurarım.

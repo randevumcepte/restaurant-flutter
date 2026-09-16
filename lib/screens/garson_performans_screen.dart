@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
 import '../providers/tema_provider.dart';
@@ -34,14 +35,29 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
 
   // GÖRSEL KÜTÜPHANESİ: assets/sema/<ad>.png -> ui.Image (yoksa vektör fallback)
   final Map<String, ui.Image> _gorsel = {};
+  double _masaOlcek = 1.0; // masa görselini büyüt/küçült (kalıcı)
 
   num _n(dynamic v) => v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0);
 
   @override
   void initState() {
     super.initState();
+    _olcekYukle();
     _gorselleriYukle();
     _yukle();
+  }
+
+  Future<void> _olcekYukle() async {
+    try {
+      final p = await SharedPreferences.getInstance();
+      final v = p.getDouble('isi_masa_olcek') ?? 1.0;
+      if (mounted) setState(() => _masaOlcek = v.clamp(0.4, 3.0));
+    } catch (_) {}
+  }
+
+  void _olcekAyarla(double d) {
+    setState(() => _masaOlcek = (_masaOlcek + d).clamp(0.4, 3.0));
+    SharedPreferences.getInstance().then((p) => p.setDouble('isi_masa_olcek', _masaOlcek)).catchError((_) => false);
   }
 
   // Kütüphanedeki sabit görselleri bir kez yükle. Dosya yoksa sessizce atla → vektör çizim.
@@ -176,6 +192,8 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
         Row(children: [
           const Text('🔥 ', style: TextStyle(fontSize: 16)),
           Expanded(child: Text('Garsonun Isı Haritası', style: TextStyle(color: t.ink, fontSize: 15, fontWeight: FontWeight.w900))),
+          // Masa görseli varsa: büyüt/küçült (kalıcı)
+          if ((_gorsel['masa_kare'] ?? _gorsel['masa_yuvarlak']) != null) _olcekKontrol(t),
         ]),
         const SizedBox(height: 4),
         Text('Salon planında en çok nerede çalıştığı — kırmızı = en yoğun.', style: TextStyle(color: t.sub, fontSize: 11.5)),
@@ -219,6 +237,27 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
         ],
       ]),
     );
+  }
+
+  // Masa görselini büyüt/küçült (kalıcı ayar)
+  Widget _olcekKontrol(TemaProvider t) {
+    Widget btn(IconData ik, VoidCallback on) => InkWell(
+          onTap: on,
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            width: 30, height: 30,
+            decoration: BoxDecoration(color: t.card2, borderRadius: BorderRadius.circular(8), border: Border.all(color: t.line)),
+            child: Icon(ik, size: 17, color: t.ink),
+          ),
+        );
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Icon(Icons.photo_size_select_large_outlined, size: 14, color: t.sub),
+      const SizedBox(width: 4),
+      btn(Icons.remove, () => _olcekAyarla(-0.1)),
+      SizedBox(width: 34, child: Text('${(_masaOlcek * 100).round()}%', textAlign: TextAlign.center,
+          style: TextStyle(color: t.sub, fontSize: 11, fontWeight: FontWeight.bold))),
+      btn(Icons.add, () => _olcekAyarla(0.1)),
+    ]);
   }
 
   // Toplam yürüyüş mesafesi (adım sayacından): seçili garson ya da tüm salon
@@ -390,6 +429,7 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
             zones: zones.map((b) => Rect.fromLTWH(sx(_n(b['x'])), sy(_n(b['y'])), sx(_n(b['w'])), sy(_n(b['h'])))).toList(),
             tablolar: tablolar,
             gorsel: _gorsel,
+            masaOlcek: _masaOlcek,
           ))),
           for (final b in zones)
             Positioned(left: sx(_n(b['x'])) + 6, top: sy(_n(b['y'])) + 4,
@@ -496,7 +536,8 @@ class _SemaPainter extends CustomPainter {
   final List<Rect> zones;
   final List<_Masa> tablolar;
   final Map<String, ui.Image> gorsel; // görsel kütüphanesi (assets/sema/*)
-  _SemaPainter({required this.koyu, required this.parsel, required this.zones, required this.tablolar, required this.gorsel});
+  final double masaOlcek; // masa görseli ölçek çarpanı
+  _SemaPainter({required this.koyu, required this.parsel, required this.zones, required this.tablolar, required this.gorsel, this.masaOlcek = 1.0});
 
   Color _jet(double o) {
     o = o.clamp(0, 1);
@@ -656,6 +697,17 @@ class _SemaPainter extends CustomPainter {
 
   void _masaCiz(Canvas canvas, _Masa m) {
     final s = m.size;
+    // COMBO GÖRSEL: masa+sandalye tek PNG → onu bas (ayrı sandalye çizme), boyut ayarıyla ölçekli
+    final combo = m.yuvarlak ? gorsel['masa_yuvarlak'] : gorsel['masa_kare'];
+    if (combo != null) {
+      final r = s * 1.85 * masaOlcek;
+      final rect = Rect.fromCenter(center: m.c, width: r, height: r);
+      canvas.drawRRect(
+          RRect.fromRectAndRadius(rect.deflate(r * 0.14).shift(const Offset(0, 3)), Radius.circular(r * 0.1)),
+          Paint()..color = Colors.black.withValues(alpha: 0.22)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6));
+      _cizGorsel(canvas, combo, rect);
+      return;
+    }
     final g = s * 0.13;                     // masa-sandalye boşluğu
     final ch = (s * 0.26).clamp(6.0, 24.0); // sandalye derinliği
     final n = m.kapasite < 1 ? 4 : (m.kapasite > 12 ? 12 : m.kapasite);
@@ -691,19 +743,9 @@ class _SemaPainter extends CustomPainter {
       }
     }
 
-    // MASA ÜSTÜ: görsel varsa PNG, yoksa vektör ahşap
+    // MASA ÜSTÜ (vektör ahşap — combo görsel yoksa)
     final golge = Paint()..color = Colors.black.withValues(alpha: 0.28)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
-    final img = m.yuvarlak ? gorsel['masa_yuvarlak'] : gorsel['masa_kare'];
     final rect = Rect.fromCenter(center: m.c, width: s, height: s);
-    if (img != null) {
-      if (m.yuvarlak) {
-        canvas.drawCircle(m.c + const Offset(0, 3), s / 2, golge);
-      } else {
-        canvas.drawRRect(RRect.fromRectAndRadius(rect.shift(const Offset(0, 3)), const Radius.circular(8)), golge);
-      }
-      _cizGorsel(canvas, img, rect);
-      return;
-    }
     final woodSh = RadialGradient(colors: const [Color(0xFFC08A54), Color(0xFF7A5230), Color(0xFF5B3D26)], stops: const [0.0, 0.7, 1.0])
         .createShader(Rect.fromCircle(center: m.c, radius: s / 2));
     if (m.yuvarlak) {
