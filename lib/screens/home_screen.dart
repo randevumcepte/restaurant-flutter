@@ -22,6 +22,8 @@ import 'gider_screen.dart';
 import 'raporlar_screen.dart';
 import 'sebep_yonetimi_screen.dart';
 import 'masa_atama_screen.dart';
+import 'garson_performans_screen.dart';
+import '../services/adim_servisi.dart';
 
 /// Uygulama kabugu — iki yuz:
 ///  • TELEFON: koyu bar + ortada mikrofon (mevcut mobil deneyim, aynen korunur).
@@ -49,6 +51,11 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     anaSekme.addListener(_sekmeDinle); // Asistan gibi ekranlardan sekme degisince guncelle
+    // Garson adim sayaci: giris token'iyla sensoru dinlemeye basla (izin ister)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final tok = context.read<AuthProvider>().token;
+      if (tok != null) AdimServisi().baslat(tok);
+    });
   }
 
   @override
@@ -312,6 +319,7 @@ class _YanMenu extends StatelessWidget {
               _link(t, Icons.event_available_outlined, 'Rezervasyonlar', () => git(const RezervasyonScreen())),
               if (patron) _link(t, Icons.badge_outlined, 'Personel & Maaş', () => git(const PersonelScreen())),
               if (patron) _link(t, Icons.table_restaurant_outlined, 'Masa & Bölge Atama', () => git(const MasaAtamaScreen())),
+              if (patron) _link(t, Icons.emoji_events_outlined, 'Garson Performansı', () => git(const GarsonPerformansScreen()), renk: t.yesil),
               if (patron) _link(t, Icons.receipt_long_outlined, 'Giderler', () => git(const GiderScreen())),
               if (patron) _link(t, Icons.bar_chart_outlined, 'Raporlar', () => git(const RaporlarScreen())),
               if (patron) _link(t, Icons.rule_folder_outlined, 'İptal / İkram Sebepleri', () => git(const SebepYonetimiScreen())),
