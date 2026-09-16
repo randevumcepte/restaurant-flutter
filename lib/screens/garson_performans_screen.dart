@@ -110,36 +110,112 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
     );
   }
 
-  // ---------------- ISI HARITASI ----------------
+  // ---------------- ISI HARITASI (bolge bolge temiz izgara) ----------------
   Widget _isiBolumu(TemaProvider t) {
     final masalar = ((isi['masalar'] as List?) ?? []).map((e) => Map<String, dynamic>.from(e)).toList();
+    final bolgeler = ((isi['bolgeler'] as List?) ?? []).map((e) => Map<String, dynamic>.from(e)).toList();
     final maxA = _n(isi['max_agirlik']).toInt();
+
+    // En yogun masa + bolge ozeti
+    Map<String, dynamic>? enMasa;
+    final Map<int, int> bolgeTop = {};
+    for (final m in masalar) {
+      if (enMasa == null || _n(m['agirlik']) > _n(enMasa['agirlik'])) enMasa = m;
+      final b = _n(m['bolge_id']).toInt();
+      bolgeTop[b] = (bolgeTop[b] ?? 0) + _n(m['agirlik']).toInt();
+    }
+    int enBolge = -1, enBolgeVal = -1;
+    bolgeTop.forEach((k, v) { if (v > enBolgeVal) { enBolgeVal = v; enBolge = k; } });
+    String bolgeAd(int id) => (bolgeler.firstWhere((b) => _n(b['id']).toInt() == id, orElse: () => {'ad': ''})['ad'] ?? '').toString();
+    final veriVar = masalar.isNotEmpty && maxA > 0;
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(color: t.card, borderRadius: BorderRadius.circular(18), boxShadow: t.golge),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           const Text('🔥 ', style: TextStyle(fontSize: 16)),
-          Expanded(child: Text('Isı Haritası — en çok nerede çalıştı', style: TextStyle(color: t.ink, fontSize: 15, fontWeight: FontWeight.w900))),
+          Expanded(child: Text('En çok nerede çalıştı', style: TextStyle(color: t.ink, fontSize: 15, fontWeight: FontWeight.w900))),
         ]),
         const SizedBox(height: 4),
-        Text('Salon planında iş yoğunluğu (sipariş/servis). Koyu kırmızı = en yoğun.', style: TextStyle(color: t.sub, fontSize: 11.5)),
+        Text('Kutu ne kadar kırmızıysa orada o kadar çok çalışmış (sipariş/servis).', style: TextStyle(color: t.sub, fontSize: 11.5)),
         const SizedBox(height: 10),
-        // Garson seçici (Tümü + garsonlar)
-        SizedBox(
-          height: 34,
-          child: ListView(scrollDirection: Axis.horizontal, children: [
-            _isiChip(t, null, 'Tüm salon'),
-            for (final g in garsonlar) _isiChip(t, g['id'] as int, g['ad']?.toString() ?? ''),
-          ]),
-        ),
+        // Garson seçici
+        SizedBox(height: 34, child: ListView(scrollDirection: Axis.horizontal, children: [
+          _isiChip(t, null, 'Tüm salon'),
+          for (final g in garsonlar) _isiChip(t, g['id'] as int, g['ad']?.toString() ?? ''),
+        ])),
         const SizedBox(height: 12),
-        if (masalar.isEmpty)
-          Padding(padding: const EdgeInsets.symmetric(vertical: 24), child: Center(child: Text('Masa/aktivite verisi yok.', style: TextStyle(color: t.sub))))
-        else
-          _harita(t, masalar, maxA),
-        const SizedBox(height: 8),
-        _lejant(t),
+        if (!veriVar)
+          Padding(padding: const EdgeInsets.symmetric(vertical: 20), child: Center(child: Text(
+            'Bu dönemde bu seçim için masa aktivitesi yok.', textAlign: TextAlign.center, style: TextStyle(color: t.sub, fontSize: 13))))
+        else ...[
+          // Özet kutusu
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: t.card2, borderRadius: BorderRadius.circular(12)),
+            child: Row(children: [
+              Icon(Icons.local_fire_department, color: _sicaklik(1), size: 24),
+              const SizedBox(width: 10),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('En yoğun masa: ${enMasa?['ad'] ?? '-'}', style: TextStyle(color: t.ink, fontSize: 14.5, fontWeight: FontWeight.w900)),
+                Text('${bolgeAd(enBolge)} · ${_n(enMasa?['agirlik']).toInt()} işlem', style: TextStyle(color: t.sub, fontSize: 12)),
+              ])),
+            ]),
+          ),
+          const SizedBox(height: 14),
+          for (final b in bolgeler) ..._bolgeBlok(t, b, masalar, maxA, bolgeTop[_n(b['id']).toInt()] ?? 0),
+          const SizedBox(height: 4),
+          _lejant(t),
+        ],
+      ]),
+    );
+  }
+
+  // Bir bölgenin başlığı + o bölgenin masaları (yoğunluğa göre sıralı, renkli kutular)
+  List<Widget> _bolgeBlok(TemaProvider t, Map<String, dynamic> b, List<Map<String, dynamic>> masalar, int maxA, int bolgeTop) {
+    final bid = _n(b['id']).toInt();
+    final list = masalar.where((m) => _n(m['bolge_id']).toInt() == bid).toList();
+    if (list.isEmpty) return [];
+    list.sort((x, y) => _n(y['agirlik']).toInt() - _n(x['agirlik']).toInt());
+    return [
+      Padding(
+        padding: const EdgeInsets.only(top: 4, bottom: 8),
+        child: Row(children: [
+          Text(b['ad']?.toString() ?? '', style: TextStyle(color: t.ink, fontSize: 13.5, fontWeight: FontWeight.w900)),
+          const SizedBox(width: 8),
+          if (bolgeTop > 0) Container(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+            decoration: BoxDecoration(color: t.mor1.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(9)),
+            child: Text('$bolgeTop işlem', style: TextStyle(color: t.mor1, fontSize: 10.5, fontWeight: FontWeight.bold)),
+          ),
+        ]),
+      ),
+      Wrap(spacing: 8, runSpacing: 8, children: list.map((m) => _masaTile(t, m, maxA)).toList()),
+      const SizedBox(height: 12),
+    ];
+  }
+
+  Widget _masaTile(TemaProvider t, Map<String, dynamic> m, int maxA) {
+    final a = _n(m['agirlik']).toInt();
+    final o = maxA > 0 ? a / maxA : 0.0;
+    final renk = a > 0 ? _sicaklik(o.toDouble()) : t.card2;
+    final yazi = a > 0 ? Colors.white : t.sub;
+    return Container(
+      width: 78, height: 58,
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+      decoration: BoxDecoration(
+        color: renk, borderRadius: BorderRadius.circular(12),
+        border: a > 0 ? null : Border.all(color: t.line),
+        boxShadow: o > 0.55 ? [BoxShadow(color: renk.withValues(alpha: 0.5), blurRadius: 10)] : null,
+      ),
+      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        SizedBox(width: 68, child: FittedBox(fit: BoxFit.scaleDown, child: Text(
+          m['ad']?.toString() ?? '', maxLines: 1, style: TextStyle(color: yazi, fontSize: 13, fontWeight: FontWeight.w900)))),
+        if (a > 0) ...[
+          const SizedBox(height: 2),
+          Text('$a işlem', style: TextStyle(color: yazi.withValues(alpha: 0.9), fontSize: 9.5, fontWeight: FontWeight.w600)),
+        ],
       ]),
     );
   }
@@ -167,62 +243,6 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
     if (o <= 0) return const Color(0xFF334155).withValues(alpha: 0.25);
     if (o < 0.5) return Color.lerp(const Color(0xFF3B82F6), const Color(0xFFF59E0B), o / 0.5)!;
     return Color.lerp(const Color(0xFFF59E0B), const Color(0xFFEF4444), (o - 0.5) / 0.5)!;
-  }
-
-  Widget _harita(TemaProvider t, List<Map<String, dynamic>> masalar, int maxA) {
-    // Koordinat aralığı
-    int minX = 1 << 30, maxX = -(1 << 30), minY = 1 << 30, maxY = -(1 << 30);
-    for (final m in masalar) {
-      final x = _n(m['x']).toInt(), y = _n(m['y']).toInt();
-      if (x < minX) minX = x; if (x > maxX) maxX = x;
-      if (y < minY) minY = y; if (y > maxY) maxY = y;
-    }
-    final yayilimVar = (maxX - minX) >= 5 && (maxY - minY) >= 5;
-
-    if (!yayilimVar) {
-      // Konum verisi yok/degenere -> bölge bölge ızgara (renk = yoğunluk)
-      return Wrap(spacing: 8, runSpacing: 8, children: masalar.map((m) {
-        final a = _n(m['agirlik']).toInt();
-        final o = maxA > 0 ? a / maxA : 0.0;
-        return Container(
-          width: 58, height: 46,
-          decoration: BoxDecoration(color: _sicaklik(o.toDouble()), borderRadius: BorderRadius.circular(10)),
-          child: Center(child: Text(m['ad']?.toString() ?? '', textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold))),
-        );
-      }).toList());
-    }
-
-    // POS x,y -> kutuya ölçekle
-    return LayoutBuilder(builder: (ctx, c) {
-      final w = c.maxWidth;
-      const h = 300.0;
-      const pad = 22.0;
-      double sx(int x) => pad + (w - 2 * pad) * (x - minX) / (maxX - minX);
-      double sy(int y) => pad + (h - 2 * pad) * (y - minY) / (maxY - minY);
-      return Container(
-        height: h,
-        decoration: BoxDecoration(color: t.card2, borderRadius: BorderRadius.circular(14), border: Border.all(color: t.line)),
-        child: Stack(children: masalar.map((m) {
-          final a = _n(m['agirlik']).toInt();
-          final o = maxA > 0 ? (a / maxA) : 0.0;
-          final boyut = 30.0 + 26.0 * o;
-          return Positioned(
-            left: sx(_n(m['x']).toInt()) - boyut / 2,
-            top: sy(_n(m['y']).toInt()) - boyut / 2,
-            child: Container(
-              width: boyut, height: boyut,
-              decoration: BoxDecoration(
-                color: _sicaklik(o.toDouble()), shape: BoxShape.circle,
-                boxShadow: o > 0.4 ? [BoxShadow(color: _sicaklik(o.toDouble()).withValues(alpha: 0.6), blurRadius: 12)] : null,
-              ),
-              child: Center(child: Text(m['ad']?.toString() ?? '', textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.bold))),
-            ),
-          );
-        }).toList()),
-      );
-    });
   }
 
   Widget _lejant(TemaProvider t) => Row(children: [
