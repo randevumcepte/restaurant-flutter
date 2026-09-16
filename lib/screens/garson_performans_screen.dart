@@ -622,34 +622,65 @@ class _SemaPainter extends CustomPainter {
     // --- ISI: masalar arası KORİDOR ağı (referans gibi — her yer sarı olmaz; masalar üstte koyu) ---
     _isiAgCiz(canvas, size, zemin);
 
-    // --- kenar yeşillik (saksılar) ---
-    if (parsel.length >= 2) {
-      final cx = parsel.map((p) => p.dx).reduce((a, b) => a + b) / parsel.length;
-      final cy = parsel.map((p) => p.dy).reduce((a, b) => a + b) / parsel.length;
-      final merkez = Offset(cx, cy);
-      for (var i = 0; i < parsel.length; i++) {
-        final a = parsel[i], b = parsel[(i + 1) % parsel.length];
-        final adet = ((b - a).distance / 52).floor().clamp(1, 30);
-        for (var k = 0; k <= adet; k++) {
-          var p = Offset.lerp(a, b, k / (adet == 0 ? 1 : adet))!;
-          final ic = merkez - p;
-          if (ic.distance > 0) p = p + (ic / ic.distance) * 12;
-          _saksi(canvas, p);
-        }
-      }
-    }
+    // --- KENAR SÜSLEME (varsayılan): kalın koyu duvar + duvara yaslı yeşillik şeridi ---
+    _duvarCiz(canvas, zemin);
+    _kenarSuslemesi(canvas);
 
-    // --- MASALAR + SANDALYELER (ısının ÜSTÜNDE — masalar koyu kalır, ısı koridorlarda) ---
+    // --- MASALAR + SANDALYELER (duvar+yeşilliğin ve ısının ÜSTÜNDE) ---
     for (final m in tablolar) { _masaCiz(canvas, m); }
-
-    // --- duvar (keskin) ---
-    if (parsel.length >= 3) {
-      canvas.drawPath(zemin, Paint()..color = const Color(0xFF5B4632)..style = PaintingStyle.stroke..strokeWidth = 5);
-      canvas.drawPath(zemin, Paint()..color = const Color(0xFF8A6B49)..style = PaintingStyle.stroke..strokeWidth = 2);
-    }
 
     // --- YÖN OKLARI (garson nereye ilerlemiş): en üstte beyaz kesikli ---
     _oklariCiz(canvas, size);
+  }
+
+  // Kalın koyu duvar (3B his): dış koyu gövde + iç kenar highlight
+  void _duvarCiz(Canvas canvas, Path zemin) {
+    if (parsel.length < 3) return;
+    canvas.drawPath(zemin, Paint()..color = const Color(0xFF16181D)..style = PaintingStyle.stroke..strokeWidth = 16..strokeJoin = StrokeJoin.round);
+    canvas.drawPath(zemin, Paint()..color = const Color(0xFF34383F)..style = PaintingStyle.stroke..strokeWidth = 5..strokeJoin = StrokeJoin.round);
+    canvas.drawPath(zemin, Paint()..color = Colors.black.withValues(alpha: 0.45)..style = PaintingStyle.stroke..strokeWidth = 1.4);
+  }
+
+  // Duvara yaslı sürekli yeşillik şeridi (çalı + sıcak ışıklar) — referans gibi
+  void _kenarSuslemesi(Canvas canvas) {
+    if (parsel.length < 3) return;
+    final cx = parsel.map((p) => p.dx).reduce((a, b) => a + b) / parsel.length;
+    final cy = parsel.map((p) => p.dy).reduce((a, b) => a + b) / parsel.length;
+    final merkez = Offset(cx, cy);
+    for (var i = 0; i < parsel.length; i++) {
+      final a = parsel[i], b = parsel[(i + 1) % parsel.length];
+      final L = (b - a).distance;
+      if (L < 6) continue;
+      final dir = (b - a) / L;
+      var n = Offset(-dir.dy, dir.dx); // normal
+      final mid = Offset.lerp(a, b, 0.5)!;
+      if ((merkez.dx - mid.dx) * n.dx + (merkez.dy - mid.dy) * n.dy < 0) n = -n; // içeri baksın
+      const off = 11.0; // duvardan içeri
+      final a2 = a + dir * 7 + n * off, b2 = b - dir * 7 + n * off;
+      // çalı tabanı
+      canvas.drawLine(a2, b2, Paint()..color = const Color(0xFF0E3D22)..strokeWidth = 16..strokeCap = StrokeCap.round);
+      canvas.drawLine(a2, b2, Paint()..color = const Color(0xFF1B5E20)..strokeWidth = 11..strokeCap = StrokeCap.round);
+      final adet = (L / 13).floor().clamp(1, 80);
+      for (var k = 0; k <= adet; k++) {
+        final base = Offset.lerp(a2, b2, k / (adet == 0 ? 1 : adet))!;
+        final p = base + n * (math.sin(k * 1.9) * off * 0.3);
+        _yaprak(canvas, p, k);
+        if (k % 5 == 2) { // sıcak ışık
+          canvas.drawCircle(p - n * 3, 3.4, Paint()..color = const Color(0xFFFFD27A)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5));
+          canvas.drawCircle(p - n * 3, 1.5, Paint()..color = const Color(0xFFFFF1C9));
+        }
+      }
+    }
+  }
+
+  void _yaprak(Canvas canvas, Offset p, int k) {
+    final img = gorsel['saksi'];
+    if (img != null) { _cizGorsel(canvas, img, Rect.fromCenter(center: p, width: 16, height: 16)); return; }
+    final r = 4.5 + (k % 3);
+    canvas.drawCircle(p, r, Paint()..color = const Color(0xFF14532D));
+    canvas.drawCircle(p + const Offset(-1.6, -1), r * 0.55, Paint()..color = const Color(0xFF2E7D32));
+    canvas.drawCircle(p + const Offset(1.6, 1), r * 0.5, Paint()..color = const Color(0xFF43A047));
+    canvas.drawCircle(p + const Offset(0.4, -1.8), r * 0.42, Paint()..color = const Color(0xFF66BB6A));
   }
 
   // Masalar arası koridor ısı ağı + servis noktalarına arter (referans infografik mantığı)
@@ -743,19 +774,6 @@ class _SemaPainter extends CustomPainter {
       ..lineTo(base.dx - perp.dx * halfW, base.dy - perp.dy * halfW)..close();
     canvas.drawPath(head, Paint()..color = Colors.black.withValues(alpha: 0.35)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2));
     canvas.drawPath(head, Paint()..color = Colors.white.withValues(alpha: 0.95));
-  }
-
-  void _saksi(Canvas canvas, Offset p) {
-    final img = gorsel['saksi'];
-    if (img != null) {
-      _cizGorsel(canvas, img, Rect.fromCenter(center: p, width: 20, height: 20));
-      return;
-    }
-    canvas.drawCircle(p + const Offset(1.5, 2), 7, Paint()..color = Colors.black.withValues(alpha: 0.18)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3));
-    canvas.drawCircle(p, 7, Paint()..color = const Color(0xFF14532D));
-    canvas.drawCircle(p + const Offset(-2.6, -1.4), 3.6, Paint()..color = const Color(0xFF2E7D32));
-    canvas.drawCircle(p + const Offset(2.6, 1.2), 3.3, Paint()..color = const Color(0xFF43A047));
-    canvas.drawCircle(p + const Offset(0.4, -2.8), 2.8, Paint()..color = const Color(0xFF66BB6A));
   }
 
   // Kapasiteyi 4 kenara dağıt: fazlalık önce üst/alt sonra sağ/sol
