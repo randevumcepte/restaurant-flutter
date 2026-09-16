@@ -16,6 +16,7 @@ import 'cari_hesaplar_screen.dart';
 import 'sebep_yonetimi_screen.dart';
 import 'menu_yonetimi_screen.dart';
 import 'masa_atama_screen.dart';
+import 'garson_performans_screen.dart';
 import 'tema_secim_screen.dart';
 import 'garson_cagrilari_screen.dart';
 import 'ai_bildirim_screen.dart';
@@ -39,7 +40,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String period = 'haftalik';
   final _f = NumberFormat.decimalPattern('tr');
 
-  TemaProvider get _t => context.watch<TemaProvider>();
+  // read (watch DEGIL): _t getter'i tiklama/callback'lerde de kullaniliyor (ör. _detayAc -> barrierColor: _bg).
+  // context.watch build DISINDA cagrilinca DEBUG build'de HATA firlatir -> kart tiklaninca acilmaz/siyah kalir
+  // (release'de assert kapali oldugu icin gizli kalmisti). Temaya duyarli yeniden-cizim icin build() icinde
+  // ACIK context.watch<TemaProvider>() var; boylece tema toggle'i yine canli calisir.
+  TemaProvider get _t => context.read<TemaProvider>();
   Color get _bg => _t.bg;
   Color get _card => _t.card;
   Color get _ink => _t.ink;
@@ -200,6 +205,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               if (patron) oge(Icons.qr_code_2, 'Masa QR Afişleri (yazdır)', () { Navigator.of(context).pop(); _webAc('/masa-afisler'); }, renk: const Color(0xFFF6CE63)),
               if (patron) oge(Icons.badge_outlined, 'Personel & Maaş', () => git(const PersonelScreen())),
               if (patron) oge(Icons.table_restaurant_outlined, 'Masa & Bölge Atama', () => git(const MasaAtamaScreen())),
+              if (patron) oge(Icons.emoji_events_outlined, 'Garson Performansı', () => git(const GarsonPerformansScreen()), renk: const Color(0xFF10B981)),
               if (patron) oge(Icons.receipt_long_outlined, 'Giderler', () => git(const GiderScreen())),
               if (patron) oge(Icons.bar_chart_outlined, 'Raporlar', () => git(const RaporlarScreen())),
               if (patron) oge(Icons.rule_folder_outlined, 'İptal / İkram Sebepleri', () => git(const SebepYonetimiScreen())),
@@ -228,6 +234,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
+    context.watch<TemaProvider>(); // tema degisince dashboard yeniden cizilsin (_t artik read)
     final bildirimler = (data?['bildirimler'] as List?) ?? [];
     return Scaffold(
       backgroundColor: _bg,
