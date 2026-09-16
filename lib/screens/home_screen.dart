@@ -144,7 +144,9 @@ class _HomeScreenState extends State<HomeScreen> {
           key: _govdeNav,
           onGenerateRoute: (s) => MaterialPageRoute(builder: (_) => _TabGovde(ekranlar: ekranlar)),
         ),
-        floatingActionButton: patron ? _mikrofon() : null,
+        // Klavye acikken mikrofonu gizle: centerDocked FAB klavyenin ustune cikip
+        // alt-ekran butonlarinin (ör. "Kaydet") uzerine biniyordu. Yazarken zaten gerekmez.
+        floatingActionButton: (patron && MediaQuery.of(context).viewInsets.bottom < 1) ? _mikrofon() : null,
         floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
         bottomNavigationBar: patron ? _patronBar() : _personelBar(),
       ),
