@@ -24,6 +24,7 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
   List<Map<String, dynamic>> garsonlar = [];
   Map<String, dynamic> isi = {};
   Map<String, dynamic> sema = {}; // salon_sema veri (parsel/bolge/nokta/masa konum) — ısı zemini
+  final Map<String, String> _sekil = {}; // masa id -> kare|yuvarlak
   bool _semaAlindi = false;
 
   num _n(dynamic v) => v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0);
@@ -50,6 +51,9 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
         try {
           final sres = await Api.salonSema(auth.token!);
           if (sres['ok'] == 1 && sres['veri'] is Map) sema = Map<String, dynamic>.from(sres['veri']);
+          for (final m in ((sres['masalar'] as List?) ?? [])) {
+            _sekil['${m['id']}'] = (m['sekil']?.toString() ?? 'kare');
+          }
         } catch (_) {}
       }
       setState(() => loading = false);
@@ -344,25 +348,33 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
       final h = w * 1.35;
       double sx(num v) => v / 1000 * w;
       double sy(num v) => v / 1000 * h;
+      final tablolar = <_Masa>[];
+      masaYer.forEach((id, yer) {
+        final a = agir[id] ?? 0;
+        final o = maxA > 0 ? a / maxA : 0.0;
+        final boyV = _n(yer['boy']) <= 0 ? 150.0 : _n(yer['boy']).toDouble();
+        final size = sx(boyV).clamp(32.0, 88.0);
+        tablolar.add(_Masa(Offset(sx(_n(yer['x'])), sy(_n(yer['y'])).toDouble()), size, o.toDouble(),
+            _sicaklik(o.toDouble()), (_sekil[id] ?? 'kare') == 'yuvarlak', adMap[id] ?? ''));
+      });
       return ClipRRect(
         borderRadius: BorderRadius.circular(14),
         child: SizedBox(width: w, height: h, child: Stack(children: [
           Positioned.fill(child: CustomPaint(painter: _SemaPainter(
-            bos: t.koyu ? const Color(0xFF0E1526) : const Color(0xFFEFF3FA),
-            cizgi: t.line.withValues(alpha: 0.25),
+            koyu: t.koyu,
             parsel: pts.map((p) => Offset(sx(p[0]), sy(p[1]))).toList(),
             zones: zones.map((b) => Rect.fromLTWH(sx(_n(b['x'])), sy(_n(b['y'])), sx(_n(b['w'])), sy(_n(b['h'])))).toList(),
-            bloblar: masaYer.entries.map((e) {
-              final a = agir[e.key] ?? 0;
-              final o = maxA > 0 ? a / maxA : 0.0;
-              return _Blob(Offset(sx(_n(e.value['x'])), sy(_n(e.value['y']))), o.toDouble(), _sicaklik(o.toDouble()), w * 0.14 * (0.55 + o));
-            }).toList(),
+            tablolar: tablolar,
           ))),
           for (final b in zones)
             Positioned(left: sx(_n(b['x'])) + 6, top: sy(_n(b['y'])) + 4,
-              child: Text(b['ad']?.toString() ?? '', style: const TextStyle(color: Color(0xFF60A5FA), fontSize: 10.5, fontWeight: FontWeight.bold))),
+              child: Text(b['ad']?.toString() ?? '', style: const TextStyle(color: Color(0xFF7DD3FC), fontSize: 10.5, fontWeight: FontWeight.bold))),
           for (final nk in noktalar) _semaNokta(t, nk, sx, sy),
-          for (final e in masaYer.entries) _semaMasa(t, e.value, agir[e.key] ?? 0, maxA, adMap[e.key] ?? '', sx, sy),
+          for (final m in tablolar)
+            Positioned(left: m.c.dx - m.size / 2, top: m.c.dy - 7, width: m.size,
+              child: Center(child: FittedBox(fit: BoxFit.scaleDown, child: Text(m.ad,
+                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900,
+                  shadows: [Shadow(color: Colors.black54, blurRadius: 2)]))))),
         ])),
       );
     });
@@ -375,19 +387,6 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
           child: Icon(def[0] as IconData, color: Colors.white, size: 15)),
       Text(nk['ad']?.toString() ?? '', style: TextStyle(color: t.ink, fontSize: 8.5, fontWeight: FontWeight.bold)),
     ]));
-  }
-
-  Widget _semaMasa(TemaProvider t, Map<String, dynamic> yer, int a, int maxA, String ad, double Function(num) sx, double Function(num) sy) {
-    final o = maxA > 0 ? a / maxA : 0.0;
-    final boyV = _n(yer['boy']) <= 0 ? 150.0 : _n(yer['boy']).toDouble();
-    final boyut = sx(boyV).clamp(26.0, 90.0);
-    final renk = a > 0 ? _sicaklik(o.toDouble()) : t.sub.withValues(alpha: 0.35);
-    return Positioned(left: sx(_n(yer['x'])) - boyut / 2, top: sy(_n(yer['y'])) - boyut / 2,
-      child: Container(width: boyut, height: boyut,
-        decoration: BoxDecoration(color: renk.withValues(alpha: a > 0 ? 0.95 : 0.5), shape: BoxShape.circle,
-            border: Border.all(color: Colors.white.withValues(alpha: 0.6), width: 1)),
-        child: Center(child: FittedBox(fit: BoxFit.scaleDown, child: Padding(padding: const EdgeInsets.all(3),
-          child: Text(ad, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900)))))));
   }
 
   // ---------------- KARNE KARTI ----------------
@@ -448,54 +447,136 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
       );
 }
 
-class _Blob {
+class _Masa {
   final Offset c;
+  final double size;
   final double o; // 0..1 yoğunluk
   final Color renk;
-  final double yaricap;
-  _Blob(this.c, this.o, this.renk, this.yaricap);
+  final bool yuvarlak;
+  final String ad;
+  _Masa(this.c, this.size, this.o, this.renk, this.yuvarlak, this.ad);
 }
 
+/// Salon şemasını "resimli" çizer: ahşap/karo zemin + kenar yeşillik + masa+sandalye + ısı.
 class _SemaPainter extends CustomPainter {
-  final Color bos, cizgi;
+  final bool koyu;
   final List<Offset> parsel;
   final List<Rect> zones;
-  final List<_Blob> bloblar;
-  _SemaPainter({required this.bos, required this.cizgi, required this.parsel, required this.zones, required this.bloblar});
+  final List<_Masa> tablolar;
+  _SemaPainter({required this.koyu, required this.parsel, required this.zones, required this.tablolar});
+
+  static const _wood = Color(0xFF8B5E3C);
+  static const _woodK = Color(0xFF5B3D26); // sandalye (koyu ahşap)
 
   @override
   void paint(Canvas canvas, Size size) {
-    final r = RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(14));
-    canvas.drawRRect(r, Paint()..color = bos);
+    final rr = RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(14));
     canvas.save();
-    canvas.clipRRect(r);
-    // parsel (salon şekli)
+    canvas.clipRRect(rr);
+
+    // Zemin path (parsel varsa onun şekli, yoksa tüm alan)
+    Path zemin;
     if (parsel.length >= 3) {
-      final path = Path()..moveTo(parsel[0].dx, parsel[0].dy);
-      for (var i = 1; i < parsel.length; i++) { path.lineTo(parsel[i].dx, parsel[i].dy); }
-      path.close();
-      canvas.drawPath(path, Paint()..color = const Color(0xFF0EA5E9).withValues(alpha: 0.06));
-      canvas.drawPath(path, Paint()..color = const Color(0xFF0EA5E9).withValues(alpha: 0.5)..style = PaintingStyle.stroke..strokeWidth = 2);
+      zemin = Path()..moveTo(parsel[0].dx, parsel[0].dy);
+      for (var i = 1; i < parsel.length; i++) { zemin.lineTo(parsel[i].dx, parsel[i].dy); }
+      zemin.close();
+    } else {
+      zemin = Path()..addRect(Offset.zero & size);
     }
-    // ızgara
-    final gp = Paint()..color = cizgi..strokeWidth = 0.5;
-    for (int i = 1; i < 12; i++) {
-      canvas.drawLine(Offset(size.width * i / 12, 0), Offset(size.width * i / 12, size.height), gp);
-      canvas.drawLine(Offset(0, size.height * i / 12), Offset(size.width, size.height * i / 12), gp);
+    // arka plan (salon dışı)
+    canvas.drawRect(Offset.zero & size, Paint()..color = koyu ? const Color(0xFF0B1020) : const Color(0xFFDDE6D8));
+    // zemin (karo gradient)
+    canvas.save();
+    canvas.clipPath(zemin);
+    final zg = LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
+        colors: koyu ? const [Color(0xFF2A3550), Color(0xFF1E2740)] : const [Color(0xFFEDF1F7), Color(0xFFDCE3EF)]);
+    canvas.drawRect(Offset.zero & size, Paint()..shader = zg.createShader(Offset.zero & size));
+    // karo çizgileri
+    final kp = Paint()..color = (koyu ? Colors.white : Colors.black).withValues(alpha: 0.04)..strokeWidth = 1;
+    for (double x = 0; x < size.width; x += size.width / 14) { canvas.drawLine(Offset(x, 0), Offset(x, size.height), kp); }
+    for (double y = 0; y < size.height; y += size.width / 14) { canvas.drawLine(Offset(0, y), Offset(size.width, y), kp); }
+    canvas.restore();
+
+    // parsel dış çizgisi (duvar)
+    if (parsel.length >= 3) {
+      canvas.drawPath(zemin, Paint()..color = const Color(0xFF334155)..style = PaintingStyle.stroke..strokeWidth = 4);
+      canvas.drawPath(zemin, Paint()..color = const Color(0xFF64748B)..style = PaintingStyle.stroke..strokeWidth = 1.5);
     }
-    // bölgeler
+
+    // bölgeler (hafif ayraç)
     for (final z in zones) {
-      canvas.drawRRect(RRect.fromRectAndRadius(z, const Radius.circular(8)), Paint()..color = const Color(0xFF0EA5E9).withValues(alpha: 0.06));
-      canvas.drawRRect(RRect.fromRectAndRadius(z, const Radius.circular(8)), Paint()..color = const Color(0xFF0EA5E9).withValues(alpha: 0.28)..style = PaintingStyle.stroke..strokeWidth = 1);
+      canvas.drawRRect(RRect.fromRectAndRadius(z, const Radius.circular(10)),
+          Paint()..color = const Color(0xFF38BDF8).withValues(alpha: 0.05));
+      canvas.drawRRect(RRect.fromRectAndRadius(z, const Radius.circular(10)),
+          Paint()..color = const Color(0xFF38BDF8).withValues(alpha: 0.25)..style = PaintingStyle.stroke..strokeWidth = 1);
     }
-    // ISI blobları (radial gradient) — referanstaki sıcak lekeler
-    for (final b in bloblar) {
-      if (b.o <= 0) continue;
-      final rect = Rect.fromCircle(center: b.c, radius: b.yaricap);
-      final shader = RadialGradient(colors: [b.renk.withValues(alpha: 0.55), b.renk.withValues(alpha: 0.0)]).createShader(rect);
-      canvas.drawCircle(b.c, b.yaricap, Paint()..shader = shader);
+
+    // kenar yeşillik (parsel kenarları boyunca saksılar)
+    if (parsel.length >= 2) {
+      final cx = parsel.map((p) => p.dx).reduce((a, b) => a + b) / parsel.length;
+      final cy = parsel.map((p) => p.dy).reduce((a, b) => a + b) / parsel.length;
+      final merkez = Offset(cx, cy);
+      for (var i = 0; i < parsel.length; i++) {
+        final a = parsel[i], b = parsel[(i + 1) % parsel.length];
+        final uz = (b - a).distance;
+        final adet = (uz / 46).floor().clamp(1, 40);
+        for (var k = 0; k <= adet; k++) {
+          final t = k / (adet == 0 ? 1 : adet);
+          var p = Offset.lerp(a, b, t)!;
+          final ic = (merkez - p);
+          final n = ic.distance == 0 ? const Offset(0, 0) : ic / ic.distance;
+          p = p + n * 9; // biraz içeri
+          _saksi(canvas, p);
+        }
+      }
+    }
+
+    // MASALAR: ısı glow -> sandalyeler -> masa üstü
+    for (final m in tablolar) {
+      if (m.o > 0.02) {
+        final rad = m.size * (1.1 + m.o * 0.9);
+        final sh = RadialGradient(colors: [m.renk.withValues(alpha: 0.5 * m.o + 0.12), m.renk.withValues(alpha: 0)])
+            .createShader(Rect.fromCircle(center: m.c, radius: rad));
+        canvas.drawCircle(m.c, rad, Paint()..shader = sh);
+      }
+      _masaCiz(canvas, m);
     }
     canvas.restore();
+  }
+
+  void _saksi(Canvas canvas, Offset p) {
+    canvas.drawCircle(p, 6, Paint()..color = const Color(0xFF1B5E20));
+    canvas.drawCircle(p + const Offset(-2.5, -1), 3.2, Paint()..color = const Color(0xFF388E3C));
+    canvas.drawCircle(p + const Offset(2.5, 1), 3.0, Paint()..color = const Color(0xFF43A047));
+    canvas.drawCircle(p + const Offset(0, -2.5), 2.6, Paint()..color = const Color(0xFF66BB6A));
+  }
+
+  void _masaCiz(Canvas canvas, _Masa m) {
+    final s = m.size;
+    final ust = Color.lerp(_wood, m.renk, m.o * 0.8)!; // yoğunsa kızarır
+    final chairColor = Color.lerp(_woodK, m.renk, m.o * 0.5)!;
+    final g = s * 0.16; // sandalye mesafesi
+    final cw = s * 0.5, ch = s * 0.26; // sandalye ölçüsü
+    final cp = Paint()..color = chairColor;
+    // 4 yön sandalye (yuvarlak masada da 4 sandalye yeterli)
+    void chairH(double cy) => canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center: Offset(m.c.dx, cy), width: cw, height: ch), const Radius.circular(5)), cp);
+    void chairV(double cx) => canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center: Offset(cx, m.c.dy), width: ch, height: cw), const Radius.circular(5)), cp);
+    chairH(m.c.dy - s / 2 - g);
+    chairH(m.c.dy + s / 2 + g);
+    chairV(m.c.dx - s / 2 - g);
+    chairV(m.c.dx + s / 2 + g);
+    // masa gölgesi + üstü
+    final golge = Paint()..color = Colors.black.withValues(alpha: 0.25)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+    if (m.yuvarlak) {
+      canvas.drawCircle(m.c + const Offset(0, 3), s / 2, golge);
+      canvas.drawCircle(m.c, s / 2, Paint()..color = ust);
+      canvas.drawCircle(m.c, s / 2, Paint()..color = Colors.white.withValues(alpha: 0.22)..style = PaintingStyle.stroke..strokeWidth = 1.5);
+    } else {
+      final rect = Rect.fromCenter(center: m.c, width: s, height: s);
+      canvas.drawRRect(RRect.fromRectAndRadius(rect.shift(const Offset(0, 3)), const Radius.circular(8)), golge);
+      canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(8)), Paint()..color = ust);
+      canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(8)), Paint()..color = Colors.white.withValues(alpha: 0.22)..style = PaintingStyle.stroke..strokeWidth = 1.5);
+    }
   }
 
   @override
