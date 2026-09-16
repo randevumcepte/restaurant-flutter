@@ -376,6 +376,9 @@ class Api {
       _post('/api/patron/yarimamul-kaydet', token, {if (id != null) 'id': '$id', 'ad': ad, 'verim_miktar': '$verimMiktar', 'verim_birim_id': '$verimBirimId', 'kalemler': jsonEncode(kalemler)});
   static Future<Map<String, dynamic>> yariMamulSil(String token, int id) => _post('/api/patron/yarimamul-sil', token, {'id': '$id'});
 
+  // ---- URETIM RISKI (kritik malzeme -> etkilenen yemekler) ----
+  static Future<Map<String, dynamic>> uretimRiski(String token, {int esik = 15}) => _get('/api/patron/uretim-riski?esik=$esik', token);
+
   // ---- FINANS ----
   static Future<Map<String, dynamic>> finans(String token, {String? ay}) => _get('/api/patron/finans${ay != null ? '?ay=$ay' : ''}', token);
 

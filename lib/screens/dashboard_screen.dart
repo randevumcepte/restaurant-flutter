@@ -23,6 +23,7 @@ import 'garson_cagrilari_screen.dart';
 import 'ai_bildirim_screen.dart';
 import 'raporlar_screen.dart';
 import 'rezervasyon_screen.dart';
+import 'uretim_riski_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Patron ana paneli — Kerzz BOSS yogunlugunda: tek ekranda her sey.
@@ -196,6 +197,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               if (patron) oge(Icons.point_of_sale, 'Kasa (Vardiya)', () => git(const KasaScreen())),
               if (patron) oge(Icons.analytics_outlined, 'Finans / Kâr-Zarar', () => git(const FinansScreen())),
               if (patron) oge(Icons.inventory_2_outlined, 'Stok & Satın Alma', () => git(const IsletmeHubScreen())),
+              if (patron) oge(Icons.warning_amber_outlined, 'Üretim Riski', () => git(const UretimRiskiScreen()), renk: const Color(0xFFF59E0B)),
               if (patron) oge(Icons.restaurant_menu, 'Menü Yönetimi', () => git(const MenuYonetimiScreen())),
               if (patron) oge(Icons.palette_outlined, 'QR Menü Rengi', () => git(const TemaSecimScreen()), renk: const Color(0xFFF6CE63)),
               oge(Icons.notifications_active, 'Garson Çağrıları', () => git(const GarsonCagrilariScreen()), renk: _kirmizi),
