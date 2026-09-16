@@ -448,15 +448,17 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
   Widget _semaNokta(TemaProvider t, Map<String, dynamic> nk, double Function(num) sx, double Function(num) sy) {
     final tip = nk['tip']?.toString() ?? 'diger';
     final def = _tip[tip] ?? _tip['diger']!;
-    // Kütüphanede assets/sema/<tip>.png varsa gerçek görseli kullan, yoksa ikon rozeti.
-    final gorsel = Image.asset('assets/sema/$tip.png', width: 34, height: 34, fit: BoxFit.contain,
+    // Kütüphanede assets/sema/<tip>.png varsa gerçek görseli (büyük), yoksa ikon rozeti.
+    const kutu = 66.0;
+    final gorsel = Image.asset('assets/sema/$tip.png', width: kutu, fit: BoxFit.contain,
         errorBuilder: (_, _, _) => Container(
             padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: def[1] as Color, borderRadius: BorderRadius.circular(9)),
             child: Icon(def[0] as IconData, color: Colors.white, size: 15)));
-    return Positioned(left: sx(_n(nk['x'])) - 20, top: sy(_n(nk['y'])) - 20, child: Column(mainAxisSize: MainAxisSize.min, children: [
-      gorsel,
-      Text(nk['ad']?.toString() ?? '', style: TextStyle(color: t.ink, fontSize: 8.5, fontWeight: FontWeight.bold)),
-    ]));
+    return Positioned(left: sx(_n(nk['x'])) - kutu / 2, top: sy(_n(nk['y'])) - kutu / 2,
+      child: SizedBox(width: kutu, child: Column(mainAxisSize: MainAxisSize.min, children: [
+        gorsel,
+        Text(nk['ad']?.toString() ?? '', textAlign: TextAlign.center, style: TextStyle(color: t.ink, fontSize: 8.5, fontWeight: FontWeight.bold)),
+      ])));
   }
 
   // ---------------- KARNE KARTI ----------------
@@ -700,10 +702,11 @@ class _SemaPainter extends CustomPainter {
     // COMBO GÖRSEL: masa+sandalye tek PNG → onu bas (ayrı sandalye çizme), boyut ayarıyla ölçekli
     final combo = m.yuvarlak ? gorsel['masa_yuvarlak'] : gorsel['masa_kare'];
     if (combo != null) {
-      final r = s * 1.85 * masaOlcek;
-      final rect = Rect.fromCenter(center: m.c, width: r, height: r);
+      final w = s * 1.85 * masaOlcek;
+      final h = w * combo.height / combo.width; // en-boy oranını koru
+      final rect = Rect.fromCenter(center: m.c, width: w, height: h);
       canvas.drawRRect(
-          RRect.fromRectAndRadius(rect.deflate(r * 0.14).shift(const Offset(0, 3)), Radius.circular(r * 0.1)),
+          RRect.fromRectAndRadius(rect.deflate(w * 0.14).shift(const Offset(0, 3)), Radius.circular(w * 0.1)),
           Paint()..color = Colors.black.withValues(alpha: 0.22)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6));
       _cizGorsel(canvas, combo, rect);
       return;
