@@ -29,6 +29,7 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
 
   Map<String, dynamic>? secili; // {tur: masa|bolge|nokta|kose, anahtar}
   final TransformationController _tc = TransformationController();
+  final List<String> _gecmis = []; // geri al yığını (JSON anlık görüntüler)
 
   num _n(dynamic v) => v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0);
 
@@ -50,6 +51,37 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
     final o = m.getMaxScaleOnAxis();
     if (o < 0.9 || o > 5) return;
     _tc.value = m;
+  }
+
+  // ---- GERİ AL ----
+  String _anlik() => jsonEncode({
+        'katlar': katlar, 'bolgeler': bolgeler, 'noktalar': noktalar, 'masalar': masaYer,
+        'parsel': parsel.entries.map((e) => {'kat': e.key, 'pts': e.value}).toList(),
+      });
+
+  // Değiştirmeden ÖNCE çağrılır (mevcut durumu yığına at).
+  void _gecmisKaydet() {
+    _gecmis.add(_anlik());
+    if (_gecmis.length > 50) _gecmis.removeAt(0);
+  }
+
+  void _geriAl() {
+    if (_gecmis.isEmpty) return;
+    final v = jsonDecode(_gecmis.removeLast()) as Map<String, dynamic>;
+    setState(() {
+      katlar = (v['katlar'] as List).map((e) => e.toString()).toList();
+      if (katlar.isEmpty) katlar = ['Zemin Kat'];
+      bolgeler = (v['bolgeler'] as List).map((e) => Map<String, dynamic>.from(e)).toList();
+      noktalar = (v['noktalar'] as List).map((e) => Map<String, dynamic>.from(e)).toList();
+      masaYer = {};
+      (v['masalar'] as Map).forEach((k, val) => masaYer[k.toString()] = Map<String, dynamic>.from(val));
+      parsel = {};
+      for (final pr in (v['parsel'] as List)) {
+        parsel[_n(pr['kat']).toInt()] = ((pr['pts'] as List).map<List<double>>((e) => [_n(e[0]).toDouble(), _n(e[1]).toDouble()]).toList());
+      }
+      aktifKat = aktifKat.clamp(0, katlar.length - 1);
+      secili = null;
+    });
   }
 
   Future<void> _yukle() async {
@@ -129,6 +161,8 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
         iconTheme: IconThemeData(color: t.ink),
         title: Text('Salon Şeması', style: TextStyle(color: t.ink, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
         actions: [
+          IconButton(tooltip: 'Geri al', onPressed: _gecmis.isEmpty ? null : _geriAl,
+              icon: Icon(Icons.undo, color: _gecmis.isEmpty ? t.sub.withValues(alpha: 0.4) : t.mor1)),
           IconButton(tooltip: 'Uzaklaş', onPressed: () => _zoom(0.8), icon: Icon(Icons.zoom_out, color: t.sub)),
           IconButton(tooltip: 'Yakınlaş', onPressed: () => _zoom(1.25), icon: Icon(Icons.zoom_in, color: t.sub)),
           IconButton(tooltip: 'Bu katı temizle', onPressed: _katiTemizle, icon: Icon(Icons.layers_clear_outlined, color: t.sub)),
@@ -180,8 +214,8 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
           const SizedBox(width: 6),
           Expanded(child: Text('Salon sınırı: köşeleri sürükle', style: TextStyle(color: t.ink, fontSize: 11.5))),
           TextButton(onPressed: _koseEkle, child: const Text('+ Köşe', style: TextStyle(color: Color(0xFF0EA5E9), fontWeight: FontWeight.bold, fontSize: 12))),
-          TextButton(onPressed: () => setState(() => parsel[aktifKat] = _dikdortgen()), child: const Text('Sıfırla', style: TextStyle(color: Color(0xFFF97316), fontSize: 12))),
-          TextButton(onPressed: () => setState(() { parsel.remove(aktifKat); if (secili?['tur'] == 'kose') secili = null; }), child: const Text('Sil', style: TextStyle(color: Color(0xFFDC2626), fontSize: 12))),
+          TextButton(onPressed: () { _gecmisKaydet(); setState(() => parsel[aktifKat] = _dikdortgen()); }, child: const Text('Sıfırla', style: TextStyle(color: Color(0xFFF97316), fontSize: 12))),
+          TextButton(onPressed: () { _gecmisKaydet(); setState(() { parsel.remove(aktifKat); if (secili?['tur'] == 'kose') secili = null; }); }, child: const Text('Sil', style: TextStyle(color: Color(0xFFDC2626), fontSize: 12))),
         ]),
       );
 
@@ -238,6 +272,7 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
       left: sx(pt[0]) - 13, top: sy(pt[1]) - 13,
       child: GestureDetector(
         onTap: () => setState(() => secili = {'tur': 'kose', 'anahtar': i}),
+        onPanStart: (_) => _gecmisKaydet(),
         onPanUpdate: (d) => setState(() {
           pt[0] = (pt[0] + d.delta.dx / cw * 1000).clamp(0, 1000);
           pt[1] = (pt[1] + d.delta.dy / ch * 1000).clamp(0, 1000);
@@ -256,19 +291,25 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
     return Positioned(
       left: sx(_n(b['x'])), top: sy(_n(b['y'])),
       child: GestureDetector(
+        // Gövde SADECE seçer/siler — sürüklemez (üstüne nokta/masa konabilsin, kazara oynamasın)
         onTap: () => setState(() => secili = {'tur': 'bolge', 'anahtar': i}),
         onLongPress: () => _sil('bolge', i),
-        onPanUpdate: (d) => setState(() {
-          b['x'] = (_n(b['x']) + d.delta.dx / cw * 1000).clamp(0, 1000);
-          b['y'] = (_n(b['y']) + d.delta.dy / ch * 1000).clamp(0, 1000);
-        }),
         child: Container(
           width: sx(_n(b['w'])), height: sy(_n(b['h'])),
           decoration: BoxDecoration(color: renk.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10),
               border: Border.all(color: sc ? renk : renk.withValues(alpha: 0.5), width: sc ? 2 : 1.2)),
-          child: Stack(children: [
+          child: Stack(clipBehavior: Clip.none, children: [
             Padding(padding: const EdgeInsets.all(6), child: Text(b['ad']?.toString() ?? '', style: const TextStyle(color: renk, fontSize: 12, fontWeight: FontWeight.bold))),
-            if (sc) Positioned(right: 0, bottom: 0, child: GestureDetector(
+            if (sc) Positioned(right: 0, top: 0, child: GestureDetector(     // TAŞI
+              onPanStart: (_) => _gecmisKaydet(),
+              onPanUpdate: (d) => setState(() {
+                b['x'] = (_n(b['x']) + d.delta.dx / cw * 1000).clamp(0, 1000);
+                b['y'] = (_n(b['y']) + d.delta.dy / ch * 1000).clamp(0, 1000);
+              }),
+              child: Container(width: 28, height: 28, decoration: BoxDecoration(color: renk, borderRadius: BorderRadius.circular(8)),
+                  child: const Icon(Icons.open_with, size: 16, color: Colors.white)))),
+            if (sc) Positioned(right: 0, bottom: 0, child: GestureDetector(  // BOYUT
+              onPanStart: (_) => _gecmisKaydet(),
               onPanUpdate: (d) => setState(() {
                 b['w'] = (_n(b['w']) + d.delta.dx / cw * 1000).clamp(90, 1000);
                 b['h'] = (_n(b['h']) + d.delta.dy / ch * 1000).clamp(70, 1000);
@@ -290,6 +331,7 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
       child: GestureDetector(
         onTap: () => setState(() => secili = {'tur': 'nokta', 'anahtar': i}),
         onLongPress: () => _sil('nokta', i),
+        onPanStart: (_) => _gecmisKaydet(),
         onPanUpdate: (d) => setState(() {
           nk['x'] = (_n(nk['x']) + d.delta.dx / cw * 1000).clamp(0, 1000);
           nk['y'] = (_n(nk['y']) + d.delta.dy / ch * 1000).clamp(0, 1000);
@@ -319,6 +361,7 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
       child: GestureDetector(
         onTap: () => setState(() => secili = {'tur': 'masa', 'anahtar': mid}),
         onLongPress: () => _sil('masa', mid),
+        onPanStart: (_) => _gecmisKaydet(),
         onPanUpdate: (d) => setState(() {
           yer['x'] = (_n(yer['x']) + d.delta.dx / cw * 1000).clamp(0, 1000);
           yer['y'] = (_n(yer['y']) + d.delta.dy / ch * 1000).clamp(0, 1000);
@@ -335,6 +378,7 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
               child: Text(masa['ad']?.toString() ?? '', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900))))),
           ),
           if (sc) Positioned(right: -6, bottom: -6, child: GestureDetector(
+            onPanStart: (_) => _gecmisKaydet(),
             onPanUpdate: (d) => setState(() => yer['boy'] = (boyV + d.delta.dx / cw * 1000 * 1.4).clamp(90, 700)),
             child: Container(width: 22, height: 22, decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle,
                 border: Border.all(color: t.mor1, width: 2)),
@@ -365,6 +409,13 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
         Icon(Icons.adjust, size: 16, color: t.sub),
         const SizedBox(width: 8),
         Expanded(child: Text('Seçili: $ad', style: TextStyle(color: t.ink, fontSize: 13, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
+        if (tur == 'masa') ...[
+          Text('Boyut', style: TextStyle(color: t.sub, fontSize: 12)),
+          IconButton(tooltip: 'Küçült', visualDensity: VisualDensity.compact, onPressed: () => _masaBoy(secili!['anahtar'] as String, 0.82),
+              icon: Icon(Icons.remove_circle_outline, color: t.mor1)),
+          IconButton(tooltip: 'Büyült', visualDensity: VisualDensity.compact, onPressed: () => _masaBoy(secili!['anahtar'] as String, 1.22),
+              icon: Icon(Icons.add_circle_outline, color: t.mor1)),
+        ],
         if (adDegisir)
           TextButton.icon(onPressed: _seciliAdDegistir, icon: Icon(Icons.edit, size: 16, color: t.mor1),
               label: Text('Adı Değiştir', style: TextStyle(color: t.mor1, fontWeight: FontWeight.bold))),
@@ -390,13 +441,14 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
         btn(Icons.table_bar, 'Masa Ekle', _masaEkleSheet, t.mor1),
         btn(Icons.crop_square, 'Bölge', _bolgeEkle, const Color(0xFF0EA5E9)),
         btn(Icons.add_location_alt, 'Nokta', _noktaEkleSheet, const Color(0xFFF97316)),
-        btn(Icons.pentagon_outlined, 'Salon Sınırı', () => setState(() { parsel[aktifKat] ??= _dikdortgen(); }), const Color(0xFF14B8A6)),
+        btn(Icons.pentagon_outlined, 'Salon Sınırı', () { _gecmisKaydet(); setState(() { parsel[aktifKat] ??= _dikdortgen(); }); }, const Color(0xFF14B8A6)),
       ])),
     );
   }
 
   // ---------------- işlemler ----------------
   void _sil(String tur, dynamic anahtar) {
+    _gecmisKaydet();
     setState(() {
       if (tur == 'masa') {
         masaYer.remove(anahtar);
@@ -421,20 +473,20 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
     } else if (tur == 'nokta') {
       mevcut = noktalar[idx as int]['ad']?.toString() ?? '';
     }
-    _adGir('Ad', mevcut, (v) => setState(() {
+    _adGir('Ad', mevcut, (v) { _gecmisKaydet(); setState(() {
       if (tur == 'bolge') {
         bolgeler[idx as int]['ad'] = v;
       } else if (tur == 'nokta') {
         noktalar[idx as int]['ad'] = v;
       }
-    }));
+    }); });
   }
 
   void _bolgeEkle() {
-    _adGir('Bölge adı', '', (v) => setState(() {
+    _adGir('Bölge adı', '', (v) { _gecmisKaydet(); setState(() {
       bolgeler.add({'kat': aktifKat, 'ad': v, 'x': 300.0, 'y': 300.0, 'w': 320.0, 'h': 240.0});
       secili = {'tur': 'bolge', 'anahtar': bolgeler.length - 1};
-    }));
+    }); });
   }
 
   void _noktaEkleSheet() {
@@ -454,10 +506,10 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
     );
   }
 
-  void _noktaEkle(String tip) => setState(() {
+  void _noktaEkle(String tip) { _gecmisKaydet(); setState(() {
         noktalar.add({'kat': aktifKat, 'tip': tip, 'ad': (_tipler[tip]![2] as String), 'x': 500.0, 'y': 500.0});
         secili = {'tur': 'nokta', 'anahtar': noktalar.length - 1};
-      });
+      }); }
 
   void _masaEkleSheet() {
     final t = _t;
@@ -487,12 +539,20 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
     );
   }
 
-  void _masaEkle(String mid) => setState(() {
+  void _masaEkle(String mid) { _gecmisKaydet(); setState(() {
         masaYer[mid] = {'kat': aktifKat, 'x': 500.0, 'y': 450.0, 'boy': 170.0};
         secili = {'tur': 'masa', 'anahtar': mid};
-      });
+      }); }
 
-  void _tumMasalariKaldir() => setState(() { masaYer.clear(); secili = null; });
+  void _masaBoy(String mid, double f) {
+    final yer = masaYer[mid];
+    if (yer == null) return;
+    _gecmisKaydet();
+    final cur = _n(yer['boy']) <= 0 ? 170.0 : _n(yer['boy']).toDouble();
+    setState(() => yer['boy'] = (cur * f).clamp(90, 700));
+  }
+
+  void _tumMasalariKaldir() { _gecmisKaydet(); setState(() { masaYer.clear(); secili = null; }); }
 
   void _katiTemizle() {
     showDialog(context: context, builder: (ctx) => AlertDialog(
@@ -502,6 +562,7 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Vazgeç')),
         FilledButton(style: FilledButton.styleFrom(backgroundColor: const Color(0xFFDC2626)), onPressed: () {
+          _gecmisKaydet();
           setState(() {
             bolgeler.removeWhere((b) => _n(b['kat']).toInt() == aktifKat);
             noktalar.removeWhere((nk) => _n(nk['kat']).toInt() == aktifKat);
@@ -526,10 +587,11 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
       if (u > enU) { enU = u; en = i; }
     }
     final a = pts[en], b = pts[(en + 1) % pts.length];
+    _gecmisKaydet();
     setState(() => pts.insert(en + 1, [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]));
   }
 
-  void _katEkle() { setState(() { katlar.add('Kat ${katlar.length}'); aktifKat = katlar.length - 1; }); _adGir('Kat adı', katlar.last, (v) => setState(() => katlar[aktifKat] = v)); }
+  void _katEkle() { _gecmisKaydet(); setState(() { katlar.add('Kat ${katlar.length}'); aktifKat = katlar.length - 1; }); _adGir('Kat adı', katlar.last, (v) => setState(() => katlar[aktifKat] = v)); }
 
   void _katMenu(int i) {
     final t = _t;
@@ -545,6 +607,7 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
   }
 
   void _katSil(int i) {
+    _gecmisKaydet();
     setState(() {
       bolgeler.removeWhere((b) => _n(b['kat']).toInt() == i);
       noktalar.removeWhere((nk) => _n(nk['kat']).toInt() == i);
