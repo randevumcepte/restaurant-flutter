@@ -1,5 +1,8 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
@@ -29,12 +32,29 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
   final Map<String, int> _kapasite = {}; // masa id -> kişi/sandalye sayısı
   bool _semaAlindi = false;
 
+  // GÖRSEL KÜTÜPHANESİ: assets/sema/<ad>.png -> ui.Image (yoksa vektör fallback)
+  final Map<String, ui.Image> _gorsel = {};
+
   num _n(dynamic v) => v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0);
 
   @override
   void initState() {
     super.initState();
+    _gorselleriYukle();
     _yukle();
+  }
+
+  // Kütüphanedeki sabit görselleri bir kez yükle. Dosya yoksa sessizce atla → vektör çizim.
+  Future<void> _gorselleriYukle() async {
+    const adlar = ['zemin', 'masa_yuvarlak', 'masa_kare', 'sandalye', 'saksi'];
+    for (final a in adlar) {
+      try {
+        final data = await rootBundle.load('assets/sema/$a.png');
+        final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
+        _gorsel[a] = (await codec.getNextFrame()).image;
+      } catch (_) {/* görsel yok → vektör */}
+    }
+    if (mounted && _gorsel.isNotEmpty) setState(() {});
   }
 
   Future<void> _yukle() async {
@@ -369,6 +389,7 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
             parsel: pts.map((p) => Offset(sx(p[0]), sy(p[1]))).toList(),
             zones: zones.map((b) => Rect.fromLTWH(sx(_n(b['x'])), sy(_n(b['y'])), sx(_n(b['w'])), sy(_n(b['h'])))).toList(),
             tablolar: tablolar,
+            gorsel: _gorsel,
           ))),
           for (final b in zones)
             Positioned(left: sx(_n(b['x'])) + 6, top: sy(_n(b['y'])) + 4,
@@ -385,10 +406,15 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
   }
 
   Widget _semaNokta(TemaProvider t, Map<String, dynamic> nk, double Function(num) sx, double Function(num) sy) {
-    final def = _tip[nk['tip']?.toString() ?? 'diger'] ?? _tip['diger']!;
+    final tip = nk['tip']?.toString() ?? 'diger';
+    final def = _tip[tip] ?? _tip['diger']!;
+    // Kütüphanede assets/sema/<tip>.png varsa gerçek görseli kullan, yoksa ikon rozeti.
+    final gorsel = Image.asset('assets/sema/$tip.png', width: 34, height: 34, fit: BoxFit.contain,
+        errorBuilder: (_, _, _) => Container(
+            padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: def[1] as Color, borderRadius: BorderRadius.circular(9)),
+            child: Icon(def[0] as IconData, color: Colors.white, size: 15)));
     return Positioned(left: sx(_n(nk['x'])) - 20, top: sy(_n(nk['y'])) - 20, child: Column(mainAxisSize: MainAxisSize.min, children: [
-      Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: def[1] as Color, borderRadius: BorderRadius.circular(9)),
-          child: Icon(def[0] as IconData, color: Colors.white, size: 15)),
+      gorsel,
       Text(nk['ad']?.toString() ?? '', style: TextStyle(color: t.ink, fontSize: 8.5, fontWeight: FontWeight.bold)),
     ]));
   }
@@ -469,12 +495,19 @@ class _SemaPainter extends CustomPainter {
   final List<Offset> parsel;
   final List<Rect> zones;
   final List<_Masa> tablolar;
-  _SemaPainter({required this.koyu, required this.parsel, required this.zones, required this.tablolar});
+  final Map<String, ui.Image> gorsel; // görsel kütüphanesi (assets/sema/*)
+  _SemaPainter({required this.koyu, required this.parsel, required this.zones, required this.tablolar, required this.gorsel});
 
   Color _jet(double o) {
     o = o.clamp(0, 1);
     if (o < 0.5) return Color.lerp(const Color(0xFF22C55E), const Color(0xFFF59E0B), o / 0.5)!;
     return Color.lerp(const Color(0xFFF59E0B), const Color(0xFFEF4444), (o - 0.5) / 0.5)!;
+  }
+
+  // Bir görseli hedef dikdörtgene orantılı (contain) çiz.
+  void _cizGorsel(Canvas canvas, ui.Image img, Rect dst) {
+    final src = Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble());
+    canvas.drawImageRect(img, src, dst, Paint()..filterQuality = FilterQuality.medium..isAntiAlias = true);
   }
 
   @override
@@ -494,22 +527,30 @@ class _SemaPainter extends CustomPainter {
     // --- salon dışı (koyu) ---
     canvas.drawRect(Offset.zero & size, Paint()..color = koyu ? const Color(0xFF0B1020) : const Color(0xFFCBD5E1));
 
-    // --- ZEMİN: sıcak ahşap parke ---
+    // --- ZEMİN: görsel varsa döşe, yoksa sıcak ahşap parke ---
     canvas.save();
     canvas.clipPath(zemin);
-    final zg = const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
-        colors: [Color(0xFFE4CBA0), Color(0xFFD3B183)]);
-    canvas.drawRect(Offset.zero & size, Paint()..shader = zg.createShader(Offset.zero & size));
-    // parke tahtaları
-    final plank = Paint()..color = const Color(0xFF9C7B54).withValues(alpha: 0.22)..strokeWidth = 1.2;
-    for (double y = 0; y < size.height; y += size.width / 16) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), plank);
-    }
-    final segw = size.width / 8;
-    for (double y = 0; y < size.height; y += size.width / 16) {
-      final off = ((y ~/ (size.width / 16)) % 2) * segw / 2;
-      for (double x = off; x < size.width; x += segw) {
-        canvas.drawLine(Offset(x, y), Offset(x, y + size.width / 16), plank);
+    final zimg = gorsel['zemin'];
+    if (zimg != null) {
+      final tile = size.width / 4;
+      final sc = tile / zimg.width;
+      final mtx = Float64List(16)..[0] = sc..[5] = sc..[10] = 1..[15] = 1;
+      final sh = ui.ImageShader(zimg, TileMode.repeated, TileMode.repeated, mtx);
+      canvas.drawRect(Offset.zero & size, Paint()..shader = sh);
+    } else {
+      final zg = const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
+          colors: [Color(0xFFE4CBA0), Color(0xFFD3B183)]);
+      canvas.drawRect(Offset.zero & size, Paint()..shader = zg.createShader(Offset.zero & size));
+      final plank = Paint()..color = const Color(0xFF9C7B54).withValues(alpha: 0.22)..strokeWidth = 1.2;
+      for (double y = 0; y < size.height; y += size.width / 16) {
+        canvas.drawLine(Offset(0, y), Offset(size.width, y), plank);
+      }
+      final segw = size.width / 8;
+      for (double y = 0; y < size.height; y += size.width / 16) {
+        final off = ((y ~/ (size.width / 16)) % 2) * segw / 2;
+        for (double x = off; x < size.width; x += segw) {
+          canvas.drawLine(Offset(x, y), Offset(x, y + size.width / 16), plank);
+        }
       }
     }
     canvas.restore();
@@ -569,6 +610,11 @@ class _SemaPainter extends CustomPainter {
   }
 
   void _saksi(Canvas canvas, Offset p) {
+    final img = gorsel['saksi'];
+    if (img != null) {
+      _cizGorsel(canvas, img, Rect.fromCenter(center: p, width: 20, height: 20));
+      return;
+    }
     canvas.drawCircle(p + const Offset(1.5, 2), 7, Paint()..color = Colors.black.withValues(alpha: 0.18)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3));
     canvas.drawCircle(p, 7, Paint()..color = const Color(0xFF14532D));
     canvas.drawCircle(p + const Offset(-2.6, -1.4), 3.6, Paint()..color = const Color(0xFF2E7D32));
@@ -585,17 +631,27 @@ class _SemaPainter extends CustomPainter {
     return s;
   }
 
-  // Tek sandalye çiz (lokal koord, dikey=radial derinlik). ch=derinlik, cw=genişlik.
-  void _chair(Canvas canvas, Offset c, double cw, double ch) {
-    final r = Rect.fromCenter(center: c, width: cw, height: ch);
-    canvas.drawRRect(RRect.fromRectAndRadius(r.shift(const Offset(0, 2)), const Radius.circular(4)),
-        Paint()..color = Colors.black.withValues(alpha: 0.22)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2));
-    canvas.drawRRect(RRect.fromRectAndRadius(r, const Radius.circular(4)),
-        Paint()..shader = const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
-            colors: [Color(0xFF6B4A30), Color(0xFF4A3220)]).createShader(r));
-    final hl = Rect.fromLTWH(r.left + 1.5, r.top + 1.5, r.width - 3, r.height * 0.34);
-    canvas.drawRRect(RRect.fromRectAndRadius(hl, const Radius.circular(2)),
-        Paint()..color = Colors.white.withValues(alpha: 0.10));
+  // Tek sandalye: merkez + boyut + yön açısı (aci: sandalyenin "sırtı" yukarı=0).
+  // Görsel varsa PNG'yi döndürerek çiz, yoksa vektör (simetrik olduğundan açı görünmez).
+  void _chair(Canvas canvas, Offset c, double cw, double ch, double aci) {
+    canvas.save();
+    canvas.translate(c.dx, c.dy);
+    canvas.rotate(aci);
+    final r = Rect.fromCenter(center: Offset.zero, width: cw, height: ch);
+    final img = gorsel['sandalye'];
+    if (img != null) {
+      _cizGorsel(canvas, img, r);
+    } else {
+      canvas.drawRRect(RRect.fromRectAndRadius(r.shift(const Offset(0, 2)), const Radius.circular(4)),
+          Paint()..color = Colors.black.withValues(alpha: 0.22)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2));
+      canvas.drawRRect(RRect.fromRectAndRadius(r, const Radius.circular(4)),
+          Paint()..shader = const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
+              colors: [Color(0xFF6B4A30), Color(0xFF4A3220)]).createShader(r));
+      final hl = Rect.fromLTWH(r.left + 1.5, r.top + 1.5, r.width - 3, r.height * 0.34);
+      canvas.drawRRect(RRect.fromRectAndRadius(hl, const Radius.circular(2)),
+          Paint()..color = Colors.white.withValues(alpha: 0.10));
+    }
+    canvas.restore();
   }
 
   void _masaCiz(Canvas canvas, _Masa m) {
@@ -605,47 +661,49 @@ class _SemaPainter extends CustomPainter {
     final n = m.kapasite < 1 ? 4 : (m.kapasite > 12 ? 12 : m.kapasite);
 
     if (m.yuvarlak) {
-      // yuvarlak masa: sandalyeleri çevreye eşit dağıt (merkeze dönük)
+      // yuvarlak masa: sandalyeleri çevreye eşit dağıt (sırt dışa dönük)
       final rr = s / 2 + g + ch / 2;
       final cw = (2 * math.pi * rr / n * 0.7).clamp(8.0, s * 0.6);
       for (var i = 0; i < n; i++) {
         final ang = (2 * math.pi * i / n) - math.pi / 2;
-        canvas.save();
-        canvas.translate(m.c.dx + math.cos(ang) * rr, m.c.dy + math.sin(ang) * rr);
-        canvas.rotate(ang + math.pi / 2);
-        _chair(canvas, Offset.zero, cw, ch);
-        canvas.restore();
+        _chair(canvas, Offset(m.c.dx + math.cos(ang) * rr, m.c.dy + math.sin(ang) * rr), cw, ch, ang + math.pi / 2);
       }
     } else {
-      // kare/dikdörtgen masa: 4 kenara dağıt
+      // kare/dikdörtgen masa: 4 kenara dağıt (sırt dışa dönük)
       final d = _dagit(n); // üst, sağ, alt, sol
-      // üst & alt (yatay sandalye)
-      for (final side in [0, 2]) {
+      for (final side in [0, 2]) { // üst / alt
         final cnt = d[side];
         if (cnt == 0) continue;
         final cw = (s / cnt * 0.82).clamp(7.0, s * 0.6);
         final y = side == 0 ? m.c.dy - s / 2 - g - ch / 2 : m.c.dy + s / 2 + g + ch / 2;
         for (var k = 0; k < cnt; k++) {
-          final x = m.c.dx - s / 2 + s / cnt * (k + 0.5);
-          _chair(canvas, Offset(x, y), cw, ch);
+          _chair(canvas, Offset(m.c.dx - s / 2 + s / cnt * (k + 0.5), y), cw, ch, side == 0 ? 0 : math.pi);
         }
       }
-      // sağ & sol (dikey sandalye => cw/ch yer değiştirir)
-      for (final side in [1, 3]) {
+      for (final side in [1, 3]) { // sağ / sol
         final cnt = d[side];
         if (cnt == 0) continue;
-        final chH = (s / cnt * 0.82).clamp(7.0, s * 0.6);
+        final cw = (s / cnt * 0.82).clamp(7.0, s * 0.6);
         final x = side == 1 ? m.c.dx + s / 2 + g + ch / 2 : m.c.dx - s / 2 - g - ch / 2;
         for (var k = 0; k < cnt; k++) {
-          final y = m.c.dy - s / 2 + s / cnt * (k + 0.5);
-          _chair(canvas, Offset(x, y), ch, chH);
+          _chair(canvas, Offset(x, m.c.dy - s / 2 + s / cnt * (k + 0.5)), cw, ch, side == 1 ? math.pi / 2 : -math.pi / 2);
         }
       }
     }
 
-    // masa gölgesi
+    // MASA ÜSTÜ: görsel varsa PNG, yoksa vektör ahşap
     final golge = Paint()..color = Colors.black.withValues(alpha: 0.28)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
-    // masa ahşap üstü: merkez highlight -> koyu kenar (radial => 3B his)
+    final img = m.yuvarlak ? gorsel['masa_yuvarlak'] : gorsel['masa_kare'];
+    final rect = Rect.fromCenter(center: m.c, width: s, height: s);
+    if (img != null) {
+      if (m.yuvarlak) {
+        canvas.drawCircle(m.c + const Offset(0, 3), s / 2, golge);
+      } else {
+        canvas.drawRRect(RRect.fromRectAndRadius(rect.shift(const Offset(0, 3)), const Radius.circular(8)), golge);
+      }
+      _cizGorsel(canvas, img, rect);
+      return;
+    }
     final woodSh = RadialGradient(colors: const [Color(0xFFC08A54), Color(0xFF7A5230), Color(0xFF5B3D26)], stops: const [0.0, 0.7, 1.0])
         .createShader(Rect.fromCircle(center: m.c, radius: s / 2));
     if (m.yuvarlak) {
@@ -654,7 +712,6 @@ class _SemaPainter extends CustomPainter {
       canvas.drawCircle(m.c, s / 2, Paint()..color = const Color(0xFF3D2817)..style = PaintingStyle.stroke..strokeWidth = 1.5);
       canvas.drawCircle(m.c, s * 0.20, Paint()..color = Colors.white.withValues(alpha: 0.10)); // tabak iması
     } else {
-      final rect = Rect.fromCenter(center: m.c, width: s, height: s);
       canvas.drawRRect(RRect.fromRectAndRadius(rect.shift(const Offset(0, 3)), const Radius.circular(8)), golge);
       canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(8)), Paint()..shader = woodSh);
       canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(8)), Paint()..color = const Color(0xFF3D2817)..style = PaintingStyle.stroke..strokeWidth = 1.5);
