@@ -337,11 +337,15 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
           nk['y'] = (_n(nk['y']) + d.delta.dy / ch * 1000).clamp(0, 1000);
         }),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(padding: const EdgeInsets.all(9),
-            decoration: BoxDecoration(color: def[1] as Color, borderRadius: BorderRadius.circular(12),
-                border: sc ? Border.all(color: Colors.white, width: 2.5) : null,
-                boxShadow: [BoxShadow(color: (def[1] as Color).withValues(alpha: 0.4), blurRadius: 6)]),
-            child: Icon(def[0] as IconData, color: Colors.white, size: 20)),
+          // Görsel kütüphanesi: assets/sema/<tip>.png varsa gerçek görsel, yoksa ikon rozeti
+          Container(
+            decoration: sc ? BoxDecoration(borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white, width: 2.5)) : null,
+            child: Image.asset('assets/sema/${nk['tip'] ?? 'diger'}.png', width: 58, fit: BoxFit.contain,
+              errorBuilder: (_, _, _) => Container(padding: const EdgeInsets.all(9),
+                decoration: BoxDecoration(color: def[1] as Color, borderRadius: BorderRadius.circular(12),
+                    boxShadow: [BoxShadow(color: (def[1] as Color).withValues(alpha: 0.4), blurRadius: 6)]),
+                child: Icon(def[0] as IconData, color: Colors.white, size: 20))),
+          ),
           const SizedBox(height: 2),
           Text(nk['ad']?.toString() ?? (def[2] as String), style: TextStyle(color: t.ink, fontSize: 10, fontWeight: FontWeight.bold)),
         ]),
@@ -366,16 +370,28 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
           yer['x'] = (_n(yer['x']) + d.delta.dx / cw * 1000).clamp(0, 1000);
           yer['y'] = (_n(yer['y']) + d.delta.dy / ch * 1000).clamp(0, 1000);
         }),
-        child: Stack(clipBehavior: Clip.none, children: [
+        child: Stack(clipBehavior: Clip.none, alignment: Alignment.center, children: [
+          // Görsel kütüphanesi: masa_kare/masa_yuvarlak.png varsa gerçek görsel, yoksa mor kutu
           Container(
             width: boyut, height: boyut,
-            decoration: BoxDecoration(color: t.mor1,
+            decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(yuvarlak ? boyut / 2 : 12),
-              border: Border.all(color: sc ? Colors.white : Colors.white.withValues(alpha: 0.4), width: sc ? 2.5 : 1),
-              boxShadow: [BoxShadow(color: t.mor1.withValues(alpha: 0.35), blurRadius: 6)]),
-            child: Center(child: FittedBox(fit: BoxFit.scaleDown, child: Padding(
-              padding: const EdgeInsets.all(6),
-              child: Text(masa['ad']?.toString() ?? '', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900))))),
+              border: sc ? Border.all(color: Colors.white, width: 2.5) : null),
+            child: Image.asset(
+              yuvarlak ? 'assets/sema/masa_yuvarlak.png' : 'assets/sema/masa_kare.png',
+              width: boyut, height: boyut, fit: BoxFit.contain,
+              errorBuilder: (_, _, _) => Container(
+                decoration: BoxDecoration(color: t.mor1,
+                  borderRadius: BorderRadius.circular(yuvarlak ? boyut / 2 : 12),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 1),
+                  boxShadow: [BoxShadow(color: t.mor1.withValues(alpha: 0.35), blurRadius: 6)])),
+            ),
+          ),
+          // Masa adı/no rozeti (görsel üstünde okunur)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+            decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.55), borderRadius: BorderRadius.circular(7)),
+            child: Text(masa['ad']?.toString() ?? '', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900)),
           ),
           if (sc) Positioned(right: -6, bottom: -6, child: GestureDetector(
             onPanStart: (_) => _gecmisKaydet(),
