@@ -396,6 +396,11 @@ class Api {
   static Future<Map<String, dynamic>> adimKaydet(String token, int adim) =>
       _post('/api/adim-kaydet', token, {'adim': '$adim'});
 
+  // ---- SALON SEMA (dijital ikiz) ----
+  static Future<Map<String, dynamic>> salonSema(String token) => _get('/api/patron/salon-sema', token);
+  static Future<Map<String, dynamic>> salonSemaKaydet(String token, String veriJson) =>
+      _post('/api/patron/salon-sema-kaydet', token, {'veri': veriJson});
+
   static Future<Map<String, dynamic>> paket(String token) => _get('/api/paket', token);
   static Future<Map<String, dynamic>> paketDetay(String token, int id) => _get('/api/paket/$id', token);
   // Paket durum akisi: aksiyon = kabul | yola | teslim | iptal

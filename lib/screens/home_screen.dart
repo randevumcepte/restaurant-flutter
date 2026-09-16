@@ -23,6 +23,7 @@ import 'raporlar_screen.dart';
 import 'sebep_yonetimi_screen.dart';
 import 'masa_atama_screen.dart';
 import 'garson_performans_screen.dart';
+import 'salon_sema_screen.dart';
 import '../services/adim_servisi.dart';
 
 /// Uygulama kabugu — iki yuz:
@@ -320,6 +321,7 @@ class _YanMenu extends StatelessWidget {
               if (patron) _link(t, Icons.badge_outlined, 'Personel & Maaş', () => git(const PersonelScreen())),
               if (patron) _link(t, Icons.table_restaurant_outlined, 'Masa & Bölge Atama', () => git(const MasaAtamaScreen())),
               if (patron) _link(t, Icons.emoji_events_outlined, 'Garson Performansı', () => git(const GarsonPerformansScreen()), renk: t.yesil),
+              if (patron) _link(t, Icons.grid_on_outlined, 'Salon Şeması', () => git(const SalonSemaScreen()), renk: const Color(0xFF0EA5E9)),
               if (patron) _link(t, Icons.receipt_long_outlined, 'Giderler', () => git(const GiderScreen())),
               if (patron) _link(t, Icons.bar_chart_outlined, 'Raporlar', () => git(const RaporlarScreen())),
               if (patron) _link(t, Icons.rule_folder_outlined, 'İptal / İkram Sebepleri', () => git(const SebepYonetimiScreen())),

@@ -17,6 +17,7 @@ import 'sebep_yonetimi_screen.dart';
 import 'menu_yonetimi_screen.dart';
 import 'masa_atama_screen.dart';
 import 'garson_performans_screen.dart';
+import 'salon_sema_screen.dart';
 import 'tema_secim_screen.dart';
 import 'garson_cagrilari_screen.dart';
 import 'ai_bildirim_screen.dart';
@@ -206,6 +207,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               if (patron) oge(Icons.badge_outlined, 'Personel & Maaş', () => git(const PersonelScreen())),
               if (patron) oge(Icons.table_restaurant_outlined, 'Masa & Bölge Atama', () => git(const MasaAtamaScreen())),
               if (patron) oge(Icons.emoji_events_outlined, 'Garson Performansı', () => git(const GarsonPerformansScreen()), renk: const Color(0xFF10B981)),
+              if (patron) oge(Icons.grid_on_outlined, 'Salon Şeması', () => git(const SalonSemaScreen()), renk: const Color(0xFF0EA5E9)),
               if (patron) oge(Icons.receipt_long_outlined, 'Giderler', () => git(const GiderScreen())),
               if (patron) oge(Icons.bar_chart_outlined, 'Raporlar', () => git(const RaporlarScreen())),
               if (patron) oge(Icons.rule_folder_outlined, 'İptal / İkram Sebepleri', () => git(const SebepYonetimiScreen())),
