@@ -379,6 +379,12 @@ class Api {
   // ---- URETIM RISKI (kritik malzeme -> etkilenen yemekler) ----
   static Future<Map<String, dynamic>> uretimRiski(String token, {int esik = 15}) => _get('/api/patron/uretim-riski?esik=$esik', token);
 
+  // ---- SAYIM (fiziksel envanter + teorik-gercek fark) ----
+  static Future<Map<String, dynamic>> sayimYeni(String token) => _get('/api/patron/sayim-yeni', token);
+  static Future<Map<String, dynamic>> sayimKaydet(String token, List<Map<String, dynamic>> kalemler) => _post('/api/patron/sayim-kaydet', token, {'kalemler': jsonEncode(kalemler)});
+  static Future<Map<String, dynamic>> sayimGecmis(String token) => _get('/api/patron/sayim-gecmis', token);
+  static Future<Map<String, dynamic>> sayimDetay(String token, int id) => _get('/api/patron/sayim-detay?id=$id', token);
+
   // ---- FINANS ----
   static Future<Map<String, dynamic>> finans(String token, {String? ay}) => _get('/api/patron/finans${ay != null ? '?ay=$ay' : ''}', token);
 
