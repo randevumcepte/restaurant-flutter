@@ -169,7 +169,7 @@ class _TedarikciScreenState extends State<TedarikciScreen> {
 
   Future<void> _silOnay(Map e) async {
     final t = context.read<TemaProvider>();
-    final onay = await showDialog<bool>(
+    final onay = await showDialog<bool>(useRootNavigator: true, 
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: t.card,
@@ -226,7 +226,7 @@ class _TedarikciScreenState extends State<TedarikciScreen> {
     final telC = TextEditingController(text: t?['telefon']?.toString() ?? '');
     final aciklamaC = TextEditingController(text: t?['aciklama']?.toString() ?? '');
     final yeni = t == null;
-    final ok = await showModalBottomSheet<bool>(
+    final ok = await showModalBottomSheet<bool>(useRootNavigator: true, 
       context: context, isScrollControlled: true, backgroundColor: _bg,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => Padding(

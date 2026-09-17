@@ -588,7 +588,7 @@ class _DetayScreenState extends State<DetayScreen> {
   }
 
   Future<int?> _masaSecici(String baslik, List masalar, {required bool adisyonDon}) {
-    return showModalBottomSheet<int>(
+    return showModalBottomSheet<int>(useRootNavigator: true, 
       context: context, backgroundColor: _card,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => SafeArea(
@@ -658,7 +658,7 @@ class _DetayScreenState extends State<DetayScreen> {
     final aktif = kalemler.where((k) => (k as Map)['durum'] != 'iptal').toList();
     if (aktif.length < 2) { _snack('Bölmek için en az 2 ürün gerekir.'); return; }
     final secili = <int>{};
-    final onay = await showModalBottomSheet<bool>(
+    final onay = await showModalBottomSheet<bool>(useRootNavigator: true, 
       context: context, backgroundColor: _card, isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => StatefulBuilder(
@@ -717,7 +717,7 @@ class _DetayScreenState extends State<DetayScreen> {
     if (ayrilabilir.isEmpty) { _snack('Bu masa birleşik değil.'); return; }
 
     // 1) Hangi masa ayrılsın?
-    final secilenMasa = await showModalBottomSheet<Map>(
+    final secilenMasa = await showModalBottomSheet<Map>(useRootNavigator: true, 
       context: context, backgroundColor: _card,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => SafeArea(
@@ -744,7 +744,7 @@ class _DetayScreenState extends State<DetayScreen> {
     final kalemler = (d!['kalemler'] as List?) ?? [];
     final aktif = kalemler.where((k) => (k as Map)['durum'] != 'iptal').toList();
     final secili = <int>{};
-    final onay = await showModalBottomSheet<bool>(
+    final onay = await showModalBottomSheet<bool>(useRootNavigator: true, 
       context: context, backgroundColor: _card, isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => StatefulBuilder(
@@ -1044,7 +1044,7 @@ class _DetayScreenState extends State<DetayScreen> {
     } catch (_) {}
     if (metinler.isEmpty) metinler = ['Müşteri beğenmedi', 'Yanlış girildi', 'Müşteri vazgeçti', 'Ürün tükendi', 'Diğer'];
     if (!mounted) return;
-    final secilen = await showModalBottomSheet<String>(
+    final secilen = await showModalBottomSheet<String>(useRootNavigator: true, 
       context: context,
       backgroundColor: _card,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
@@ -1321,7 +1321,7 @@ class _DetayScreenState extends State<DetayScreen> {
 
   Future<String?> _pinSor(String mesaj) {
     final c = TextEditingController();
-    return showDialog<String>(
+    return showDialog<String>(useRootNavigator: true, 
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: _card,
@@ -1341,7 +1341,7 @@ class _DetayScreenState extends State<DetayScreen> {
   }
 
   Future<void> _kapatDialog() async {
-    final secim = await showDialog<String>(
+    final secim = await showDialog<String>(useRootNavigator: true, 
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: _card,
@@ -1379,7 +1379,7 @@ class _DetayScreenState extends State<DetayScreen> {
   Future<void> _iskontoDialog() async {
     final oranC = TextEditingController();
     final sebepC = TextEditingController();
-    final ok = await showDialog<bool>(
+    final ok = await showDialog<bool>(useRootNavigator: true, 
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: _card,
@@ -1411,7 +1411,7 @@ class _DetayScreenState extends State<DetayScreen> {
       return;
     }
     final secili = <int>{};
-    final onay = await showDialog<bool>(
+    final onay = await showDialog<bool>(useRootNavigator: true, 
       context: context,
       builder: (ctx) => StatefulBuilder(builder: (ctx, setD) {
         final toplam = kalemler.where((k) => secili.contains(_n((k as Map)['id']).toInt())).fold<num>(0, (a, k) => a + _n((k as Map)['tutar']));
@@ -1458,7 +1458,7 @@ class _DetayScreenState extends State<DetayScreen> {
 
   Future<void> _iptalDialog() async {
     final sebepC = TextEditingController();
-    final ok = await showDialog<bool>(
+    final ok = await showDialog<bool>(useRootNavigator: true, 
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: _card,

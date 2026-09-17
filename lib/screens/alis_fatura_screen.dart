@@ -243,7 +243,7 @@ class _AlisFaturaScreenState extends State<AlisFaturaScreen> {
     if (!mounted || d == null) { _uyar('Detay alınamadı'); return; }
     final Map dd = d;
     final kalemler = (dd['kalemler'] as List?) ?? [];
-    await showModalBottomSheet(
+    await showModalBottomSheet(useRootNavigator: true, 
       context: context, isScrollControlled: true, backgroundColor: _bg,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => DraggableScrollableSheet(expand: false, initialChildSize: 0.7, maxChildSize: 0.92, minChildSize: 0.4, builder: (ctx, scroll) => ListView(controller: scroll, padding: const EdgeInsets.all(16), children: [
@@ -415,7 +415,7 @@ class _AlisFaturaEkleScreenState extends State<AlisFaturaEkleScreen> {
     int birimId = _n((malzemeler.first as Map)['temel_birim_id']).toInt();
     final miktarC = TextEditingController();
     final fiyatC = TextEditingController();
-    final eklendi = await showModalBottomSheet<bool>(
+    final eklendi = await showModalBottomSheet<bool>(useRootNavigator: true, 
       context: context, isScrollControlled: true, backgroundColor: _bg,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => StatefulBuilder(builder: (ctx, setS) => Padding(

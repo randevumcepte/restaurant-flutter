@@ -57,7 +57,7 @@ class _SebepYonetimiScreenState extends State<SebepYonetimiScreen> {
 
   Future<void> _ekle() async {
     final ctrl = TextEditingController();
-    final metin = await showDialog<String>(
+    final metin = await showDialog<String>(useRootNavigator: true, 
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('${_turler[_tur]} sebebi ekle'),

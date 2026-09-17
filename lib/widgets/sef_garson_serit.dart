@@ -107,7 +107,7 @@ class _SefGarsonSeritState extends State<SefGarsonSerit> {
         ? mt
         : (masaAd.isNotEmpty ? '$masaAd masasında satışı artırabileceğiniz bir fırsat var. Öneri için "Ne satayım?" deyin. 😊'
                              : 'Satışı artırabileceğiniz bir fırsat var. Öneri için "Ne satayım?" deyin. 😊');
-    await showDialog(
+    await showDialog(useRootNavigator: true, 
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: t.card,
@@ -143,7 +143,7 @@ class _SefGarsonSeritState extends State<SefGarsonSerit> {
   Future<void> _oneriGoster(Map<String, dynamic> u) async {
     final auth = context.read<AuthProvider>();
     final t = context.read<TemaProvider>();
-    await showModalBottomSheet(
+    await showModalBottomSheet(useRootNavigator: true, 
       context: context,
       backgroundColor: t.card,
       isScrollControlled: true,

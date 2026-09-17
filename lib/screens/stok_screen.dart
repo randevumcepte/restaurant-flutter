@@ -348,7 +348,7 @@ class _StokScreenState extends State<StokScreen> {
     if (!mounted || d == null) { _uyar('Detay alınamadı'); return; }
     final Map dd = d;
     final hareketler = (dd['hareketler'] as List?) ?? [];
-    await showModalBottomSheet(
+    await showModalBottomSheet(useRootNavigator: true, 
       context: context, isScrollControlled: true, backgroundColor: _bg,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => DraggableScrollableSheet(
@@ -410,7 +410,7 @@ class _StokScreenState extends State<StokScreen> {
     final miktarC = TextEditingController();
     final aciklamaC = TextEditingController();
     final baslik = {'giris': 'Stok Girişi', 'fire': 'Fire / Zayi', 'duzeltme': 'Sayım Düzeltme (±)'}[tip]!;
-    final ok = await showDialog<bool>(
+    final ok = await showDialog<bool>(useRootNavigator: true, 
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: _card, title: Text(baslik, style: const TextStyle(color: Colors.white, fontSize: 17)),
@@ -448,7 +448,7 @@ class _StokScreenState extends State<StokScreen> {
     bool takipli = m == null ? true : _n(m['stok_takipli']) == 1;
     final yeni = m == null;
 
-    final kaydet = await showModalBottomSheet<bool>(
+    final kaydet = await showModalBottomSheet<bool>(useRootNavigator: true, 
       context: context, isScrollControlled: true, backgroundColor: _bg,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => StatefulBuilder(builder: (ctx, setS) => Padding(
@@ -494,7 +494,7 @@ class _StokScreenState extends State<StokScreen> {
 
   Future<void> _kategoriEkle(StateSetter setS, void Function(int) onEkle) async {
     final c = TextEditingController();
-    final ok = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
+    final ok = await showDialog<bool>(useRootNavigator: true, context: context, builder: (ctx) => AlertDialog(
       backgroundColor: _card, title: const Text('Yeni Kategori', style: TextStyle(color: Colors.white, fontSize: 16)),
       content: TextField(controller: c, autofocus: true, style: const TextStyle(color: Colors.white), decoration: _dec('Kategori adı')),
       actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Vazgeç', style: TextStyle(color: _gri))), FilledButton(style: FilledButton.styleFrom(backgroundColor: _mor1), onPressed: () => Navigator.pop(ctx, true), child: const Text('Ekle'))],

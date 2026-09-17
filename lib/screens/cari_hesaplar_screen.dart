@@ -70,7 +70,7 @@ class _CariHesaplarScreenState extends State<CariHesaplarScreen> {
     final adC = TextEditingController();
     final telC = TextEditingController();
     String tip = 'musteri';
-    final ok = await showDialog<bool>(
+    final ok = await showDialog<bool>(useRootNavigator: true, 
       context: context,
       builder: (ctx) => StatefulBuilder(builder: (ctx, setD) => AlertDialog(
         backgroundColor: _card,
@@ -337,7 +337,7 @@ class _CariDetayScreenState extends State<_CariDetayScreen> {
   Future<void> _tahsilat() async {
     final tutarC = TextEditingController(text: (_n(d?['bakiye']) > 0 ? _n(d!['bakiye']).round().toString() : ''));
     String sekil = 'nakit';
-    final ok = await showDialog<bool>(
+    final ok = await showDialog<bool>(useRootNavigator: true, 
       context: context,
       builder: (ctx) => StatefulBuilder(builder: (ctx, setD) => AlertDialog(
         backgroundColor: _card,

@@ -66,7 +66,7 @@ class _KasaScreenState extends State<KasaScreen> {
   // Ortak tutar giris dialogu
   Future<double?> _tutarSor(String baslik, String etiket, {String onay = 'Tamam', Color renk = _mor1}) {
     final c = TextEditingController();
-    return showDialog<double>(
+    return showDialog<double>(useRootNavigator: true, 
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: _card,
@@ -131,7 +131,7 @@ class _KasaScreenState extends State<KasaScreen> {
     if (res['ok'] == 1) {
       final fark = _n(res['fark']).toDouble();
       // Fark sonucunu vurgulu goster
-      await showDialog(
+      await showDialog(useRootNavigator: true, 
         context: context,
         builder: (ctx) => AlertDialog(
           backgroundColor: _card,

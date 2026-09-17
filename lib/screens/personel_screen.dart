@@ -655,7 +655,7 @@ class _PersonelDetayScreenState extends State<PersonelDetayScreen> {
   Future<void> _hareketDialog(String tur, String baslik) async {
     final tutarC = TextEditingController();
     final aciklamaC = TextEditingController();
-    final ok = await showDialog<bool>(
+    final ok = await showDialog<bool>(useRootNavigator: true, 
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: _card,
@@ -719,7 +719,7 @@ class _PersonelDetayScreenState extends State<PersonelDetayScreen> {
     String primTipi = _yeni ? 'yok' : (ozet['prim_tipi']?.toString() ?? 'yok');
     bool aktif = _yeni ? true : _n(ozet['aktif']) == 1;
 
-    final kaydet = await showModalBottomSheet<bool>(
+    final kaydet = await showModalBottomSheet<bool>(useRootNavigator: true, 
       context: context,
       isScrollControlled: true,
       backgroundColor: _bg,

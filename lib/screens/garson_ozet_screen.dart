@@ -82,7 +82,7 @@ class _GarsonOzetScreenState extends State<GarsonOzetScreen> {
           IconButton(
             tooltip: 'Çıkış',
             onPressed: () async {
-              final onay = await showDialog<bool>(
+              final onay = await showDialog<bool>(useRootNavigator: true, 
                 context: context,
                 builder: (ctx) => AlertDialog(
                   backgroundColor: t.card,

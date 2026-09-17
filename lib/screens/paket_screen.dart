@@ -447,7 +447,7 @@ class _PaketScreenState extends State<PaketScreen> {
   }
 
   Future<void> _aksiyonOnay(int id) async {
-    final onay = await showDialog<bool>(
+    final onay = await showDialog<bool>(useRootNavigator: true, 
       context: context,
       builder: (c) => AlertDialog(
         title: const Text('Siparişi iptal et'),

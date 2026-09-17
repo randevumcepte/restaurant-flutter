@@ -91,7 +91,7 @@ class _SayimScreenState extends State<SayimScreen> {
   Future<void> _sonucGoster(Map res) async {
     final t = context.read<TemaProvider>();
     final fm = _n(res['toplam_fark_maliyet']).toDouble();
-    await showDialog(context: context, builder: (c) => AlertDialog(
+    await showDialog(useRootNavigator: true, context: context, builder: (c) => AlertDialog(
       backgroundColor: t.card,
       title: Text('Sayım kaydedildi', style: TextStyle(color: t.ink)),
       content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [

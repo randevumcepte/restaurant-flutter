@@ -88,7 +88,7 @@ class _MasalarScreenState extends State<MasalarScreen> {
             ),
           ]),
         );
-    showDialog(
+    showDialog(useRootNavigator: true, 
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: t.card,
@@ -140,7 +140,7 @@ class _MasalarScreenState extends State<MasalarScreen> {
   Future<int?> _misafirSor(String masaAd, int kapasite) {
     final t = context.read<TemaProvider>();   // build DIŞI -> read
     int sayi = kapasite >= 1 && kapasite <= 20 ? kapasite : 2;
-    return showDialog<int>(
+    return showDialog<int>(useRootNavigator: true, 
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setD) => AlertDialog(
@@ -581,7 +581,7 @@ class _MasalarScreenState extends State<MasalarScreen> {
     required String onayText,
   }) {
     final t = context.read<TemaProvider>();   // build DIŞI (dialog) -> read
-    return showDialog<bool>(
+    return showDialog<bool>(useRootNavigator: true, 
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: t.card,

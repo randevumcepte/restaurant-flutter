@@ -6,7 +6,7 @@ import '../services/api.dart';
 /// "🤖 Derin AI Analizi" alt sayfasi (Haiku LLM, kural motoru ustune, on-demand).
 class AiAnalizSheet {
   static Future<void> goster(BuildContext context, {required String kapsam, int? id, String period = 'haftalik', String baslik = 'Derin AI Analizi'}) {
-    return showModalBottomSheet(
+    return showModalBottomSheet(useRootNavigator: true, 
       context: context,
       backgroundColor: const Color(0xFF161C2E),
       isScrollControlled: true,

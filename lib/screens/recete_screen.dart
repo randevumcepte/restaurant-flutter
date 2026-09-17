@@ -536,7 +536,7 @@ class _ReceteEditorScreenState extends State<ReceteEditorScreen> {
     int birimId = malzemeler.isNotEmpty ? _n((malzemeler.first as Map)['temel_birim_id']).toInt() : 0;
     int ymId = yarimamuller.isNotEmpty ? _n((yarimamuller.first as Map)['id']).toInt() : 0;
     final miktarC = TextEditingController();
-    final eklendi = await showModalBottomSheet<bool>(
+    final eklendi = await showModalBottomSheet<bool>(useRootNavigator: true, 
       context: context, isScrollControlled: true, backgroundColor: _bg,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => StatefulBuilder(builder: (ctx, setS) {
@@ -653,7 +653,7 @@ Widget _drop2(String label, int? value, Map<int, String> items, ValueChanged<int
 Future<int?> _secimPicker(BuildContext context, String baslik, Map<int, String> items) {
   final entries = items.entries.toList();
   String q = '';
-  return showModalBottomSheet<int>(
+  return showModalBottomSheet<int>(useRootNavigator: true, 
     context: context, isScrollControlled: true, backgroundColor: _bg,
     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
     builder: (ctx) => StatefulBuilder(builder: (ctx, setS) {
@@ -727,7 +727,7 @@ class _YariMamulListScreenState extends State<YariMamulListScreen> {
 
   Future<void> _sil(Map y) async {
     final auth = context.read<AuthProvider>();
-    final onay = await showDialog<bool>(context: context, builder: (c) => AlertDialog(
+    final onay = await showDialog<bool>(useRootNavigator: true, context: context, builder: (c) => AlertDialog(
       backgroundColor: _card, title: const Text('Sil', style: TextStyle(color: Colors.white)),
       content: Text('“${y['ad']}” silinsin mi?', style: const TextStyle(color: _gri)),
       actions: [TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Vazgeç')), TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('Sil', style: TextStyle(color: _kirmizi)))],
@@ -871,7 +871,7 @@ class _YariMamulEditorScreenState extends State<YariMamulEditorScreen> {
     int birimId = malzemeler.isNotEmpty ? _n((malzemeler.first as Map)['temel_birim_id']).toInt() : 0;
     int ymId = yarimamuller.isNotEmpty ? _n((yarimamuller.first as Map)['id']).toInt() : 0;
     final miktarC = TextEditingController();
-    final eklendi = await showModalBottomSheet<bool>(
+    final eklendi = await showModalBottomSheet<bool>(useRootNavigator: true, 
       context: context, isScrollControlled: true, backgroundColor: _bg,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => StatefulBuilder(builder: (ctx, setS) {

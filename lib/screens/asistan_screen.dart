@@ -100,7 +100,7 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
       if (res['ok'] == 1) gecmis = (res['gecmis'] as List?) ?? [];
     } catch (_) {}
     if (!mounted) return;
-    showModalBottomSheet(
+    showModalBottomSheet(useRootNavigator: true, 
       context: context,
       isScrollControlled: true,
       backgroundColor: _bg,
@@ -769,7 +769,7 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
 
   void _sesSecPaneliAc() {
     if (_sunulan.length < 2) return;
-    showModalBottomSheet<void>(
+    showModalBottomSheet<void>(useRootNavigator: true, 
       context: context,
       backgroundColor: _bg,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
@@ -858,7 +858,7 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
 
   // "Öneriler" — proaktif tespitleri (senin için baktım) alttan panelde gösterir.
   void _onerilerAc() {
-    showModalBottomSheet(
+    showModalBottomSheet(useRootNavigator: true, 
       context: context,
       isScrollControlled: true,
       backgroundColor: _bg,

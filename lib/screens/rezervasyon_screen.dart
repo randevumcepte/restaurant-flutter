@@ -486,7 +486,7 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
     DateTime secilenTarih = DateTime.tryParse(tarih) ?? DateTime.now();
     final saatler = <String>[for (int h = 12; h <= 23; h++) for (final m in ['00', '30']) '${h.toString().padLeft(2, '0')}:$m'];
 
-    await showModalBottomSheet(
+    await showModalBottomSheet(useRootNavigator: true, 
       context: context,
       backgroundColor: _card,
       isScrollControlled: true,

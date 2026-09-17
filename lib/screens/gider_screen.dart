@@ -278,7 +278,7 @@ class _GiderScreenState extends State<GiderScreen> {
     final tutarC = TextEditingController();
     final aciklamaC = TextEditingController();
     String kategori = 'kira';
-    final ok = await showModalBottomSheet<bool>(
+    final ok = await showModalBottomSheet<bool>(useRootNavigator: true, 
       context: context, isScrollControlled: true, backgroundColor: _bg,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => StatefulBuilder(

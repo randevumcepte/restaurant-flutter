@@ -368,7 +368,7 @@ class _MenuYonetimiScreenState extends State<MenuYonetimiScreen> {
     final adCtrl = TextEditingController(text: kat?['ad']?.toString() ?? '');
     final siraCtrl = TextEditingController(text: '${kat?['sira'] ?? kategoriler.length}');
     final t = _t;
-    final res = await showDialog<String>(
+    final res = await showDialog<String>(useRootNavigator: true, 
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: t.card,
@@ -537,7 +537,7 @@ class _UrunDuzenleSayfaState extends State<_UrunDuzenleSayfa> {
 
   Future<void> _sil() async {
     final t = _t;
-    final onay = await showDialog<bool>(
+    final onay = await showDialog<bool>(useRootNavigator: true, 
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: t.card,
@@ -567,7 +567,7 @@ class _UrunDuzenleSayfaState extends State<_UrunDuzenleSayfa> {
     }
     if (!mounted) return;
     final t = _t;
-    final kaynak = await showModalBottomSheet<ImageSource>(
+    final kaynak = await showModalBottomSheet<ImageSource>(useRootNavigator: true, 
       context: context,
       backgroundColor: t.card,
       builder: (ctx) => SafeArea(

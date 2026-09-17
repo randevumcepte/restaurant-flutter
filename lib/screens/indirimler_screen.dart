@@ -82,7 +82,7 @@ class _IndirimlerScreenState extends State<IndirimlerScreen> {
   }
 
   Future<void> _sil(Map k) async {
-    final onay = await showDialog<bool>(
+    final onay = await showDialog<bool>(useRootNavigator: true, 
       context: context,
       builder: (c) => AlertDialog(
         backgroundColor: _t.card,

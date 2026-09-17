@@ -521,7 +521,7 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
 
   void _noktaEkleSheet() {
     final t = _t;
-    showModalBottomSheet(context: context, backgroundColor: t.card, shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+    showModalBottomSheet(useRootNavigator: true, context: context, backgroundColor: t.card, shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => Padding(padding: const EdgeInsets.all(16), child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('Sabit nokta ekle', style: TextStyle(color: t.ink, fontSize: 16, fontWeight: FontWeight.bold)),
         const SizedBox(height: 12),
@@ -545,7 +545,7 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
     final t = _t;
     final yerlesmis = masaYer.keys.toSet();
     final bekleyen = masalar.where((m) => !yerlesmis.contains('${m['id']}')).toList();
-    showModalBottomSheet(context: context, backgroundColor: t.card, isScrollControlled: true,
+    showModalBottomSheet(useRootNavigator: true, context: context, backgroundColor: t.card, isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => Padding(padding: const EdgeInsets.fromLTRB(16, 16, 16, 24), child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
@@ -592,7 +592,7 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
   void _tumMasalariKaldir() { _gecmisKaydet(); setState(() { masaYer.clear(); secili = null; }); }
 
   void _katiTemizle() {
-    showDialog(context: context, builder: (ctx) => AlertDialog(
+    showDialog(useRootNavigator: true, context: context, builder: (ctx) => AlertDialog(
       backgroundColor: _t.card, surfaceTintColor: _t.card,
       title: Text('Bu katı temizle?', style: TextStyle(color: _t.ink, fontSize: 16)),
       content: Text('Bu kattaki masalar, bölgeler, noktalar ve salon sınırı kaldırılır (kaydedene kadar geri alınabilir).', style: TextStyle(color: _t.sub)),
@@ -632,7 +632,7 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
 
   void _katMenu(int i) {
     final t = _t;
-    showModalBottomSheet(context: context, backgroundColor: t.card, shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+    showModalBottomSheet(useRootNavigator: true, context: context, backgroundColor: t.card, shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
         ListTile(leading: Icon(Icons.edit, color: t.mor1), title: Text('Adı Değiştir', style: TextStyle(color: t.ink)),
             onTap: () { Navigator.pop(ctx); _adGir('Kat adı', katlar[i], (v) => setState(() => katlar[i] = v)); }),
@@ -667,7 +667,7 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
   void _adGir(String baslik, String mevcut, ValueChanged<String> onOk) {
     final t = _t;
     final c = TextEditingController(text: mevcut);
-    showModalBottomSheet(context: context, backgroundColor: t.card, isScrollControlled: true,
+    showModalBottomSheet(useRootNavigator: true, context: context, backgroundColor: t.card, isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => Padding(
         padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.of(ctx).viewInsets.bottom),
