@@ -693,12 +693,7 @@ class _SemaPainter extends CustomPainter {
     }
     canvas.restore();
 
-    // --- bölge zeminleri (hafif farklı ton + etiket kutusu üstte widget) ---
-    for (final z in zones) {
-      final rz = RRect.fromRectAndRadius(z, const Radius.circular(12));
-      canvas.drawRRect(rz, Paint()..color = const Color(0xFFFFFFFF).withValues(alpha: 0.06));
-      canvas.drawRRect(rz, Paint()..color = const Color(0xFF7C5A3A).withValues(alpha: 0.35)..style = PaintingStyle.stroke..strokeWidth = 1.4);
-    }
+    // --- bölge kenar çizgisi (border) ısı haritasında GÖRÜNMESİN — sadece etiket kalır ---
 
     // --- ISI: masalar arası KORİDOR ağı (referans gibi — her yer sarı olmaz; masalar üstte koyu) ---
     _isiAgCiz(canvas, size, zemin);
