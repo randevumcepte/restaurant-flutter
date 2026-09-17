@@ -363,7 +363,7 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
     final kap = _n(masa['kapasite']).toInt();
     final masaGorsel = yuvarlak
         ? (kap > 0 && kap <= 2 ? 'assets/sema/masa_yuvarlak_2.png' : 'assets/sema/masa_yuvarlak.png')
-        : 'assets/sema/masa_kare.png';
+        : (kap > 0 && kap <= 2 ? 'assets/sema/masa_kare_2.png' : 'assets/sema/masa_kare.png');
     final sc = _sec('masa', mid);
     final boyV = _n(yer['boy']) <= 0 ? 170.0 : _n(yer['boy']).toDouble();
     final boyut = sx(boyV).clamp(28.0, cw);
