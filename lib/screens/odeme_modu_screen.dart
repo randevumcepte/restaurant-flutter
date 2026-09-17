@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'menu_hamburger.dart';
@@ -17,7 +18,10 @@ class _OdemeModuScreenState extends State<OdemeModuScreen> {
   String mod = 'post_pay';
   bool kacakAktif = true;
   int kacakDk = 90;
+  List bolgeler = []; // [{id, ad, mod}] — mod '' = restoran varsayılanı
   bool loading = true, kaydediyor = false, duzenleyebilir = false;
+
+  static const Map<String, String> _modAd = {'': 'Varsayılan', 'post_pay': 'Klasik', 'on_odeme': 'Ön Ödemeli', 'acik_kart': 'Açık Hesap+Kart'};
 
   TemaProvider get _t => context.watch<TemaProvider>();
 
@@ -37,6 +41,7 @@ class _OdemeModuScreenState extends State<OdemeModuScreen> {
         mod = res['mod']?.toString() ?? 'post_pay';
         kacakAktif = res['kacak_aktif'] == true;
         kacakDk = (res['kacak_dk'] is num) ? (res['kacak_dk'] as num).toInt() : int.tryParse('${res['kacak_dk']}') ?? 90;
+        bolgeler = (res['bolgeler'] as List?) ?? [];
         duzenleyebilir = res['duzenleyebilir'] == true;
         loading = false;
       });
@@ -51,7 +56,8 @@ class _OdemeModuScreenState extends State<OdemeModuScreen> {
     final auth = context.read<AuthProvider>();
     setState(() => kaydediyor = true);
     try {
-      final res = await Api.odemeModuKaydet(auth.token!, mod: mod, kacakAktif: kacakAktif, kacakDk: kacakDk);
+      final res = await Api.odemeModuKaydet(auth.token!, mod: mod, kacakAktif: kacakAktif, kacakDk: kacakDk,
+          bolgeler: jsonEncode(bolgeler.map((b) => {'id': (b as Map)['id'], 'mod': b['mod'] ?? ''}).toList()));
       if (!mounted) return;
       if (res['ok'] == 1) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Kaydedildi ✓')));
@@ -132,6 +138,15 @@ class _OdemeModuScreenState extends State<OdemeModuScreen> {
                 child: Text('Örn: 90 dk’dan uzun süredir açık ve ödenmemiş bir masa varsa garson uyarılır. Süreyi restoranın ortalama oturma süresine göre ayarla.', style: TextStyle(color: t.sub2, fontSize: 12, height: 1.35)),
               ),
 
+              if (bolgeler.isNotEmpty) ...[
+                _baslik(t, 'Bölge Bazlı (opsiyonel)'),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4, left: 2),
+                  child: Text('Her bölge için ayrı mod seçebilirsin (ör. Bahçe = Ön Ödemeli, Salon = Klasik). “Varsayılan” = yukarıdaki restoran modu.', style: TextStyle(color: t.sub2, fontSize: 12, height: 1.35)),
+                ),
+                for (final b in bolgeler) _bolgeRow(t, b as Map),
+              ],
+
               const SizedBox(height: 18),
               if (duzenleyebilir)
                 SizedBox(
@@ -151,6 +166,27 @@ class _OdemeModuScreenState extends State<OdemeModuScreen> {
   }
 
   Widget _baslik(TemaProvider t, String s) => Padding(padding: const EdgeInsets.fromLTRB(2, 18, 0, 8), child: Text(s, style: TextStyle(color: t.sub, fontSize: 12.5, fontWeight: FontWeight.w700)));
+
+  Widget _bolgeRow(TemaProvider t, Map b) {
+    final cur = _modAd.containsKey(b['mod']) ? (b['mod'] as String? ?? '') : '';
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      decoration: BoxDecoration(color: t.card, borderRadius: BorderRadius.circular(12), border: Border.all(color: t.line)),
+      child: Row(children: [
+        Expanded(child: Text('${b['ad']}', style: TextStyle(color: t.ink, fontSize: 14.5, fontWeight: FontWeight.w600))),
+        DropdownButtonHideUnderline(
+          child: DropdownButton<String>(
+            value: cur,
+            dropdownColor: t.card,
+            style: TextStyle(color: t.ink, fontSize: 13.5),
+            items: [for (final e in _modAd.entries) DropdownMenuItem(value: e.key, child: Text(e.value))],
+            onChanged: duzenleyebilir ? (v) => setState(() => b['mod'] = v ?? '') : null,
+          ),
+        ),
+      ]),
+    );
+  }
 
   Widget _mod(TemaProvider t, String v, String ik, String ad, String aciklama, {bool kilit = false}) {
     final secili = mod == v;
