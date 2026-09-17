@@ -548,6 +548,7 @@ class _SemaPainter extends CustomPainter {
   final Map<String, ui.Image> gorsel; // görsel kütüphanesi (assets/sema/*)
   final double masaOlcek; // masa görseli ölçek çarpanı
   final List<_Nokta> noktalar; // servis noktaları (giriş/mutfak/bar) — koridor arter + ok yönü
+  final List<List<double>> _oklar = []; // en sıcak koridorlar üstüne yön okları (paint sırasında dolar)
   _SemaPainter({required this.koyu, required this.parsel, required this.zones, required this.tablolar, required this.gorsel, this.masaOlcek = 1.0, this.noktalar = const []});
 
   // Tam jet renk skalası: mavi(soğuk) → cyan → yeşil → sarı → turuncu → kırmızı(sıcak)
@@ -695,7 +696,7 @@ class _SemaPainter extends CustomPainter {
     for (final m in tablolar) { avg += m.size; }
     avg /= tablolar.length;
     final maxGap = avg * 2.7;
-    final segs = <List<double>>[]; // ax, ay, bx, by, w
+    final segs = <List<double>>[]; // ax, ay, bx, by, w, oa, ob
     // komşu masalar arası (grid koridorları)
     for (var i = 0; i < tablolar.length; i++) {
       for (var j = i + 1; j < tablolar.length; j++) {
@@ -704,7 +705,7 @@ class _SemaPainter extends CustomPainter {
         if (d > maxGap) continue;
         final dx = (a.dx - b.dx).abs(), dy = (a.dy - b.dy).abs();
         if (dx > avg * 0.8 && dy > avg * 0.8) continue; // sadece yatay/dikey hizalı komşu
-        segs.add([a.dx, a.dy, b.dx, b.dy, (tablolar[i].o + tablolar[j].o) / 2]);
+        segs.add([a.dx, a.dy, b.dx, b.dy, (tablolar[i].o + tablolar[j].o) / 2, tablolar[i].o, tablolar[j].o]);
       }
     }
     // servis noktaları -> en yakın 2 masa (giriş/mutfak/bar arterleri sıcak)
@@ -712,78 +713,77 @@ class _SemaPainter extends CustomPainter {
       if (nk.tip != 'giris' && nk.tip != 'mutfak' && nk.tip != 'bar') continue;
       final sirali = [...tablolar]..sort((x, y) => (nk.c - x.c).distance.compareTo((nk.c - y.c).distance));
       for (var k = 0; k < sirali.length && k < 2; k++) {
-        segs.add([nk.c.dx, nk.c.dy, sirali[k].c.dx, sirali[k].c.dy, 0.72 + 0.28 * sirali[k].o]);
+        segs.add([nk.c.dx, nk.c.dy, sirali[k].c.dx, sirali[k].c.dy, 0.6 + 0.4 * sirali[k].o, 0.0, sirali[k].o]);
       }
     }
-    // düşükten yükseğe çiz → sıcak koridorlar üstte (gamma ile orta değerler yükseltilir)
+    if (segs.isEmpty) { canvas.restore(); return; }
+    // EN YOĞUN koridora göre normalize → en sıcak koridor GARANTİ kırmızı olur
+    double maxW = 0; for (final s in segs) { if (s[4] > maxW) maxW = s[4]; }
+    if (maxW <= 0) maxW = 1;
+    // düşükten yükseğe çiz → sıcak koridorlar üstte
     segs.sort((p, q) => p[4].compareTo(q[4]));
     final sw = (avg * 0.62).clamp(12.0, 48.0);
     for (final s in segs) {
-      final w = math.pow(s[4].clamp(0.0, 1.0), 0.6).toDouble(); // ısıyı belirginleştir
+      final w = math.pow((s[4] / maxW).clamp(0.0, 1.0), 0.7).toDouble();
       final p = Paint()
-        ..color = _jet5(w).withValues(alpha: 0.95)
+        ..color = _jet5(w).withValues(alpha: 0.96)
         ..strokeWidth = sw
         ..strokeCap = StrokeCap.round
         ..maskFilter = MaskFilter.blur(BlurStyle.normal, sw * 0.42);
       canvas.drawLine(Offset(s[0], s[1]), Offset(s[2], s[3]), p);
     }
     // yoğun masalara ısı halesi (veri belirgin çıksın; masa görseli üstte örtecek)
+    double maxO = 0; for (final m in tablolar) { if (m.o > maxO) maxO = m.o; }
+    if (maxO <= 0) maxO = 1;
     for (final m in tablolar) {
-      if (m.o < 0.12) continue;
-      final w = math.pow(m.o, 0.6).toDouble();
-      final rad = avg * (0.75 + m.o * 0.9);
-      final sh = RadialGradient(colors: [_jet5(w).withValues(alpha: 0.7), _jet5(w).withValues(alpha: 0.0)])
+      if (m.o < 0.1) continue;
+      final w = math.pow((m.o / maxO).clamp(0.0, 1.0), 0.7).toDouble();
+      final rad = avg * (0.8 + (m.o / maxO) * 1.0);
+      final sh = RadialGradient(colors: [_jet5(w).withValues(alpha: 0.72), _jet5(w).withValues(alpha: 0.0)])
           .createShader(Rect.fromCircle(center: m.c, radius: rad));
       canvas.drawCircle(m.c, rad, Paint()..shader = sh);
     }
     canvas.restore();
+
+    // EN SICAK koridorların üstüne YÖN OKLARI (düşük yoğunluktan yükseğe doğru)
+    _oklar.clear();
+    final ust = [...segs]..sort((p, q) => q[4].compareTo(p[4]));
+    for (var i = 0; i < ust.length && _oklar.length < 7; i++) {
+      final s = ust[i];
+      if ((Offset(s[0], s[1]) - Offset(s[2], s[3])).distance < avg * 0.7) continue;
+      // yön: düşük "o" olan uçtan yüksek "o" olan uca (garson o yöne daha çok gidiyor)
+      if (s[6] >= s[5]) { _oklar.add([s[0], s[1], s[2], s[3]]); }
+      else { _oklar.add([s[2], s[3], s[0], s[1]]); }
+    }
   }
 
-  // Yön okları: giriş→merkez, mutfak→merkez, merkez→bar, merkez→en yoğun masa
+  // Koridor yön okları: en sıcak koridorların üstünde, daha çok yürünen yöne doğru ok ucu
   void _oklariCiz(Canvas canvas, Size size) {
-    if (tablolar.isEmpty) return;
-    double sx = 0, sy = 0, sw = 0;
-    _Masa? sicak;
-    for (final m in tablolar) {
-      final w = 0.12 + m.o;
-      sx += m.c.dx * w; sy += m.c.dy * w; sw += w;
-      if (sicak == null || m.o > sicak.o) sicak = m;
+    for (final o in _oklar) {
+      final a = Offset(o[0], o[1]), b = Offset(o[2], o[3]);
+      final total = (b - a).distance;
+      if (total < 14) continue;
+      final dir = (b - a) / total;
+      // ok ucu koridorun ~%58'ine (masaya girmeden, şeridin ortasında)
+      _okUcu(canvas, a + dir * (total * 0.58), dir);
     }
-    final merkez = Offset(sx / sw, sy / sw);
-    Offset? nk(String tip) {
-      for (final n in noktalar) { if (n.tip == tip) return n.c; }
-      return null;
-    }
-    final giris = nk('giris'), mutfak = nk('mutfak'), bar = nk('bar');
-    if (giris != null) _dashArrow(canvas, giris, merkez);
-    if (mutfak != null) _dashArrow(canvas, mutfak, merkez);
-    if (bar != null) _dashArrow(canvas, merkez, bar);
-    if (sicak != null && (sicak.c - merkez).distance > 30) _dashArrow(canvas, merkez, sicak.c);
   }
 
-  void _dashArrow(Canvas canvas, Offset a, Offset b) {
-    final total = (b - a).distance;
-    if (total < 16) return;
-    final dir = (b - a) / total;
+  void _okUcu(Canvas canvas, Offset tip, Offset dir) {
     final perp = Offset(-dir.dy, dir.dx);
-    const headLen = 13.0, halfW = 7.0, dash = 11.0, gap = 7.0;
-    final govde = Paint()..color = Colors.white.withValues(alpha: 0.94)..strokeWidth = 2.4..strokeCap = StrokeCap.round;
-    final golge = Paint()..color = Colors.black.withValues(alpha: 0.4)..strokeWidth = 4.4..strokeCap = StrokeCap.round..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
-    double tt = 0;
-    final govdeSon = total - headLen;
-    while (tt < govdeSon) {
-      final s = a + dir * tt;
-      final e = a + dir * math.min(tt + dash, govdeSon);
-      canvas.drawLine(s, e, golge);
-      canvas.drawLine(s, e, govde);
-      tt += dash + gap;
-    }
+    const headLen = 12.0, halfW = 7.0, tail = 15.0;
+    final govde = Paint()..color = Colors.white.withValues(alpha: 0.96)..strokeWidth = 2.6..strokeCap = StrokeCap.round;
+    final golge = Paint()..color = Colors.black.withValues(alpha: 0.45)..strokeWidth = 4.8..strokeCap = StrokeCap.round..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
+    // kısa kuyruk
+    final ts = tip - dir * (tail + headLen), te = tip - dir * headLen;
+    canvas.drawLine(ts, te, golge);
+    canvas.drawLine(ts, te, govde);
     // ok başı
-    final base = b - dir * headLen;
-    final head = Path()..moveTo(b.dx, b.dy)..lineTo(base.dx + perp.dx * halfW, base.dy + perp.dy * halfW)
+    final base = tip - dir * headLen;
+    final head = Path()..moveTo(tip.dx, tip.dy)..lineTo(base.dx + perp.dx * halfW, base.dy + perp.dy * halfW)
       ..lineTo(base.dx - perp.dx * halfW, base.dy - perp.dy * halfW)..close();
-    canvas.drawPath(head, Paint()..color = Colors.black.withValues(alpha: 0.35)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2));
-    canvas.drawPath(head, Paint()..color = Colors.white.withValues(alpha: 0.95));
+    canvas.drawPath(head, Paint()..color = Colors.black.withValues(alpha: 0.4)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2));
+    canvas.drawPath(head, Paint()..color = Colors.white.withValues(alpha: 0.96));
   }
 
   // Kapasiteyi 4 kenara dağıt: fazlalık önce üst/alt sonra sağ/sol
