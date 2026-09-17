@@ -494,7 +494,7 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
         final o = maxA > 0 ? a / maxA : 0.0;
         final boyV = _n(yer['boy']) <= 0 ? 150.0 : _n(yer['boy']).toDouble();
         final size = sx(boyV).clamp(32.0, 88.0);
-        tablolar.add(_Masa(Offset(sx(_n(yer['x'])), sy(_n(yer['y'])).toDouble()), size, o.toDouble(),
+        tablolar.add(_Masa(int.tryParse(id) ?? 0, Offset(sx(_n(yer['x'])), sy(_n(yer['y'])).toDouble()), size, o.toDouble(),
             _sicaklik(o.toDouble()), (_sekil[id] ?? 'kare') == 'yuvarlak', adMap[id] ?? '', _kapasite[id] ?? 4));
       });
       return ClipRRect(
@@ -509,6 +509,7 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
             masaOlcek: _masaOlcek,
             noktalar: noktalar.map((nk) => _Nokta(
                 Offset(sx(_n(nk['x'])), sy(_n(nk['y'])).toDouble()), nk['tip']?.toString() ?? 'diger')).toList(),
+            rota: ((isi['rota'] as List?) ?? []).map((e) => Map<String, dynamic>.from(e)).toList(),
           ))),
           for (final b in zones)
             Positioned(left: sx(_n(b['x'])) + 6, top: sy(_n(b['y'])) + 4,
@@ -599,6 +600,7 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
 }
 
 class _Masa {
+  final int id;
   final Offset c;
   final double size;
   final double o; // 0..1 yoğunluk
@@ -606,7 +608,7 @@ class _Masa {
   final bool yuvarlak;
   final String ad;
   final int kapasite; // sandalye sayısı
-  _Masa(this.c, this.size, this.o, this.renk, this.yuvarlak, this.ad, this.kapasite);
+  _Masa(this.id, this.c, this.size, this.o, this.renk, this.yuvarlak, this.ad, this.kapasite);
 }
 
 class _Nokta {
@@ -625,8 +627,9 @@ class _SemaPainter extends CustomPainter {
   final Map<String, ui.Image> gorsel; // görsel kütüphanesi (assets/sema/*)
   final double masaOlcek; // masa görseli ölçek çarpanı
   final List<_Nokta> noktalar; // servis noktaları (giriş/mutfak/bar) — koridor arter + ok yönü
+  final List<Map<String, dynamic>> rota; // GERÇEK rota: {a,b,ab,ba} masa->masa geçiş sayıları
   final List<List<double>> _oklar = []; // en sıcak koridorlar üstüne yön okları (paint sırasında dolar)
-  _SemaPainter({required this.koyu, required this.parsel, required this.zones, required this.tablolar, required this.gorsel, this.masaOlcek = 1.0, this.noktalar = const []});
+  _SemaPainter({required this.koyu, required this.parsel, required this.zones, required this.tablolar, required this.gorsel, this.masaOlcek = 1.0, this.noktalar = const [], this.rota = const []});
 
   // Tam jet renk skalası: mavi(soğuk) → cyan → yeşil → sarı → turuncu → kırmızı(sıcak)
   Color _jet5(double o) {
@@ -772,25 +775,40 @@ class _SemaPainter extends CustomPainter {
     double avg = 0;
     for (final m in tablolar) { avg += m.size; }
     avg /= tablolar.length;
-    final maxGap = avg * 2.7;
-    final segs = <List<double>>[]; // ax, ay, bx, by, w, oa, ob
-    // komşu masalar arası (grid koridorları)
-    for (var i = 0; i < tablolar.length; i++) {
-      for (var j = i + 1; j < tablolar.length; j++) {
-        final a = tablolar[i].c, b = tablolar[j].c;
-        final d = (a - b).distance;
-        if (d > maxGap) continue;
-        final dx = (a.dx - b.dx).abs(), dy = (a.dy - b.dy).abs();
-        if (dx > avg * 0.8 && dy > avg * 0.8) continue; // sadece yatay/dikey hizalı komşu
-        segs.add([a.dx, a.dy, b.dx, b.dy, (tablolar[i].o + tablolar[j].o) / 2, tablolar[i].o, tablolar[j].o]);
-      }
+    final segs = <List<double>>[]; // ax, ay, bx, by, w, oa, ob  (oa<ob => ok a->b yönünde)
+
+    // 1) GERÇEK ROTA: masa->masa gerçek geçişler (POS servis olay sırası)
+    int pi(dynamic v) => v is num ? v.toInt() : (int.tryParse('$v') ?? 0);
+    double pd(dynamic v) => v is num ? v.toDouble() : (double.tryParse('$v') ?? 0.0);
+    final byId = {for (final m in tablolar) m.id: m};
+    for (final r in rota) {
+      final a = byId[pi(r['a'])], b = byId[pi(r['b'])];
+      if (a == null || b == null) continue;
+      final ab = pd(r['ab']), ba = pd(r['ba']);
+      final w = ab + ba;
+      if (w <= 0) continue;
+      final ileri = ab >= ba; // a->b mı
+      segs.add([a.c.dx, a.c.dy, b.c.dx, b.c.dy, w, ileri ? 0.0 : 1.0, ileri ? 1.0 : 0.0]);
     }
-    // servis noktaları -> en yakın 2 masa (giriş/mutfak/bar arterleri sıcak)
-    for (final nk in noktalar) {
-      if (nk.tip != 'giris' && nk.tip != 'mutfak' && nk.tip != 'bar') continue;
-      final sirali = [...tablolar]..sort((x, y) => (nk.c - x.c).distance.compareTo((nk.c - y.c).distance));
-      for (var k = 0; k < sirali.length && k < 2; k++) {
-        segs.add([nk.c.dx, nk.c.dy, sirali[k].c.dx, sirali[k].c.dy, 0.6 + 0.4 * sirali[k].o, 0.0, sirali[k].o]);
+
+    // 2) Rota yoksa (yetersiz veri) → sentetik komşuluk + servis arteri (yaklaşık)
+    if (segs.isEmpty) {
+      final maxGap = avg * 2.7;
+      for (var i = 0; i < tablolar.length; i++) {
+        for (var j = i + 1; j < tablolar.length; j++) {
+          final a = tablolar[i].c, b = tablolar[j].c;
+          if ((a - b).distance > maxGap) continue;
+          final dx = (a.dx - b.dx).abs(), dy = (a.dy - b.dy).abs();
+          if (dx > avg * 0.8 && dy > avg * 0.8) continue;
+          segs.add([a.dx, a.dy, b.dx, b.dy, (tablolar[i].o + tablolar[j].o) / 2, tablolar[i].o, tablolar[j].o]);
+        }
+      }
+      for (final nk in noktalar) {
+        if (nk.tip != 'giris' && nk.tip != 'mutfak' && nk.tip != 'bar') continue;
+        final sirali = [...tablolar]..sort((x, y) => (nk.c - x.c).distance.compareTo((nk.c - y.c).distance));
+        for (var k = 0; k < sirali.length && k < 2; k++) {
+          segs.add([nk.c.dx, nk.c.dy, sirali[k].c.dx, sirali[k].c.dy, 0.6 + 0.4 * sirali[k].o, 0.0, sirali[k].o]);
+        }
       }
     }
     if (segs.isEmpty) { canvas.restore(); return; }
