@@ -360,6 +360,10 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
     final yer = masaYer[mid]!;
     final masa = masalar.firstWhere((m) => '${m['id']}' == mid, orElse: () => <String, dynamic>{'ad': mid, 'sekil': 'kare'});
     final yuvarlak = (masa['sekil']?.toString() ?? 'kare') == 'yuvarlak';
+    final kap = _n(masa['kapasite']).toInt();
+    final masaGorsel = yuvarlak
+        ? (kap > 0 && kap <= 2 ? 'assets/sema/masa_yuvarlak_2.png' : 'assets/sema/masa_yuvarlak.png')
+        : 'assets/sema/masa_kare.png';
     final sc = _sec('masa', mid);
     final boyV = _n(yer['boy']) <= 0 ? 170.0 : _n(yer['boy']).toDouble();
     final boyut = sx(boyV).clamp(28.0, cw);
@@ -381,7 +385,7 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
               borderRadius: BorderRadius.circular(yuvarlak ? boyut / 2 : 12),
               border: sc ? Border.all(color: Colors.white, width: 2.5) : null),
             child: Image.asset(
-              yuvarlak ? 'assets/sema/masa_yuvarlak.png' : 'assets/sema/masa_kare.png',
+              masaGorsel,
               width: boyut, height: boyut, fit: BoxFit.contain,
               errorBuilder: (_, _, _) => Container(
                 decoration: BoxDecoration(color: t.mor1,

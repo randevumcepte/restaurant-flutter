@@ -48,7 +48,7 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
 
   // Kütüphanedeki sabit görselleri bir kez yükle. Dosya yoksa sessizce atla → vektör çizim.
   Future<void> _gorselleriYukle() async {
-    const adlar = ['zemin', 'masa_yuvarlak', 'masa_kare', 'sandalye', 'saksi'];
+    const adlar = ['zemin', 'masa_yuvarlak', 'masa_yuvarlak_2', 'masa_kare', 'sandalye', 'saksi'];
     for (final a in adlar) {
       try {
         final data = await rootBundle.load('assets/sema/$a.png');
@@ -915,8 +915,11 @@ class _SemaPainter extends CustomPainter {
 
   void _masaCiz(Canvas canvas, _Masa m) {
     final s = m.size;
-    // COMBO GÖRSEL: masa+sandalye tek PNG → onu bas (ayrı sandalye çizme), boyut ayarıyla ölçekli
-    final combo = m.yuvarlak ? gorsel['masa_yuvarlak'] : gorsel['masa_kare'];
+    // COMBO GÖRSEL: masa+sandalye tek PNG → onu bas (ayrı sandalye çizme), boyut ayarıyla ölçekli.
+    // Yuvarlak + 2 kişilik ise özel görsel; değilse normal yuvarlak; kare ise kare.
+    final combo = m.yuvarlak
+        ? (m.kapasite <= 2 ? (gorsel['masa_yuvarlak_2'] ?? gorsel['masa_yuvarlak']) : gorsel['masa_yuvarlak'])
+        : gorsel['masa_kare'];
     if (combo != null) {
       final w = s * 1.3 * masaOlcek;
       final h = w * combo.height / combo.width; // en-boy oranını koru
