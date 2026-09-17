@@ -214,8 +214,8 @@ class Api {
 
   // ---- ODEME MODU / KACAK ONLEME (sahip/mudur) ----
   static Future<Map<String, dynamic>> odemeModu(String token) => _get('/api/patron/odeme-modu', token);
-  static Future<Map<String, dynamic>> odemeModuKaydet(String token, {required String mod, required bool kacakAktif, required int kacakDk}) =>
-      _post('/api/patron/odeme-modu-kaydet', token, {'mod': mod, 'kacak_aktif': kacakAktif ? '1' : '0', 'kacak_dk': '$kacakDk'});
+  static Future<Map<String, dynamic>> odemeModuKaydet(String token, {required String mod, required bool kacakAktif, required int kacakDk, String? bolgeler}) =>
+      _post('/api/patron/odeme-modu-kaydet', token, {'mod': mod, 'kacak_aktif': kacakAktif ? '1' : '0', 'kacak_dk': '$kacakDk', if (bolgeler != null) 'bolgeler': bolgeler});
 
   static Future<Map<String, dynamic>> masaTasi(String token, int adisyonId, int yeniMasaId) =>
       _post('/api/patron/masa-tasi', token, {'adisyon_id': '$adisyonId', 'yeni_masa_id': '$yeniMasaId'});

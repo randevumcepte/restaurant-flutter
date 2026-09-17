@@ -867,7 +867,14 @@ class _SemaPainter extends CustomPainter {
       if (total < 14) continue;
       final dir = (b - a) / total;
       // ok ucu koridorun ~%58'ine (masaya girmeden, şeridin ortasında)
-      _okUcu(canvas, a + dir * (total * 0.58), dir);
+      var tip = a + dir * (total * 0.58);
+      // GİRİŞ kapısının önünü kapatma: ok ucu bir girişe yakınsa kapının ÜST tarafına taşı
+      for (final nk in noktalar) {
+        if (nk.tip != 'giris') continue;
+        final s = nk.boy <= 0 ? 66.0 : nk.boy;
+        if ((tip - nk.c).distance < s) { tip = Offset(nk.c.dx, nk.c.dy - s * 0.95); break; }
+      }
+      _okUcu(canvas, tip, dir);
     }
   }
 
