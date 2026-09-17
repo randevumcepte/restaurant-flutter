@@ -27,6 +27,7 @@ import 'raporlar_screen.dart';
 import 'rezervasyon_screen.dart';
 import 'uretim_riski_screen.dart';
 import 'sayim_screen.dart';
+import 'musteri_detay_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Patron ana paneli — Kerzz BOSS yogunlugunda: tek ekranda her sey.
@@ -654,7 +655,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final fark = oncekiVar ? (simdi - onceki) / onceki * 100 : 0.0;
     final up = fark >= 0;
     final donemAd = const {'gunluk': 'bugün', 'haftalik': 'bu hafta', 'aylik': 'bu ay', 'yillik': 'bu yıl'}[period] ?? 'bu dönem';
-    return Container(
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => MusteriDetayScreen(period: period))),
+      child: Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(18), boxShadow: _t.golge),
       child: Row(children: [
@@ -679,8 +683,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const SizedBox(height: 3),
             Text('önceki: $onceki', style: TextStyle(color: _sub, fontSize: 11)),
           ]),
+        const SizedBox(width: 6),
+        Icon(Icons.chevron_right, color: _sub, size: 20),
       ]),
-    );
+    ));
   }
 
   Widget _folioKart(String baslik, String deger, String alt, Color renk, bool kapali) {
