@@ -445,18 +445,16 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('Isı Haritası Renkleri', style: TextStyle(color: t.ink, fontSize: 13.5, fontWeight: FontWeight.w900)),
         const SizedBox(height: 12),
-        Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-          Container(width: 18, height: 130, decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(9),
-            gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
-              colors: [Color(0xFFEF4444), Color(0xFFF97316), Color(0xFFEAB308), Color(0xFF22C55E), Color(0xFF06B6D4), Color(0xFF1D4ED8)]))),
-          const SizedBox(width: 14),
-          Expanded(child: SizedBox(height: 130, child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween, crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('En çok yürüdüğü alanlar', style: TextStyle(color: t.sub2, fontSize: 12.5)),
-              Text('Sık yürüdüğü alanlar', style: TextStyle(color: t.sub2, fontSize: 12.5)),
-              Text('En az yürüdüğü alanlar', style: TextStyle(color: t.sub2, fontSize: 12.5)),
-            ]))),
+        // yatay gradient bar (sol = en çok / kırmızı, sağ = en az / mavi)
+        Container(height: 14, decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(7),
+          gradient: const LinearGradient(
+            colors: [Color(0xFFEF4444), Color(0xFFF97316), Color(0xFFEAB308), Color(0xFF22C55E), Color(0xFF06B6D4), Color(0xFF1D4ED8)]))),
+        const SizedBox(height: 8),
+        Row(children: [
+          Expanded(child: Text('En çok yürüdüğü', style: TextStyle(color: t.sub2, fontSize: 11), textAlign: TextAlign.start)),
+          Expanded(child: Text('Sık', style: TextStyle(color: t.sub2, fontSize: 11), textAlign: TextAlign.center)),
+          Expanded(child: Text('En az yürüdüğü', style: TextStyle(color: t.sub2, fontSize: 11), textAlign: TextAlign.end)),
         ]),
       ]),
     );

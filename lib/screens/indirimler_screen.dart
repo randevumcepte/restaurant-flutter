@@ -27,6 +27,11 @@ const Map<String, List<String>> kTipler = {
   'urun': ['🍽️', 'Seçili Ürünler', 'İndirim yalnızca seçtiğin ürünlere (online ödemede).'],
 };
 
+// Backend decimal alanlari JSON'da String gelebilir ("10.00") -> güvenli parse
+double _asD(dynamic v) => v == null ? 0.0 : (v is num ? v.toDouble() : double.tryParse(v.toString()) ?? 0.0);
+int _asI(dynamic v) => v == null ? 0 : (v is num ? v.toInt() : int.tryParse(v.toString().split('.').first) ?? 0);
+String _fmtNum(dynamic v) { final d = _asD(v); return d == d.roundToDouble() ? d.toInt().toString() : d.toString(); }
+
 class _IndirimlerScreenState extends State<IndirimlerScreen> {
   List kurallar = [];
   List urunler = [];
@@ -70,7 +75,7 @@ class _IndirimlerScreenState extends State<IndirimlerScreen> {
     final yeni = (k['aktif'] == 1 || k['aktif'] == true) ? 0 : 1;
     setState(() => k['aktif'] = yeni); // iyimser
     try {
-      await Api.indirimToggle(auth.token!, (k['id'] as num).toInt());
+      await Api.indirimToggle(auth.token!, _asI(k['id']));
     } catch (_) {
       if (mounted) setState(() => k['aktif'] = yeni == 1 ? 0 : 1);
     }
@@ -92,22 +97,21 @@ class _IndirimlerScreenState extends State<IndirimlerScreen> {
     if (onay != true || !mounted) return;
     final auth = context.read<AuthProvider>();
     try {
-      await Api.indirimSil(auth.token!, (k['id'] as num).toInt());
+      await Api.indirimSil(auth.token!, _asI(k['id']));
       _yukle();
     } catch (_) {}
   }
 
   String _degerYazi(Map k) {
-    final d = (k['deger'] as num?)?.toDouble() ?? 0;
-    final ds = d == d.roundToDouble() ? d.toInt().toString() : d.toString();
+    final ds = _fmtNum(k['deger']);
     return k['deger_tipi'] == 'yuzde' ? '%$ds' : '$ds ₺';
   }
 
   List<String> _kosullar(Map k) {
     final out = <String>[];
     if (k['kupon_kodu'] != null && '${k['kupon_kodu']}'.isNotEmpty) out.add('${k['kupon_kodu']}');
-    if ((k['min_tutar'] as num?) != null && (k['min_tutar'] as num) > 0) out.add('min ${(k['min_tutar'] as num).toInt()}₺');
-    if ((k['max_indirim'] as num?) != null && (k['max_indirim'] as num) > 0) out.add('tavan ${(k['max_indirim'] as num).toInt()}₺');
+    if (k['min_tutar'] != null && _asD(k['min_tutar']) > 0) out.add('min ${_asI(k['min_tutar'])}₺');
+    if (k['max_indirim'] != null && _asD(k['max_indirim']) > 0) out.add('tavan ${_asI(k['max_indirim'])}₺');
     if (k['saat_bas'] != null && k['saat_bit'] != null) out.add('${k['saat_bas']}–${k['saat_bit']}');
     if (k['gun_maskesi'] != null && '${k['gun_maskesi']}'.isNotEmpty) {
       const g = ['', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
@@ -118,7 +122,7 @@ class _IndirimlerScreenState extends State<IndirimlerScreen> {
       try { n = (jsonDecode('${k['urun_ids'] ?? '[]'}') as List).length; } catch (_) {}
       out.add('$n ürün');
     }
-    if ((k['kullanim_limiti'] as num?) != null) out.add('kullanım ${(k['kullanim_sayisi'] ?? 0)}/${k['kullanim_limiti']}');
+    if (k['kullanim_limiti'] != null) out.add('kullanım ${_asI(k['kullanim_sayisi'])}/${_asI(k['kullanim_limiti'])}');
     return out;
   }
 
@@ -248,19 +252,18 @@ class _IndirimFormState extends State<_IndirimForm> {
     tip = k?['tip'] ?? 'online_odeme';
     degerTipi = k?['deger_tipi'] ?? 'yuzde';
     adC.text = k?['ad']?.toString() ?? '';
-    final d = (k?['deger'] as num?)?.toDouble();
-    if (d != null) degerC.text = d == d.roundToDouble() ? d.toInt().toString() : d.toString();
+    if (k != null && k['deger'] != null) degerC.text = _fmtNum(k['deger']);
     kuponC.text = k?['kupon_kodu']?.toString() ?? '';
-    if ((k?['min_tutar'] as num?) != null) minC.text = (k!['min_tutar'] as num).toString();
-    if ((k?['max_indirim'] as num?) != null) maxC.text = (k!['max_indirim'] as num).toString();
-    if ((k?['kullanim_limiti'] as num?) != null) limitC.text = (k!['kullanim_limiti'] as num).toInt().toString();
+    if (k?['min_tutar'] != null) minC.text = _fmtNum(k!['min_tutar']);
+    if (k?['max_indirim'] != null) maxC.text = _fmtNum(k!['max_indirim']);
+    if (k?['kullanim_limiti'] != null) limitC.text = _asI(k!['kullanim_limiti']).toString();
     saatBas = k?['saat_bas'];
     saatBit = k?['saat_bit'];
     if (k?['gun_maskesi'] != null) {
       for (final s in '${k!['gun_maskesi']}'.split(',')) { final n = int.tryParse(s.trim()); if (n != null) gunler.add(n); }
     }
     if (k?['urun_ids'] != null) {
-      try { for (final x in (jsonDecode('${k!['urun_ids']}') as List)) urunIds.add((x as num).toInt()); } catch (_) {}
+      try { for (final x in (jsonDecode('${k!['urun_ids']}') as List)) urunIds.add(_asI(x)); } catch (_) {}
     }
     aktif = k == null ? true : (k['aktif'] == 1 || k['aktif'] == true);
   }
@@ -455,10 +458,10 @@ class _IndirimFormState extends State<_IndirimForm> {
             dense: true,
             activeColor: const Color(0xFF4F46E5),
             controlAffinity: ListTileControlAffinity.leading,
-            value: urunIds.contains(((u as Map)['id'] as num).toInt()),
+            value: urunIds.contains(_asI((u as Map)['id'])),
             title: Text('${u['ad']}', style: TextStyle(color: t.ink, fontSize: 14)),
             onChanged: (_) => setState(() {
-              final id = (u['id'] as num).toInt();
+              final id = _asI(u['id']);
               urunIds.contains(id) ? urunIds.remove(id) : urunIds.add(id);
             }),
           ),
