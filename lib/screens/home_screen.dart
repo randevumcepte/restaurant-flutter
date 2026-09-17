@@ -352,6 +352,7 @@ class _YanMenu extends StatelessWidget {
               if (patron) _link(t, Icons.inventory_2_outlined, 'Stok & Satın Alma', () => git(const IsletmeHubScreen())),
               if (patron) _link(t, Icons.restaurant_menu, 'Menü Yönetimi', () => git(const MenuYonetimiScreen())),
               if (patron) _link(t, Icons.palette_outlined, 'QR Menü Rengi', () => git(const TemaSecimScreen()), renk: t.gold),
+              if (patron) _link(t, Icons.local_offer_outlined, 'İndirimler', () async { try { await launchUrl(Uri.parse('${Api.base}/indirimler'), mode: LaunchMode.externalApplication); } catch (_) {} }, renk: t.yesil),
               _link(t, Icons.account_balance_wallet_outlined, 'Cari / Açık Hesaplar', () => git(const CariHesaplarScreen())),
               _link(t, Icons.event_available_outlined, 'Rezervasyonlar', () => git(const RezervasyonScreen())),
               if (patron) _link(t, Icons.badge_outlined, 'Personel & Maaş', () => git(const PersonelScreen())),
