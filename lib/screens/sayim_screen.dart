@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
 import '../providers/tema_provider.dart';
 import '../services/api.dart';
+import 'menu_hamburger.dart';
 
 final _f = NumberFormat.decimalPattern('tr');
 num _n(dynamic v) => v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0);
@@ -116,7 +117,7 @@ class _SayimScreenState extends State<SayimScreen> {
         backgroundColor: t.bg, elevation: 0, iconTheme: IconThemeData(color: t.ink),
         title: Text('Sayım', style: TextStyle(color: t.ink, fontSize: 17, fontWeight: FontWeight.bold)),
         actions: [TextButton.icon(onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SayimGecmisScreen())),
-            icon: Icon(Icons.history, color: t.mavi, size: 18), label: Text('Geçmiş', style: TextStyle(color: t.mavi, fontSize: 13)))],
+            icon: Icon(Icons.history, color: t.mavi, size: 18), label: Text('Geçmiş', style: TextStyle(color: t.mavi, fontSize: 13))), const MenuHamburger()],
       ),
       body: loading
           ? Center(child: CircularProgressIndicator(color: t.mor1))

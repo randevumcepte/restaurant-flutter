@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'menu_hamburger.dart';
 import '../providers/auth_provider.dart';
 import '../providers/tema_provider.dart';
 import '../responsive.dart';
@@ -94,7 +95,7 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
         elevation: 0,
         iconTheme: const IconThemeData(color: Color(0xFF94A3B8)),
         title: const Text('Rezervasyonlar', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
-        actions: [IconButton(onPressed: () => _yukle(), icon: const Icon(Icons.refresh))],
+        actions: [IconButton(onPressed: () => _yukle(), icon: const Icon(Icons.refresh)), const MenuHamburger()],
       ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: _mor,

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
 import '../providers/tema_provider.dart';
 import '../services/api.dart';
+import 'menu_hamburger.dart';
 
 /// Üretim Riski — "bizi bizden koruyan" ekran.
 /// Kritik malzemeler + kalan stokla her yemekten kaç porsiyon çıkar (yarı mamül dahil, nested).
@@ -51,7 +52,7 @@ class _UretimRiskiScreenState extends State<UretimRiskiScreen> {
       appBar: AppBar(
         backgroundColor: t.bg, elevation: 0, iconTheme: IconThemeData(color: t.ink),
         title: Text('Üretim Riski', style: TextStyle(color: t.ink, fontSize: 17, fontWeight: FontWeight.bold)),
-        actions: [IconButton(onPressed: _yukle, icon: Icon(Icons.refresh, color: t.sub))],
+        actions: [IconButton(onPressed: _yukle, icon: Icon(Icons.refresh, color: t.sub)), const MenuHamburger()],
       ),
       body: loading
           ? Center(child: CircularProgressIndicator(color: t.mor1))

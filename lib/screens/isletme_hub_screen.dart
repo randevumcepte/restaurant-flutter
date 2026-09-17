@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'menu_hamburger.dart';
 import 'stok_screen.dart';
 import 'recete_screen.dart';
 import 'alis_fatura_screen.dart';
@@ -29,7 +30,7 @@ class IsletmeHubScreen extends StatelessWidget {
     ];
     return Scaffold(
       backgroundColor: _bg,
-      appBar: AppBar(backgroundColor: _bg, elevation: 0, iconTheme: const IconThemeData(color: Colors.white), title: const Text('Stok & Satın Alma', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold))),
+      appBar: AppBar(backgroundColor: _bg, elevation: 0, iconTheme: const IconThemeData(color: Colors.white), title: const Text('Stok & Satın Alma', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)), actions: const [MenuHamburger()]),
       body: GridView.count(
         padding: const EdgeInsets.all(14),
         crossAxisCount: 2,

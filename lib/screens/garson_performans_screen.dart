@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'menu_hamburger.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
@@ -100,6 +101,7 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
         backgroundColor: t.bg,
         iconTheme: IconThemeData(color: t.ink),
         title: Text('Garson Performansı', style: TextStyle(color: t.ink, fontWeight: FontWeight.bold)),
+        actions: const [MenuHamburger()],
       ),
       body: Column(children: [
         // Period seçici

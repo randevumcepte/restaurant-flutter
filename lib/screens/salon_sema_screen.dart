@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'menu_hamburger.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/tema_provider.dart';
@@ -161,6 +162,7 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
         iconTheme: IconThemeData(color: t.ink),
         title: Text('Salon Şeması', style: TextStyle(color: t.ink, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
         actions: [
+          const MenuHamburger(),
           IconButton(tooltip: 'Geri al', onPressed: _gecmis.isEmpty ? null : _geriAl,
               icon: Icon(Icons.undo, color: _gecmis.isEmpty ? t.sub.withValues(alpha: 0.4) : t.mor1)),
           IconButton(tooltip: 'Uzaklaş', onPressed: () => _zoom(0.8), icon: Icon(Icons.zoom_out, color: t.sub)),

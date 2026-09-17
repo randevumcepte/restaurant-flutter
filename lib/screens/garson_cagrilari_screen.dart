@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'menu_hamburger.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_tts/flutter_tts.dart';
@@ -153,6 +154,7 @@ class _GarsonCagrilariScreenState extends State<GarsonCagrilariScreen> {
           ],
         ]),
         actions: [
+          const MenuHamburger(),
           if (cagrilar.isNotEmpty)
             TextButton.icon(
               onPressed: _hepsiniKapat,

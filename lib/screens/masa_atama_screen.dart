@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'menu_hamburger.dart';
 import '../providers/auth_provider.dart';
 import '../providers/tema_provider.dart';
 import '../services/api.dart';
@@ -99,6 +100,7 @@ class _MasaAtamaScreenState extends State<MasaAtamaScreen> {
         backgroundColor: t.bg,
         iconTheme: IconThemeData(color: t.ink),
         title: Text('Masa & Bölge Atama', style: TextStyle(color: t.ink, fontWeight: FontWeight.bold)),
+        actions: const [MenuHamburger()],
       ),
       body: loading
           ? const Center(child: CircularProgressIndicator())

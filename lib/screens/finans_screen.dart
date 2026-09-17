@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'menu_hamburger.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
@@ -74,7 +75,7 @@ class _FinansScreenState extends State<FinansScreen> {
     final giderKat = (d['gider_kategori'] as List?) ?? [];
     return Scaffold(
       backgroundColor: _bg,
-      appBar: AppBar(backgroundColor: _bg, elevation: 0, iconTheme: const IconThemeData(color: Colors.white), title: const Text('Kasa', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold))),
+      appBar: AppBar(backgroundColor: _bg, elevation: 0, iconTheme: const IconThemeData(color: Colors.white), title: const Text('Kasa', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)), actions: const [MenuHamburger()]),
       body: loading
           ? const Center(child: CircularProgressIndicator(color: _mor1))
           : Column(children: [

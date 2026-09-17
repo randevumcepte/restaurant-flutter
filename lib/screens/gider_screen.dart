@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'menu_hamburger.dart';
 import '../providers/auth_provider.dart';
 import '../providers/tema_provider.dart';
 import '../responsive.dart';
@@ -92,6 +93,7 @@ class _GiderScreenState extends State<GiderScreen> {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
         title: const Text('Giderler', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
+        actions: const [MenuHamburger()],
       ),
       // Bu ekrana zaten sadece patron (sahip/mudur) ulasabilir -> buton daima gorunur.
       // Backend gider-ekle de patron seviyesinde; yetkisiz durumda uc zaten reddeder.

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'menu_hamburger.dart';
 import '../providers/auth_provider.dart';
 import '../providers/tema_provider.dart';
 import '../responsive.dart';
@@ -121,6 +122,7 @@ class _PersonelScreenState extends State<PersonelScreen> {
         elevation: 0,
         iconTheme: IconThemeData(color: _ink),
         title: Text('Personel & Maaş', style: TextStyle(color: _ink, fontSize: 17, fontWeight: FontWeight.bold)),
+        actions: const [MenuHamburger()],
       ),
       floatingActionButton: duzenleyebilir
           ? FloatingActionButton.extended(

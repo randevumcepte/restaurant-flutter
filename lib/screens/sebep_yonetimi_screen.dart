@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'menu_hamburger.dart';
 import '../providers/auth_provider.dart';
 import '../providers/tema_provider.dart';
 import '../services/api.dart';
@@ -94,6 +95,7 @@ class _SebepYonetimiScreenState extends State<SebepYonetimiScreen> {
         elevation: 0.5,
         title: Text('Sebep Yönetimi', style: TextStyle(color: _ink, fontSize: 18, fontWeight: FontWeight.bold)),
         iconTheme: IconThemeData(color: _ink),
+        actions: const [MenuHamburger()],
       ),
       floatingActionButton: duzenleyebilir
           ? FloatingActionButton.extended(onPressed: _ekle, backgroundColor: _mavi, icon: const Icon(Icons.add, color: Colors.white), label: const Text('Sebep Ekle', style: TextStyle(color: Colors.white)))

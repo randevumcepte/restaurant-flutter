@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'menu_hamburger.dart';
 import '../providers/auth_provider.dart';
 import '../providers/tema_provider.dart';
 import '../services/api.dart';
@@ -125,6 +126,7 @@ class _CariHesaplarScreenState extends State<CariHesaplarScreen> {
         elevation: 0,
         iconTheme: IconThemeData(color: _ink),
         title: Text(widget.secmeMod ? 'Cari Seç (Açık Hesap)' : 'Cari Hesaplar', style: TextStyle(color: _ink, fontSize: 17, fontWeight: FontWeight.bold)),
+        actions: const [MenuHamburger()],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _yeniCari,

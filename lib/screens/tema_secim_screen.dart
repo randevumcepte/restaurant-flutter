@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'menu_hamburger.dart';
 import '../providers/auth_provider.dart';
 import '../providers/tema_provider.dart';
 import '../services/api.dart';
@@ -119,7 +120,7 @@ class _TemaSecimScreenState extends State<TemaSecimScreen> {
     return Scaffold(
       backgroundColor: _bg,
       appBar: AppBar(backgroundColor: _bg, iconTheme: IconThemeData(color: _ink),
-          title: Text('QR Menü Rengi', style: TextStyle(color: _ink, fontWeight: FontWeight.bold))),
+          title: Text('QR Menü Rengi', style: TextStyle(color: _ink, fontWeight: FontWeight.bold)), actions: const [MenuHamburger()]),
       body: loading
           ? const Center(child: CircularProgressIndicator(color: _gold))
           : hata != null

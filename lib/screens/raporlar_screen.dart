@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'menu_hamburger.dart';
 import '../providers/auth_provider.dart';
 import '../providers/tema_provider.dart';
 import '../services/api.dart';
@@ -97,6 +98,7 @@ class _RaporlarScreenState extends State<RaporlarScreen> {
         elevation: 0.5,
         title: const Text('Raporlar  (30 gün)',
             style: TextStyle(color: Color(0xFF0F172A), fontSize: 18, fontWeight: FontWeight.bold)),
+        actions: const [MenuHamburger()],
       ),
       body: loading
           ? const Center(child: CircularProgressIndicator())

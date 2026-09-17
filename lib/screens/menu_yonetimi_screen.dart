@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
+import 'menu_hamburger.dart';
 import '../providers/auth_provider.dart';
 import '../providers/tema_provider.dart';
 import '../services/api.dart';
@@ -85,6 +86,7 @@ class _MenuYonetimiScreenState extends State<MenuYonetimiScreen> {
             icon: const Icon(Icons.create_new_folder_outlined, color: Color(0xFFC4B5FD), size: 19),
             label: const Text('Kategori', style: TextStyle(color: Color(0xFFC4B5FD), fontWeight: FontWeight.bold)),
           ),
+          const MenuHamburger(),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(

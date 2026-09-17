@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'menu_hamburger.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
@@ -173,7 +174,7 @@ class _KasaScreenState extends State<KasaScreen> {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
         title: const Text('Kasa', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
-        actions: [IconButton(onPressed: _yukle, icon: const Icon(Icons.refresh, color: _gri))],
+        actions: [IconButton(onPressed: _yukle, icon: const Icon(Icons.refresh, color: _gri)), const MenuHamburger()],
       ),
       body: loading
           ? const Center(child: CircularProgressIndicator(color: _mor1))
