@@ -263,7 +263,6 @@ class Api {
 
   static Future<Map<String, dynamic>> fis(String token, int adisyonId) => _get('/api/patron/fis?adisyon_id=$adisyonId', token);
   static Future<Map<String, dynamic>> zRaporu(String token, {String? tarih}) => _get('/api/patron/z-raporu${tarih != null ? '?tarih=$tarih' : ''}', token);
-  static Future<Map<String, dynamic>> hareketler(String token) => _get('/api/patron/hareketler', token);
 
   // ---- MENU YONETIMI (sahip/mudur) ----
   static Future<Map<String, dynamic>> menuYonetim(String token) => _get('/api/patron/menu-yonetim', token);
@@ -426,6 +425,10 @@ class Api {
   // ---- BAGLI CIHAZLAR (heartbeat) ----
   static Future<Map<String, dynamic>> cihazlar(String token) => _get('/api/patron/cihazlar', token);
   static Future<Map<String, dynamic>> cihazPing(String token, Map<String, String> bilgi) => _post('/api/cihaz/ping', token, bilgi);
+
+  // ---- HAREKETLER / AKTIVITE LOG ----
+  static Future<Map<String, dynamic>> hareketler(String token, {int gun = 7, String? kategori, int? kim, String? ara, int sayfa = 1, int boyut = 40}) =>
+      _get('/api/patron/hareketler?gun=$gun&sayfa=$sayfa&boyut=$boyut${kategori != null ? '&kategori=$kategori' : ''}${kim != null ? '&kim=$kim' : ''}${ara != null && ara.isNotEmpty ? '&ara=${Uri.encodeComponent(ara)}' : ''}', token);
 
   // ---- SAYIM (fiziksel envanter + teorik-gercek fark) ----
   static Future<Map<String, dynamic>> sayimYeni(String token) => _get('/api/patron/sayim-yeni', token);
