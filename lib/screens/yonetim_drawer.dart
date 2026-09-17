@@ -10,6 +10,7 @@ import 'sayim_screen.dart';
 import 'menu_yonetimi_screen.dart';
 import 'tema_secim_screen.dart';
 import 'indirimler_screen.dart';
+import 'odeme_modu_screen.dart';
 import 'garson_cagrilari_screen.dart';
 import 'cari_hesaplar_screen.dart';
 import 'rezervasyon_screen.dart';
@@ -76,6 +77,7 @@ class YonetimDrawer extends StatelessWidget {
               if (patron) git(Icons.restaurant_menu, 'Menü Yönetimi', const MenuYonetimiScreen()),
               if (patron) git(Icons.palette_outlined, 'QR Menü Rengi', const TemaSecimScreen(), renk: const Color(0xFFF6CE63)),
               if (patron) git(Icons.local_offer_outlined, 'İndirimler', const IndirimlerScreen(), renk: const Color(0xFF22C55E)),
+              if (patron) git(Icons.shield_outlined, 'Kaçak Önleme', const OdemeModuScreen(), renk: const Color(0xFFF43F5E)),
               git(Icons.notifications_active, 'Garson Çağrıları', const GarsonCagrilariScreen(), renk: const Color(0xFFF43F5E)),
               git(Icons.account_balance_wallet_outlined, 'Cari / Açık Hesaplar', const CariHesaplarScreen()),
               git(Icons.event_available_outlined, 'Rezervasyonlar', const RezervasyonScreen()),

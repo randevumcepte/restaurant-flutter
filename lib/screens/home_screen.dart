@@ -19,6 +19,7 @@ import 'isletme_hub_screen.dart';
 import 'menu_yonetimi_screen.dart';
 import 'tema_secim_screen.dart';
 import 'indirimler_screen.dart';
+import 'odeme_modu_screen.dart';
 import 'cari_hesaplar_screen.dart';
 import 'rezervasyon_screen.dart';
 import 'personel_screen.dart';
@@ -354,6 +355,7 @@ class _YanMenu extends StatelessWidget {
               if (patron) _link(t, Icons.restaurant_menu, 'Menü Yönetimi', () => git(const MenuYonetimiScreen())),
               if (patron) _link(t, Icons.palette_outlined, 'QR Menü Rengi', () => git(const TemaSecimScreen()), renk: t.gold),
               if (patron) _link(t, Icons.local_offer_outlined, 'İndirimler', () => git(const IndirimlerScreen()), renk: t.yesil),
+              if (patron) _link(t, Icons.shield_outlined, 'Kaçak Önleme', () => git(const OdemeModuScreen()), renk: const Color(0xFFF43F5E)),
               _link(t, Icons.account_balance_wallet_outlined, 'Cari / Açık Hesaplar', () => git(const CariHesaplarScreen())),
               _link(t, Icons.event_available_outlined, 'Rezervasyonlar', () => git(const RezervasyonScreen())),
               if (patron) _link(t, Icons.badge_outlined, 'Personel & Maaş', () => git(const PersonelScreen())),
