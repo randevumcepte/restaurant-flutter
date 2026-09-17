@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
 import '../providers/tema_provider.dart';
 import '../responsive.dart';
+import '../ana_sekme.dart';
 import '../services/api.dart';
 import 'fis.dart';
 
@@ -153,6 +154,8 @@ class _PaketScreenState extends State<PaketScreen> {
             style: TextStyle(color: _ink, fontSize: 18, fontWeight: FontWeight.bold)),
         actions: [
           IconButton(onPressed: _yukle, tooltip: 'Yenile', icon: Icon(Icons.refresh, color: _sub)),
+          if (!genisMi(context))
+            IconButton(tooltip: 'Menü', onPressed: () => anaScaffoldKey.currentState?.openDrawer(), icon: Icon(Icons.menu, color: _ink)),
           const SizedBox(width: 6),
         ],
       ),

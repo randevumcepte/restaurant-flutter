@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../ana_sekme.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/tema_provider.dart';
@@ -242,6 +243,11 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
               if (_tab.index == 3) _analizYukle();
             },
             icon: const Icon(Icons.refresh),
+          ),
+          IconButton(
+            tooltip: 'Menü',
+            onPressed: () => anaScaffoldKey.currentState?.openDrawer(),
+            icon: Icon(Icons.menu, color: _ink),
           ),
         ],
         bottom: TabBar(

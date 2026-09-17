@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../ana_sekme.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
@@ -234,6 +235,11 @@ class _MasalarScreenState extends State<MasalarScreen> {
             tooltip: 'Masa taşıma/birleştirme nasıl yapılır?',
             onPressed: _ipucuGoster,
             icon: Icon(Icons.info_outline, color: t.sub),
+          ),
+          IconButton(
+            tooltip: 'Menü',
+            onPressed: () => anaScaffoldKey.currentState?.openDrawer(),
+            icon: Icon(Icons.menu, color: t.ink),
           ),
         ],
       ),

@@ -171,6 +171,8 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
     final semaVar = ((sema['masalar'] as Map?)?.isNotEmpty ?? false);
     final noktaTipleri = ((sema['noktalar'] as List?) ?? [])
         .map((e) => (e is Map ? e['tip']?.toString() : null) ?? '').where((x) => x.isNotEmpty).toSet();
+    final sakinAdlar = bolgeler.where((b) => (bolgeTop[_n(b['id']).toInt()] ?? 0) == 0)
+        .map((b) => b['ad']?.toString() ?? '').where((x) => x.isNotEmpty).toList();
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -201,7 +203,6 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
                     Text('${bolgeAd(enBolge)} · ${_n(enMasa?['agirlik']).toInt()} işlem', style: TextStyle(color: t.sub, fontSize: 12)),
                   ])
                 : Text('Bu dönemde sipariş yok — masalara sipariş girilince ısı burada belirir.', style: TextStyle(color: t.sub, fontSize: 12.5, height: 1.3))),
-            if (veriVar) _mesafeRozet(t),
           ]),
         ),
         const SizedBox(height: 14),
@@ -214,11 +215,15 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
           Padding(padding: const EdgeInsets.symmetric(vertical: 16), child: Center(child: Text(
             'Salon şemasını "Salon Şeması" ekranından çizip kaydedersen, ısı haritası buraya salon planının üzerinde gelir.',
             textAlign: TextAlign.center, style: TextStyle(color: t.sub, fontSize: 12.5, height: 1.4)))),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         if (semaVar || veriVar) _lejant(t),
         if (veriVar) ...[
           const SizedBox(height: 12),
           ..._gozlemler(t, bolgeler, bolgeTop, enBolge, bolgeAd, enMasa, noktaTipleri),
+          const SizedBox(height: 12),
+          _mesafeKart(t),
+          const SizedBox(height: 12),
+          ..._aiDegerlendirme(t, enBolge, bolgeAd, sakinAdlar, enMasa),
         ],
       ]),
     );
@@ -231,17 +236,6 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
       return _n(g['adim']).toInt();
     }
     return garsonlar.fold<int>(0, (p, g) => p + _n(g['adim']).toInt());
-  }
-
-  Widget _mesafeRozet(TemaProvider t) {
-    final adim = _adimToplam();
-    final km = adim * 0.75 / 1000; // ~0.75 m/adım
-    final metin = km >= 1 ? '${km.toStringAsFixed(1)} km' : '${(adim * 0.75).round()} m';
-    return Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-      Row(children: [Icon(Icons.directions_walk, size: 15, color: t.mor1), const SizedBox(width: 3),
-        Text(metin, style: TextStyle(color: t.ink, fontSize: 14, fontWeight: FontWeight.w900))]),
-      Text('yürüyüş', style: TextStyle(color: t.sub, fontSize: 10)),
-    ]);
   }
 
   // Otomatik gözlemler (veriden) — patronu bilgilendirir; ikonlu, kart içinde (referans gibi)
@@ -272,28 +266,109 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
     if (sakin.isNotEmpty) {
       rows.add([Icons.chair_alt, '${sakin.take(2).join(', ')} daha az ziyaret ediliyor (köşe/arka bölgeler).']);
     }
-    // 6) toplam yürüyüş
-    final adim = _adimToplam();
-    if (adim > 0) {
-      final km = adim * 0.75 / 1000;
-      final mesafe = km >= 1 ? '${km.toStringAsFixed(1)} km' : '${(adim * 0.75).round()} m';
-      rows.add([Icons.route, 'Toplam yürüyüş mesafesi: $mesafe (bu dönem).']);
-    }
     if (rows.isEmpty) return [];
     return [
       Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(color: t.card2, borderRadius: BorderRadius.circular(12)),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(color: t.card2, borderRadius: BorderRadius.circular(14)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [Icon(Icons.insights, size: 16, color: t.mor1), const SizedBox(width: 6),
-            Text('Gözlemler', style: TextStyle(color: t.ink, fontSize: 13.5, fontWeight: FontWeight.w900))]),
+          Text('Gözlemler', style: TextStyle(color: t.ink, fontSize: 13.5, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 10),
+          for (var i = 0; i < rows.length; i++) ...[
+            Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+              Container(width: 38, height: 38, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: t.line, width: 1.4)),
+                  child: Icon(rows[i][0] as IconData, size: 19, color: t.sub2)),
+              const SizedBox(width: 12),
+              Expanded(child: Text(rows[i][1] as String, style: TextStyle(color: t.sub2, fontSize: 12.5, height: 1.35))),
+            ]),
+            if (i < rows.length - 1) Padding(padding: const EdgeInsets.symmetric(vertical: 9), child: Divider(height: 1, color: t.line)),
+          ],
+        ]),
+      ),
+    ];
+  }
+
+  // Toplam yürüyüş mesafesi kartı (referans gibi büyük)
+  Widget _mesafeKart(TemaProvider t) {
+    final adim = _adimToplam();
+    final km = adim * 0.75 / 1000;
+    final metin = km >= 1 ? '${km.toStringAsFixed(1)} km' : '${(adim * 0.75).round()} m';
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: t.card2, borderRadius: BorderRadius.circular(14)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('Toplam Yürüyüş Mesafesi', style: TextStyle(color: t.ink, fontSize: 13.5, fontWeight: FontWeight.w900)),
+        const SizedBox(height: 10),
+        Row(children: [
+          Icon(Icons.route, size: 30, color: t.mor1),
+          const SizedBox(width: 12),
+          Text(metin, style: TextStyle(color: t.ink, fontSize: 26, fontWeight: FontWeight.w900)),
+          const SizedBox(width: 8),
+          Text('(adım sayacından)', style: TextStyle(color: t.sub, fontSize: 11)),
+        ]),
+      ]),
+    );
+  }
+
+  // AI DEĞERLENDİRMESİ: ısı haritası gözlemleri + karne metriklerini birleştirip
+  // garsona puan/verdict + koçluk notu üretir (kural motoru; sürekli veriyle güncel).
+  List<Widget> _aiDegerlendirme(TemaProvider t, int enBolge, String Function(int) bolgeAd, List<String> sakin, Map<String, dynamic>? enMasa) {
+    Map<String, dynamic>? g;
+    if (isiGarson != null) {
+      final f = garsonlar.firstWhere((x) => x['id'] == isiGarson, orElse: () => <String, dynamic>{});
+      if (f.isNotEmpty) g = f;
+    }
+    final ad = g?['ad']?.toString() ?? 'Ekip';
+    final adim = _adimToplam();
+    final km = adim * 0.75 / 1000;
+    final servis = g != null ? _n(g['ort_servis_dk']).toInt() : 0;
+    final adis = g != null ? _n(g['adisyon']).toInt() : 0;
+    final kalem = g != null ? _n(g['kalem']).toInt() : 0;
+    final ciro = g != null ? _n(g['ciro']) : 0;
+
+    final artilar = <String>[], gelisim = <String>[];
+    int puan = 60;
+    if (km >= 3) { artilar.add('sahada aktif (${km.toStringAsFixed(1)} km)'); puan += 10; }
+    else if (adim > 0 && km < 1) { gelisim.add('az hareket (${km.toStringAsFixed(1)} km); masalara daha sık uğramalı'); puan -= 10; }
+    if (servis > 0 && servis <= 7) { artilar.add('hızlı servis (ort. $servis dk)'); puan += 12; }
+    else if (servis >= 13) { gelisim.add('servis süresi yüksek (ort. $servis dk); masalara dönüş hızlanmalı'); puan -= 12; }
+    if (sakin.isNotEmpty) { gelisim.add('${sakin.take(2).join(', ')} bölgesine az uğramış'); puan -= 8; }
+    else if (enBolge >= 0) { artilar.add('salonu dengeli dolaşmış'); puan += 5; }
+    if (adis >= 8) { artilar.add('$adis adisyon ile yüksek tempo'); puan += 8; }
+    if (kalem > 0 && adis > 0 && kalem / adis >= 4) { artilar.add('masa başına güçlü satış (ort. ${(kalem / adis).toStringAsFixed(1)} kalem)'); puan += 6; }
+    puan = puan.clamp(0, 100);
+
+    final verdict = puan >= 80 ? 'Çok iyi' : puan >= 60 ? 'İyi' : puan >= 45 ? 'Orta' : 'Geliştirilebilir';
+    final vColor = puan >= 80 ? const Color(0xFF16A34A) : puan >= 60 ? const Color(0xFF22C55E) : puan >= 45 ? const Color(0xFFF59E0B) : const Color(0xFFEF4444);
+
+    final buf = StringBuffer(ad);
+    if (adis > 0) buf.write(' bu dönem $adis masaya baktı');
+    if (ciro > 0) buf.write('${adis > 0 ? ', ' : ' '}${_tl(ciro)} ciro üretti');
+    buf.write('. ');
+    if (enBolge >= 0) buf.write('En çok ${bolgeAd(enBolge)} bölgesinde çalıştı. ');
+    if (artilar.isNotEmpty) buf.write('Güçlü yön: ${artilar.take(3).join(', ')}. ');
+    if (gelisim.isNotEmpty) buf.write('Gelişim: ${gelisim.take(2).join(', ')}.');
+    if (artilar.isEmpty && gelisim.isEmpty) buf.write('Değerlendirme için yeterli veri yok.');
+
+    return [
+      Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          gradient: LinearGradient(colors: [t.mor1.withValues(alpha: 0.14), t.mor1.withValues(alpha: 0.05)]),
+          border: Border.all(color: t.mor1.withValues(alpha: 0.35)),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Icon(Icons.auto_awesome, size: 17, color: t.mor1),
+            const SizedBox(width: 6),
+            Expanded(child: Text('AI Değerlendirmesi', style: TextStyle(color: t.ink, fontSize: 13.5, fontWeight: FontWeight.w900))),
+            Container(padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+              decoration: BoxDecoration(color: vColor.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(10), border: Border.all(color: vColor.withValues(alpha: 0.5))),
+              child: Text('$verdict · $puan', style: TextStyle(color: vColor, fontSize: 11.5, fontWeight: FontWeight.w900))),
+          ]),
           const SizedBox(height: 8),
-          for (final r in rows) Padding(padding: const EdgeInsets.only(bottom: 8), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Container(width: 26, height: 26, decoration: BoxDecoration(color: t.mor1.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
-                child: Icon(r[0] as IconData, size: 15, color: t.mor1)),
-            const SizedBox(width: 10),
-            Expanded(child: Text(r[1] as String, style: TextStyle(color: t.sub2, fontSize: 12.5, height: 1.35))),
-          ])),
+          Text(buf.toString(), style: TextStyle(color: t.sub2, fontSize: 12.5, height: 1.4)),
         ]),
       ),
     ];
@@ -373,24 +448,24 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
   }
 
   Widget _lejant(TemaProvider t) {
-    Widget satir(Color c, String s) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: 3),
-          child: Row(children: [
-            Container(width: 26, height: 12, decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(3))),
-            const SizedBox(width: 10),
-            Expanded(child: Text(s, style: TextStyle(color: t.sub2, fontSize: 12))),
-          ]),
-        );
     return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: t.card2, borderRadius: BorderRadius.circular(12)),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: t.card2, borderRadius: BorderRadius.circular(14)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Isı Haritası Renkleri', style: TextStyle(color: t.ink, fontSize: 13, fontWeight: FontWeight.w900)),
-        const SizedBox(height: 8),
-        satir(const Color(0xFFEF4444), 'En çok yürüdüğü alanlar'),
-        satir(const Color(0xFFEAB308), 'Sık yürüdüğü alanlar'),
-        satir(const Color(0xFF22C55E), 'Orta yoğunluk'),
-        satir(const Color(0xFF1D4ED8), 'En az yürüdüğü alanlar'),
+        Text('Isı Haritası Renkleri', style: TextStyle(color: t.ink, fontSize: 13.5, fontWeight: FontWeight.w900)),
+        const SizedBox(height: 12),
+        Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Container(width: 18, height: 148, decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(9),
+            gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
+              colors: [Color(0xFFEF4444), Color(0xFFF97316), Color(0xFFEAB308), Color(0xFF22C55E), Color(0xFF06B6D4), Color(0xFF1D4ED8)]))),
+          const SizedBox(width: 14),
+          SizedBox(height: 148, child: Column(mainAxisAlignment: MainAxisAlignment.spaceBetween, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('En çok yürüdüğü alanlar', style: TextStyle(color: t.sub2, fontSize: 12.5)),
+            Text('Sık yürüdüğü alanlar', style: TextStyle(color: t.sub2, fontSize: 12.5)),
+            Text('En az yürüdüğü alanlar', style: TextStyle(color: t.sub2, fontSize: 12.5)),
+          ])),
+        ]),
       ]),
     );
   }

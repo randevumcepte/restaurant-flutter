@@ -4,6 +4,9 @@ import '../providers/auth_provider.dart';
 import '../providers/tema_provider.dart';
 import '../ana_sekme.dart';
 import '../responsive.dart';
+import '../services/api.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'yonetim_drawer.dart';
 import 'dashboard_screen.dart';
 import 'garson_ozet_screen.dart';
 import 'masalar_screen.dart';
@@ -140,6 +143,13 @@ class _HomeScreenState extends State<HomeScreen> {
         if (_index != 0) { anaSekme.value = 0; return; } // koke don
       },
       child: Scaffold(
+        key: anaScaffoldKey,
+        // Yonetim menusu HER SAYFADAN acilsin diye drawer dis Scaffold'da.
+        // Secilen ekran _govdeNav'a push edilir -> alt bar + mikrofon kalici kalir (mevcut davranis).
+        drawer: YonetimDrawer(
+          onGit: (e) => _govdeNav.currentState?.push(MaterialPageRoute(builder: (_) => e)),
+          onWeb: (p) async { try { await launchUrl(Uri.parse('${Api.base}$p'), mode: LaunchMode.externalApplication); } catch (_) {} },
+        ),
         body: Navigator(
           key: _govdeNav,
           onGenerateRoute: (s) => MaterialPageRoute(builder: (_) => _TabGovde(ekranlar: ekranlar)),
