@@ -257,11 +257,18 @@ class _GarsonCagrilariScreenState extends State<GarsonCagrilariScreen> {
           Text(c['saat']?.toString() ?? '', style: TextStyle(color: t.sub, fontSize: 11)),
         ]),
         const SizedBox(width: 10),
-        FilledButton(
-          onPressed: () => _kapat(c['id'] as int),
-          style: FilledButton.styleFrom(backgroundColor: const Color(0xFF16A34A), padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12)),
-          child: const Text('✓', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
-        ),
+        tip == 'tasima'
+            ? FilledButton.icon(
+                onPressed: () => _tasimaOnayla(c),
+                style: FilledButton.styleFrom(backgroundColor: const Color(0xFF7C3AED), padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12)),
+                icon: const Icon(Icons.swap_horiz, color: Colors.white, size: 18),
+                label: const Text('Taşı', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+              )
+            : FilledButton(
+                onPressed: () => _kapat(c['id'] as int),
+                style: FilledButton.styleFrom(backgroundColor: const Color(0xFF16A34A), padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12)),
+                child: const Text('✓', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
+              ),
       ]),
     );
   }
