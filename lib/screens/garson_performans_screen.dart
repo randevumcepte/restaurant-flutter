@@ -508,7 +508,8 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
             gorsel: _gorsel,
             masaOlcek: _masaOlcek,
             noktalar: noktalar.map((nk) => _Nokta(
-                Offset(sx(_n(nk['x'])), sy(_n(nk['y'])).toDouble()), nk['tip']?.toString() ?? 'diger')).toList(),
+                Offset(sx(_n(nk['x'])), sy(_n(nk['y'])).toDouble()), nk['tip']?.toString() ?? 'diger',
+                _n(nk['boy']) <= 0 ? 66.0 : _n(nk['boy']).toDouble())).toList(),
             rota: ((isi['rota'] as List?) ?? []).map((e) => Map<String, dynamic>.from(e)).toList(),
           ))),
           for (final b in zones)
@@ -614,7 +615,8 @@ class _Masa {
 class _Nokta {
   final Offset c;
   final String tip; // giris/mutfak/bar/...
-  _Nokta(this.c, this.tip);
+  final double boy; // görsel boyutu (kapı boşluğu için)
+  _Nokta(this.c, this.tip, [this.boy = 66]);
 }
 
 /// KUŞBAKIŞI GERÇEKÇİ SALON: ahşap zemin + gerçekçi masa/sandalye/saksı;
@@ -699,8 +701,18 @@ class _SemaPainter extends CustomPainter {
     _isiAgCiz(canvas, size, zemin);
 
     // --- KENAR SÜSLEME (varsayılan): kalın koyu duvar + duvara yaslı yeşillik şeridi ---
+    // Katmana çiz ki GİRİŞ noktalarında duvar+yeşilliği KESİP (kapı boşluğu) altındaki zemini açalım.
+    canvas.saveLayer(Offset.zero & size, Paint());
     _duvarCiz(canvas, zemin);
     _kenarSuslemesi(canvas);
+    for (final nk in noktalar) {
+      if (nk.tip != 'giris') continue;
+      final s = (nk.boy <= 0 ? 66.0 : nk.boy) * 1.15;
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(Rect.fromCenter(center: nk.c, width: s, height: s), Radius.circular(s * 0.18)),
+        Paint()..blendMode = BlendMode.clear);
+    }
+    canvas.restore();
 
     // --- MASALAR + SANDALYELER (duvar+yeşilliğin ve ısının ÜSTÜNDE) ---
     for (final m in tablolar) { _masaCiz(canvas, m); }

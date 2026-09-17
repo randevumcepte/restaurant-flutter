@@ -351,6 +351,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         // ANA CIRO karti (Total Amount + comparison) — uyarilar artik AppBar'daki AI cani altinda
         _ciroHero(ciro, ciroYuzde, info, comp),
         const SizedBox(height: 10),
+        // GELEN MUSTERI — donemsel (Gunluk/Haftalik/Aylik/Yillik) + onceki donem trendi
+        _gelenMusteriKart(info, comp),
+        const SizedBox(height: 10),
 
         // Acik / Kapali folio + Maliyet
         Row(children: [
@@ -640,6 +643,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
           FittedBox(child: Text(oncekiVar ? onceki : '—', style: const TextStyle(color: Colors.white38, fontSize: 10))),
         ]),
       ),
+    );
+  }
+
+  // Gelen musteri (misafir) karti — secili donemin toplam misafiri + onceki donemle trend.
+  Widget _gelenMusteriKart(Map info, Map comp) {
+    final simdi = _n(info['misafir']).toInt();
+    final onceki = _n(comp['misafir']).toInt();
+    final oncekiVar = onceki > 0;
+    final fark = oncekiVar ? (simdi - onceki) / onceki * 100 : 0.0;
+    final up = fark >= 0;
+    final donemAd = const {'gunluk': 'bugün', 'haftalik': 'bu hafta', 'aylik': 'bu ay', 'yillik': 'bu yıl'}[period] ?? 'bu dönem';
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(18), boxShadow: _t.golge),
+      child: Row(children: [
+        Container(
+          width: 46, height: 46,
+          decoration: BoxDecoration(color: _mavi.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(14)),
+          child: const Icon(Icons.groups, color: _mavi, size: 26),
+        ),
+        const SizedBox(width: 14),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Gelen Müşteri · $donemAd', style: TextStyle(color: _sub, fontSize: 12.5)),
+          const SizedBox(height: 2),
+          _sayiAnim(simdi, TextStyle(color: _ink, fontSize: 24, fontWeight: FontWeight.bold), bicim: (v) => '${_f.format(v.round())} kişi'),
+        ])),
+        if (oncekiVar)
+          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(color: (up ? _yesil : _kirmizi).withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
+              child: Text('${up ? "▲" : "▼"} %${fark.abs().toStringAsFixed(0)}', style: TextStyle(color: up ? _yesil : _kirmizi, fontWeight: FontWeight.bold, fontSize: 12)),
+            ),
+            const SizedBox(height: 3),
+            Text('önceki: $onceki', style: TextStyle(color: _sub, fontSize: 11)),
+          ]),
+      ]),
     );
   }
 
