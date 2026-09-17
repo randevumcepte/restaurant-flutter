@@ -28,6 +28,7 @@ import 'garson_cagrilari_screen.dart';
 import 'ai_bildirim_screen.dart';
 import 'raporlar_screen.dart';
 import 'bagli_cihazlar_screen.dart';
+import 'hareketler_screen.dart';
 import 'rezervasyon_screen.dart';
 import 'uretim_riski_screen.dart';
 import 'sayim_screen.dart';
@@ -227,6 +228,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               if (patron) oge(Icons.receipt_long_outlined, 'Giderler', () => git(const GiderScreen())),
               if (patron) oge(Icons.bar_chart_outlined, 'Raporlar', () => git(const RaporlarScreen())),
               if (patron) oge(Icons.devices_other_outlined, 'Bağlı Cihazlar', () => git(const BagliCihazlarScreen()), renk: const Color(0xFF0EA5E9)),
+              if (patron) oge(Icons.history, 'Hareketler (Log)', () => git(const HareketlerScreen()), renk: const Color(0xFF7C3AED)),
               if (patron) oge(Icons.rule_folder_outlined, 'İptal / İkram Sebepleri', () => git(const SebepYonetimiScreen())),
               oge(Icons.auto_awesome, 'Patron Asistan', () => git(const AsistanScreen()), renk: const Color(0xFFC4B5FD)),
             ]),
