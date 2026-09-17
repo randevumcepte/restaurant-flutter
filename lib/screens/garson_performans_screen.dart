@@ -192,6 +192,9 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
           for (final g in garsonlar) _isiChip(t, g['id'] as int, g['ad']?.toString() ?? ''),
         ])),
         const SizedBox(height: 12),
+        // ADIM + YÜRÜYÜŞ — büyük, belirgin (en üstte)
+        _adimMesafeKart(t),
+        const SizedBox(height: 12),
         // Özet / bilgi kutusu
         Container(
           padding: const EdgeInsets.all(12),
@@ -222,8 +225,6 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
         if (veriVar) ...[
           const SizedBox(height: 12),
           ..._gozlemler(t, bolgeler, bolgeTop, enBolge, bolgeAd, enMasa, noktaTipleri),
-          const SizedBox(height: 12),
-          _mesafeKart(t),
           const SizedBox(height: 12),
           ..._aiDegerlendirme(t, enBolge, bolgeAd, sakinAdlar, enMasa),
         ],
@@ -290,26 +291,40 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
     ];
   }
 
-  // Toplam yürüyüş mesafesi kartı (referans gibi büyük)
-  Widget _mesafeKart(TemaProvider t) {
+  // ADIM + TOPLAM YÜRÜYÜŞ — büyük, belirgin çift istatistik (adım sayacından)
+  Widget _adimMesafeKart(TemaProvider t) {
     final adim = _adimToplam();
     final km = adim * 0.75 / 1000;
-    final metin = km >= 1 ? '${km.toStringAsFixed(1)} km' : '${(adim * 0.75).round()} m';
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: t.card2, borderRadius: BorderRadius.circular(14)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Toplam Yürüyüş Mesafesi', style: TextStyle(color: t.ink, fontSize: 13.5, fontWeight: FontWeight.w900)),
-        const SizedBox(height: 10),
-        Row(children: [
-          Icon(Icons.route, size: 30, color: t.mor1),
-          const SizedBox(width: 12),
-          Text(metin, style: TextStyle(color: t.ink, fontSize: 26, fontWeight: FontWeight.w900)),
-          const SizedBox(width: 8),
-          Text('(adım sayacından)', style: TextStyle(color: t.sub, fontSize: 11)),
-        ]),
+    final kmStr = km >= 1 ? km.toStringAsFixed(1) : km.toStringAsFixed(2);
+    final kimAd = isiGarson == null ? 'Tüm ekip' : (garsonlar.firstWhere((x) => x['id'] == isiGarson, orElse: () => {'ad': ''})['ad']?.toString() ?? '');
+
+    Widget stat(IconData ic, Color c, String buyuk, String birim, String alt) => Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+            decoration: BoxDecoration(color: t.card2, borderRadius: BorderRadius.circular(16), border: Border.all(color: c.withValues(alpha: 0.35))),
+            child: Column(children: [
+              Container(width: 40, height: 40, decoration: BoxDecoration(color: c.withValues(alpha: 0.14), shape: BoxShape.circle),
+                  child: Icon(ic, color: c, size: 22)),
+              const SizedBox(height: 8),
+              FittedBox(fit: BoxFit.scaleDown, child: RichText(text: TextSpan(children: [
+                TextSpan(text: buyuk, style: TextStyle(color: t.ink, fontSize: 26, fontWeight: FontWeight.w900)),
+                TextSpan(text: ' $birim', style: TextStyle(color: t.sub, fontSize: 13, fontWeight: FontWeight.bold)),
+              ]))),
+              const SizedBox(height: 2),
+              Text(alt, style: TextStyle(color: t.sub, fontSize: 11)),
+            ]),
+          ),
+        );
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        stat(Icons.directions_walk, t.mor1, _f.format(adim), 'adım', 'atılan adım'),
+        const SizedBox(width: 10),
+        stat(Icons.route, const Color(0xFF16A34A), kmStr, 'km', 'toplam yürüyüş'),
       ]),
-    );
+      const SizedBox(height: 6),
+      Padding(padding: const EdgeInsets.only(left: 4), child: Text(
+        '$kimAd · adım sayacından ölçüldü', style: TextStyle(color: t.sub, fontSize: 10.5))),
+    ]);
   }
 
   // AI DEĞERLENDİRMESİ: ısı haritası gözlemleri + karne metriklerini birleştirip
