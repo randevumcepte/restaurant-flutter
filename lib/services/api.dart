@@ -14,6 +14,24 @@ class Api {
     return jsonDecode(r.body) as Map<String, dynamic>;
   }
 
+  // ---------------- MESAI (QR + geofence) ----------------
+  static Future<Map<String, dynamic>> mesaiDurum(String token) => _get('/api/mesai/durum', token);
+  static Future<Map<String, dynamic>> mesaiQrSecret(String token) => _get('/api/mesai/qr-secret', token);
+  static Future<Map<String, dynamic>> mesaiListe(String token, {String? gun}) =>
+      _get('/api/mesai/liste${gun != null ? '?gun=$gun' : ''}', token);
+  static Future<Map<String, dynamic>> mesaiOkut(String token,
+          {required String kod, required int w, double? lat, double? lng, int adim = 0}) =>
+      _post('/api/mesai/okut', token, {
+        'kod': kod, 'w': '$w', 'adim': '$adim',
+        if (lat != null) 'lat': '$lat', if (lng != null) 'lng': '$lng',
+      });
+  static Future<Map<String, dynamic>> mesaiPing(String token, {double? lat, double? lng, int adim = 0}) =>
+      _post('/api/mesai/ping', token, {
+        'adim': '$adim', if (lat != null) 'lat': '$lat', if (lng != null) 'lng': '$lng',
+      });
+  static Future<Map<String, dynamic>> mesaiKonumAyarla(String token, double lat, double lng, {int yaricap = 150}) =>
+      _post('/api/mesai/konum-ayarla', token, {'lat': '$lat', 'lng': '$lng', 'yaricap': '$yaricap'});
+
   static Future<Map<String, dynamic>> _get(String path, String token) async {
     final r = await http.get(
       Uri.parse('$base$path'),
@@ -395,6 +413,10 @@ class Api {
 
   // ---- GELEN MUSTERI DETAYI ----
   static Future<Map<String, dynamic>> musteriDetay(String token, {String period = 'gunluk'}) => _get('/api/patron/musteri-detay?period=$period', token);
+
+  // ---- BAGLI CIHAZLAR (heartbeat) ----
+  static Future<Map<String, dynamic>> cihazlar(String token) => _get('/api/patron/cihazlar', token);
+  static Future<Map<String, dynamic>> cihazPing(String token, Map<String, String> bilgi) => _post('/api/cihaz/ping', token, bilgi);
 
   // ---- SAYIM (fiziksel envanter + teorik-gercek fark) ----
   static Future<Map<String, dynamic>> sayimYeni(String token) => _get('/api/patron/sayim-yeni', token);

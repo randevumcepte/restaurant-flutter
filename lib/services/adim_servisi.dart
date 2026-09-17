@@ -20,6 +20,9 @@ class AdimServisi {
   int _sonGonderilen = -1;
   DateTime? _sonGonderim;
 
+  /// O ana kadar bilinen BUGÜNkü adım (mesai baseline/delta için).
+  int get bugunkuAdim => _sonGonderilen < 0 ? 0 : _sonGonderilen;
+
   /// Giris sonrasi cagrilir. Idempotent (bir kez baslar).
   Future<void> baslat(String token) async {
     _token = token;

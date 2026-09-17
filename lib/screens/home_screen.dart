@@ -30,6 +30,9 @@ import 'masa_atama_screen.dart';
 import 'garson_performans_screen.dart';
 import 'salon_sema_screen.dart';
 import '../services/adim_servisi.dart';
+import '../services/mesai_servisi.dart';
+import 'mesai_kapisi_screen.dart';
+import '../services/cihaz_servisi.dart';
 
 /// Uygulama kabugu — iki yuz:
 ///  • TELEFON: koyu bar + ortada mikrofon (mevcut mobil deneyim, aynen korunur).
@@ -69,8 +72,14 @@ class _HomeScreenState extends State<HomeScreen> {
     anaSekme.addListener(_sekmeDinle); // Asistan gibi ekranlardan sekme degisince guncelle
     // Garson adim sayaci: giris token'iyla sensoru dinlemeye basla (izin ister)
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final tok = context.read<AuthProvider>().token;
-      if (tok != null) AdimServisi().baslat(tok);
+      final auth = context.read<AuthProvider>();
+      final tok = auth.token;
+      if (tok != null) {
+        AdimServisi().baslat(tok);
+        CihazServisi().baslat(tok, rol: auth.rol); // Bağlı Cihazlar: periyodik "buradayım" sinyali
+        // Mesai kilidi: garson/personel mesai açmadan işletme bilgilerini göremez (patron/müdür serbest)
+        MesaiServisi().baslat(tok, rolKilit: !(auth.rol == 'sahip' || auth.rol == 'mudur'));
+      }
     });
   }
 
@@ -88,6 +97,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Mesai kilidi: garson/personel mesai açmadan içeriyi göremez → QR kapısı.
+    return ValueListenableBuilder<bool>(
+      valueListenable: MesaiServisi().kilit,
+      builder: (ctx, kilitli, _) => kilitli ? const MesaiKapisiScreen() : _uygulama(ctx),
+    );
+  }
+
+  Widget _uygulama(BuildContext context) {
     final rol = context.watch<AuthProvider>().rol;
     final patron = rol == 'sahip' || rol == 'mudur';
 
