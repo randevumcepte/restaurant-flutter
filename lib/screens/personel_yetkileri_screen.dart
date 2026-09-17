@@ -18,6 +18,7 @@ const _etiketler = {
   'adisyon_iptal': 'Adisyon İptal',
   'adisyon_bol': 'Adisyon Böl',
   'adisyon_birlestir': 'Masa Birleştir',
+  'masa_tasima': 'Masa Taşıma',
   'iskonto': 'İskonto Uygula',
   'ikram': 'İkram',
   'urun_sil': 'Ürün Sil (Void)',
@@ -27,7 +28,7 @@ const _etiketler = {
   'rapor_gor': 'Rapor Görebilir',
 };
 const _gruplar = {
-  '🧾 Adisyon': ['adisyon_ac', 'adisyon_kapat', 'adisyon_iptal', 'adisyon_bol', 'adisyon_birlestir'],
+  '🧾 Adisyon': ['adisyon_ac', 'adisyon_kapat', 'adisyon_iptal', 'adisyon_bol', 'adisyon_birlestir', 'masa_tasima'],
   '💸 Para & Kayıp': ['iskonto', 'ikram', 'urun_sil', 'fatura_kes'],
   '📊 Yönetim': ['geri_islem', 'maliyet_gor', 'rapor_gor'],
 };

@@ -64,8 +64,44 @@ class _GarsonCagrilariScreenState extends State<GarsonCagrilariScreen> {
     super.dispose();
   }
 
-  String _tipYazi(String t) => t == 'hesap' ? 'Hesap istiyor' : (t == 'siparis' ? 'Sipariş verdi' : 'Garson çağırıyor');
-  IconData _tipIkon(String t) => t == 'hesap' ? Icons.credit_card : (t == 'siparis' ? Icons.receipt_long : Icons.notifications_active);
+  String _tipYazi(String t) => t == 'tasima' ? 'Taşıma talebi' : (t == 'odeme' ? 'Ödeme alınacak' : (t == 'hesap' ? 'Hesap istiyor' : (t == 'siparis' ? 'Sipariş verdi' : 'Garson çağırıyor')));
+  IconData _tipIkon(String t) => t == 'tasima' ? Icons.swap_horiz : (t == 'odeme' ? Icons.payments_outlined : (t == 'hesap' ? Icons.credit_card : (t == 'siparis' ? Icons.receipt_long : Icons.notifications_active)));
+
+  // Masa taşıma talebini onayla (yetki yoksa PIN sor)
+  Future<void> _tasimaOnayla(Map<String, dynamic> c, {String? pin}) async {
+    final auth = context.read<AuthProvider>();
+    final kaynak = (c['masa_id'] is num) ? (c['masa_id'] as num).toInt() : 0;
+    final hedef = (c['hedef_masa_id'] is num) ? (c['hedef_masa_id'] as num).toInt() : 0;
+    if (kaynak == 0 || hedef == 0) return;
+    try {
+      final res = await Api.masaTasimaOnayla(auth.token!, kaynakMasa: kaynak, hedefMasa: hedef, cagriId: c['id'] as int, onayPin: pin);
+      if (!mounted) return;
+      if (res['ok'] == 1) {
+        setState(() => cagrilar.removeWhere((x) => x['id'] == c['id']));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['mesaj']?.toString() ?? 'Taşındı')));
+      } else if (res['onay_gerek'] == true) {
+        final girilen = await _pinSor();
+        if (girilen != null && girilen.isNotEmpty) _tasimaOnayla(c, pin: girilen);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['hata']?.toString() ?? 'Taşınamadı')));
+      }
+    } catch (_) {}
+  }
+
+  Future<String?> _pinSor() async {
+    final ctrl = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('Kasa / Müdür Onayı'),
+        content: TextField(controller: ctrl, keyboardType: TextInputType.number, obscureText: true, autofocus: true, decoration: const InputDecoration(hintText: 'Yetkili PIN')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c), child: const Text('Vazgeç')),
+          TextButton(onPressed: () => Navigator.pop(c, ctrl.text.trim()), child: const Text('Onayla')),
+        ],
+      ),
+    );
+  }
   String _sure(int sn) { sn = sn < 0 ? 0 : sn; if (sn < 60) return '$sn sn'; return '${(sn / 60).floor()} dk'; }
 
   Future<void> _cek() async {
@@ -212,7 +248,7 @@ class _GarsonCagrilariScreenState extends State<GarsonCagrilariScreen> {
         ),
         const SizedBox(width: 13),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(c['masa']?.toString() ?? '', style: TextStyle(color: t.ink, fontSize: 19, fontWeight: FontWeight.w900)),
+          Text(tip == 'tasima' && c['hedef'] != null ? '${c['masa']} → ${c['hedef']}' : (c['masa']?.toString() ?? ''), style: TextStyle(color: t.ink, fontSize: 19, fontWeight: FontWeight.w900)),
           const SizedBox(height: 2),
           Text(_tipYazi(tip), style: TextStyle(color: vurgu, fontSize: 13.5, fontWeight: FontWeight.w700)),
         ])),

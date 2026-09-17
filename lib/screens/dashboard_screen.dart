@@ -20,6 +20,7 @@ import 'garson_performans_screen.dart';
 import 'salon_sema_screen.dart';
 import 'mesai_qr_screen.dart';
 import 'puantaj_screen.dart';
+import 'isletme_konum_screen.dart';
 import 'tema_secim_screen.dart';
 import 'indirimler_screen.dart';
 import 'odeme_modu_screen.dart';
@@ -221,6 +222,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               if (patron) oge(Icons.emoji_events_outlined, 'Garson Performansı', () => git(const GarsonPerformansScreen()), renk: const Color(0xFF10B981)),
               if (patron) oge(Icons.grid_on_outlined, 'Salon Şeması', () => git(const SalonSemaScreen()), renk: const Color(0xFF0EA5E9)),
               if (patron) oge(Icons.qr_code_2, 'Kasa Mesai QR', () => git(const MesaiQrScreen()), renk: const Color(0xFF14B8A6)),
+              if (patron) oge(Icons.my_location, 'İşletme Konumu (Mesai)', () => git(const IsletmeKonumScreen()), renk: const Color(0xFF14B8A6)),
               if (patron) oge(Icons.how_to_reg_outlined, 'Puantaj (Mesai)', () => git(const PuantajScreen()), renk: const Color(0xFF10B981)),
               if (patron) oge(Icons.receipt_long_outlined, 'Giderler', () => git(const GiderScreen())),
               if (patron) oge(Icons.bar_chart_outlined, 'Raporlar', () => git(const RaporlarScreen())),

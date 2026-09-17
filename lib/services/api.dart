@@ -29,6 +29,7 @@ class Api {
       _post('/api/mesai/ping', token, {
         'adim': '$adim', if (lat != null) 'lat': '$lat', if (lng != null) 'lng': '$lng',
       });
+  static Future<Map<String, dynamic>> mesaiKonum(String token) => _get('/api/mesai/konum', token);
   static Future<Map<String, dynamic>> mesaiKonumAyarla(String token, double lat, double lng, {int yaricap = 150}) =>
       _post('/api/mesai/konum-ayarla', token, {'lat': '$lat', 'lng': '$lng', 'yaricap': '$yaricap'});
 
@@ -215,6 +216,14 @@ class Api {
     if (r.statusCode == 401) throw ApiYetkiHatasi();
     return jsonDecode(r.body) as Map<String, dynamic>;
   }
+
+  // Masa tasima onayi (talep karti): kaynak masadaki acik hesabi hedef masaya tasir. Yetki yoksa onayPin gerekir.
+  static Future<Map<String, dynamic>> masaTasimaOnayla(String token, {required int kaynakMasa, required int hedefMasa, int? cagriId, String? onayPin}) =>
+      _post('/api/patron/masa-tasi', token, {
+        'kaynak_masa': '$kaynakMasa', 'yeni_masa_id': '$hedefMasa',
+        if (cagriId != null) 'cagri_id': '$cagriId',
+        if (onayPin != null && onayPin.isNotEmpty) 'onay_pin': onayPin,
+      });
 
   static Future<Map<String, dynamic>> sebepEkle(String token, String tur, String metin) =>
       _post('/api/patron/sebep-ekle', token, {'tur': tur, 'metin': metin});
