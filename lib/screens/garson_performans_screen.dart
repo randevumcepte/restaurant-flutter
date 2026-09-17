@@ -184,32 +184,14 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
           const Text('🔥 ', style: TextStyle(fontSize: 16)),
           Expanded(child: Text('Garsonun Isı Haritası', style: TextStyle(color: t.ink, fontSize: 15, fontWeight: FontWeight.w900))),
         ]),
-        const SizedBox(height: 4),
-        Text('Salon planında en çok nerede çalıştığı — kırmızı = en yoğun.', style: TextStyle(color: t.sub, fontSize: 11.5)),
         const SizedBox(height: 10),
         SizedBox(height: 34, child: ListView(scrollDirection: Axis.horizontal, children: [
           _isiChip(t, null, 'Tüm salon'),
           for (final g in garsonlar) _isiChip(t, g['id'] as int, g['ad']?.toString() ?? ''),
         ])),
         const SizedBox(height: 12),
-        // ADIM + YÜRÜYÜŞ — büyük, belirgin (en üstte)
+        // ADIM + YÜRÜYÜŞ — kompakt, belirgin (en üstte)
         _adimMesafeKart(t),
-        const SizedBox(height: 12),
-        // Özet / bilgi kutusu
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: t.card2, borderRadius: BorderRadius.circular(12)),
-          child: Row(children: [
-            Icon(veriVar ? Icons.local_fire_department : Icons.info_outline, color: veriVar ? _sicaklik(1) : t.sub, size: 24),
-            const SizedBox(width: 10),
-            Expanded(child: veriVar
-                ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('En yoğun masa: ${enMasa?['ad'] ?? '-'}', style: TextStyle(color: t.ink, fontSize: 14.5, fontWeight: FontWeight.w900)),
-                    Text('${bolgeAd(enBolge)} · ${_n(enMasa?['agirlik']).toInt()} işlem', style: TextStyle(color: t.sub, fontSize: 12)),
-                  ])
-                : Text('Bu dönemde sipariş yok — masalara sipariş girilince ısı burada belirir.', style: TextStyle(color: t.sub, fontSize: 12.5, height: 1.3))),
-          ]),
-        ),
         const SizedBox(height: 14),
         // Harita: şema varsa HER ZAMAN kroki (aktivite yoksa masalar soğuk); şema yoksa ızgara ya da uyarı
         if (semaVar)
@@ -291,39 +273,31 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
     ];
   }
 
-  // ADIM + TOPLAM YÜRÜYÜŞ — büyük, belirgin çift istatistik (adım sayacından)
+  // ADIM + TOPLAM YÜRÜYÜŞ — kompakt çift istatistik (adım sayacından)
   Widget _adimMesafeKart(TemaProvider t) {
     final adim = _adimToplam();
     final km = adim * 0.75 / 1000;
     final kmStr = km >= 1 ? km.toStringAsFixed(1) : km.toStringAsFixed(2);
-    final kimAd = isiGarson == null ? 'Tüm ekip' : (garsonlar.firstWhere((x) => x['id'] == isiGarson, orElse: () => {'ad': ''})['ad']?.toString() ?? '');
 
-    Widget stat(IconData ic, Color c, String buyuk, String birim, String alt) => Expanded(
+    Widget stat(IconData ic, Color c, String buyuk, String birim) => Expanded(
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-            decoration: BoxDecoration(color: t.card2, borderRadius: BorderRadius.circular(16), border: Border.all(color: c.withValues(alpha: 0.35))),
-            child: Column(children: [
-              Container(width: 40, height: 40, decoration: BoxDecoration(color: c.withValues(alpha: 0.14), shape: BoxShape.circle),
-                  child: Icon(ic, color: c, size: 22)),
-              const SizedBox(height: 8),
-              FittedBox(fit: BoxFit.scaleDown, child: RichText(text: TextSpan(children: [
-                TextSpan(text: buyuk, style: TextStyle(color: t.ink, fontSize: 26, fontWeight: FontWeight.w900)),
-                TextSpan(text: ' $birim', style: TextStyle(color: t.sub, fontSize: 13, fontWeight: FontWeight.bold)),
-              ]))),
-              const SizedBox(height: 2),
-              Text(alt, style: TextStyle(color: t.sub, fontSize: 11)),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(color: t.card2, borderRadius: BorderRadius.circular(14), border: Border.all(color: c.withValues(alpha: 0.30))),
+            child: Row(children: [
+              Container(width: 34, height: 34, decoration: BoxDecoration(color: c.withValues(alpha: 0.14), shape: BoxShape.circle),
+                  child: Icon(ic, color: c, size: 18)),
+              const SizedBox(width: 10),
+              Expanded(child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: RichText(text: TextSpan(children: [
+                TextSpan(text: buyuk, style: TextStyle(color: t.ink, fontSize: 21, fontWeight: FontWeight.w900)),
+                TextSpan(text: ' $birim', style: TextStyle(color: t.sub, fontSize: 12, fontWeight: FontWeight.bold)),
+              ])))),
             ]),
           ),
         );
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [
-        stat(Icons.directions_walk, t.mor1, _f.format(adim), 'adım', 'atılan adım'),
-        const SizedBox(width: 10),
-        stat(Icons.route, const Color(0xFF16A34A), kmStr, 'km', 'toplam yürüyüş'),
-      ]),
-      const SizedBox(height: 6),
-      Padding(padding: const EdgeInsets.only(left: 4), child: Text(
-        '$kimAd · adım sayacından ölçüldü', style: TextStyle(color: t.sub, fontSize: 10.5))),
+    return Row(children: [
+      stat(Icons.directions_walk, t.mor1, _f.format(adim), 'adım'),
+      const SizedBox(width: 10),
+      stat(Icons.route, const Color(0xFF16A34A), kmStr, 'km'),
     ]);
   }
 

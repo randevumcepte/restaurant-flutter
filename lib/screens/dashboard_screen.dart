@@ -19,6 +19,7 @@ import 'masa_atama_screen.dart';
 import 'garson_performans_screen.dart';
 import 'salon_sema_screen.dart';
 import 'tema_secim_screen.dart';
+import 'indirimler_screen.dart';
 import 'garson_cagrilari_screen.dart';
 import 'ai_bildirim_screen.dart';
 import 'raporlar_screen.dart';
@@ -202,7 +203,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               if (patron) oge(Icons.fact_check_outlined, 'Sayım (Envanter)', () => git(const SayimScreen()), renk: const Color(0xFF0EA5E9)),
               if (patron) oge(Icons.restaurant_menu, 'Menü Yönetimi', () => git(const MenuYonetimiScreen())),
               if (patron) oge(Icons.palette_outlined, 'QR Menü Rengi', () => git(const TemaSecimScreen()), renk: const Color(0xFFF6CE63)),
-              if (patron) oge(Icons.local_offer_outlined, 'İndirimler', () { Navigator.of(context).pop(); _webAc('/indirimler'); }, renk: const Color(0xFF22C55E)),
+              if (patron) oge(Icons.local_offer_outlined, 'İndirimler', () => git(const IndirimlerScreen()), renk: const Color(0xFF22C55E)),
               oge(Icons.notifications_active, 'Garson Çağrıları', () => git(const GarsonCagrilariScreen()), renk: _kirmizi),
               oge(Icons.account_balance_wallet_outlined, 'Cari / Açık Hesaplar', () => git(const CariHesaplarScreen())),
               oge(Icons.event_available_outlined, 'Rezervasyonlar', () => git(const RezervasyonScreen())),

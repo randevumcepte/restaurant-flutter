@@ -203,6 +203,15 @@ class Api {
   static Future<Map<String, dynamic>> sebepSil(String token, int id) =>
       _post('/api/patron/sebep-sil', token, {'id': '$id'});
 
+  // ---- INDIRIMLER (sahip/mudur) ----
+  static Future<Map<String, dynamic>> indirimler(String token) => _get('/api/patron/indirimler', token);
+  static Future<Map<String, dynamic>> indirimKaydet(String token, Map<String, String> data) =>
+      _post('/api/patron/indirim-kaydet', token, data);
+  static Future<Map<String, dynamic>> indirimToggle(String token, int id) =>
+      _post('/api/patron/indirim-toggle', token, {'id': '$id'});
+  static Future<Map<String, dynamic>> indirimSil(String token, int id) =>
+      _post('/api/patron/indirim-sil', token, {'id': '$id'});
+
   static Future<Map<String, dynamic>> masaTasi(String token, int adisyonId, int yeniMasaId) =>
       _post('/api/patron/masa-tasi', token, {'adisyon_id': '$adisyonId', 'yeni_masa_id': '$yeniMasaId'});
   static Future<Map<String, dynamic>> masaBirlestir(String token, int adisyonId, int kaynakAdisyonId) =>
