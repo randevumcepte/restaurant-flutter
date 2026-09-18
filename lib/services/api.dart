@@ -429,9 +429,11 @@ class Api {
   // ---- GELEN MUSTERI DETAYI ----
   static Future<Map<String, dynamic>> musteriDetay(String token, {String period = 'gunluk'}) => _get('/api/patron/musteri-detay?period=$period', token);
 
-  // ---- BAGLI CIHAZLAR (heartbeat) ----
+  // ---- BAGLI CIHAZLAR (heartbeat + manuel yonetim) ----
   static Future<Map<String, dynamic>> cihazlar(String token) => _get('/api/patron/cihazlar', token);
   static Future<Map<String, dynamic>> cihazPing(String token, Map<String, String> bilgi) => _post('/api/cihaz/ping', token, bilgi);
+  static Future<Map<String, dynamic>> cihazKaydet(String token, Map<String, String> v) => _post('/api/patron/cihaz-kaydet', token, v);
+  static Future<Map<String, dynamic>> cihazSil(String token, int id) => _post('/api/patron/cihaz-sil', token, {'id': '$id'});
 
   // ---- HAREKETLER / AKTIVITE LOG ----
   static Future<Map<String, dynamic>> hareketler(String token, {int gun = 7, String? kategori, int? kim, String? ara, int sayfa = 1, int boyut = 40}) =>
