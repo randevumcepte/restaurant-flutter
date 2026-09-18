@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/tema_provider.dart';
 import '../services/api.dart';
+import '../services/yazici_servisi.dart';
 import 'barkod_tarayici.dart';
 
 /// BARKOD YÖNETİMİ — bir ürüne (tur='urun') ya da malzemeye (tur='malzeme') barkod ekle/sil.
@@ -63,6 +65,56 @@ class _BarkodYonetimScreenState extends State<BarkodYonetimScreen> {
     _yukle();
   }
 
+  // Barkodsuz ürün/malzeme için dahili numara üret.
+  Future<void> _icUret() async {
+    if (mesgul) return;
+    setState(() => mesgul = true);
+    final auth = context.read<AuthProvider>();
+    final r = await Api.barkodIcUret(auth.token!, widget.tur, widget.hedefId);
+    if (!mounted) return;
+    setState(() => mesgul = false);
+    if (r['ok'] == 1) { _yukle(); ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('İç barkod üretildi: ${r['barkod']}'), backgroundColor: const Color(0xFF16A34A))); }
+    else { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r['hata']?.toString() ?? 'Üretilemedi'), backgroundColor: const Color(0xFFDC2626))); }
+  }
+
+  // Etiket bas (mevcut fiş yazıcı, ESC/POS CODE128) — adet + SKT gün + fiyat sorar.
+  Future<void> _etiketYazdir(String barkod) async {
+    final adetC = TextEditingController(text: '1');
+    final sktC = TextEditingController();
+    final fiyatC = TextEditingController();
+    final t = context.read<TemaProvider>();
+    final bas = await showDialog<bool>(useRootNavigator: true, context: context, builder: (c) => AlertDialog(
+      backgroundColor: t.card,
+      title: Text('Etiket Bas', style: TextStyle(color: t.ink, fontSize: 17)),
+      content: Column(mainAxisSize: MainAxisSize.min, children: [
+        TextField(controller: adetC, keyboardType: TextInputType.number, style: TextStyle(color: t.ink),
+            decoration: InputDecoration(labelText: 'Adet', labelStyle: TextStyle(color: t.sub))),
+        TextField(controller: sktC, keyboardType: TextInputType.number, style: TextStyle(color: t.ink),
+            decoration: InputDecoration(labelText: 'SKT (kaç gün sonra) — boş=yok', labelStyle: TextStyle(color: t.sub))),
+        TextField(controller: fiyatC, keyboardType: TextInputType.number, style: TextStyle(color: t.ink),
+            decoration: InputDecoration(labelText: 'Fiyat (ops.)', labelStyle: TextStyle(color: t.sub))),
+      ]),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Vazgeç')),
+        FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Yazdır')),
+      ],
+    ));
+    if (bas != true || !mounted) return;
+    final adet = int.tryParse(adetC.text) ?? 1;
+    final gun = int.tryParse(sktC.text);
+    final bugun = DateTime.now();
+    final uretim = DateFormat('dd.MM.yyyy').format(bugun);
+    final skt = gun != null ? DateFormat('dd.MM.yyyy').format(bugun.add(Duration(days: gun))) : null;
+    final fiyat = fiyatC.text.trim().isEmpty ? null : '${fiyatC.text.trim()} TL';
+    final yz = YaziciServisi();
+    if (!yz.ayarli) await yz.yukle();
+    if (!mounted) return;
+    if (!yz.ayarli) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Yazıcı IP tanımlı değil — Yazıcı Ayarları'), backgroundColor: Color(0xFFDC2626))); return; }
+    final sonuc = await yz.etiketBas(ad: widget.ad, barkod: barkod, fiyat: fiyat, uretim: uretim, skt: skt, adet: adet);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(sonuc == 'ok' ? '$adet etiket basıldı ✓' : sonuc), backgroundColor: sonuc == 'ok' ? const Color(0xFF16A34A) : const Color(0xFFDC2626)));
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = context.watch<TemaProvider>();
@@ -98,6 +150,15 @@ class _BarkodYonetimScreenState extends State<BarkodYonetimScreen> {
                   label: const Text('Kamerayla Barkod Okut', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)))),
               ),
               const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: SizedBox(width: double.infinity, height: 46, child: OutlinedButton.icon(
+                  onPressed: mesgul ? null : _icUret,
+                  style: OutlinedButton.styleFrom(side: BorderSide(color: t.mor1), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                  icon: Icon(Icons.tag, color: t.mor1),
+                  label: Text('İç Barkod Üret (barkodsuz ürün)', style: TextStyle(color: t.mor1, fontWeight: FontWeight.bold)))),
+              ),
+              const SizedBox(height: 8),
               Expanded(child: barkodlar.isEmpty
                   ? Center(child: Text('Henüz barkod yok.\nOkut ya da elle ekle.', textAlign: TextAlign.center, style: TextStyle(color: t.sub)))
                   : ListView.separated(
@@ -113,6 +174,7 @@ class _BarkodYonetimScreenState extends State<BarkodYonetimScreen> {
                             Icon(Icons.qr_code_2, color: t.mor1),
                             const SizedBox(width: 12),
                             Expanded(child: Text(b['barkod']?.toString() ?? '', style: TextStyle(color: t.ink, fontSize: 15, fontWeight: FontWeight.w700, letterSpacing: 0.5))),
+                            IconButton(tooltip: 'Etiket bas', onPressed: () => _etiketYazdir(b['barkod']?.toString() ?? ''), icon: Icon(Icons.print, color: t.mor1)),
                             IconButton(onPressed: () => _sil((b['id'] as num).toInt()), icon: const Icon(Icons.delete_outline, color: Color(0xFFDC2626))),
                           ]),
                         );

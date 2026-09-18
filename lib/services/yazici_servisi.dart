@@ -213,4 +213,44 @@ class YaziciServisi {
         ],
         'not': 'Masaya birlikte çıksın',
       });
+
+  // ---------- İÇ BARKOD ETİKETİ ----------
+  // CODE128 barkod çizer (HRI altta). Dahili numaralar için ideal.
+  void _barkodCiz(String kod) {
+    _hizala(1);
+    _b.addAll([0x1D, 0x48, 0x02]);   // GS H 2 — HRI barkodun ALTINDA
+    _b.addAll([0x1D, 0x68, 90]);     // GS h — yükseklik (dot)
+    _b.addAll([0x1D, 0x77, 0x02]);   // GS w — modül genişliği
+    final veri = <int>[0x7B, 0x42];  // CODE128 "{B" (kod seti B)
+    veri.addAll(kod.codeUnits);
+    _b.addAll([0x1D, 0x6B, 73, veri.length]); // GS k 73 n
+    _b.addAll(veri);
+    _nl();
+    _hizala(0);
+  }
+
+  /// İÇ BARKOD ETİKETİ — ad + CODE128 barkod + (ops.) fiyat + üretim/SKT. adet kadar basar.
+  Future<String> etiketBas({required String ad, required String barkod, String? fiyat, String? uretim, String? skt, int adet = 1}) async {
+    await yukle();
+    final n = adet.clamp(1, 50);
+    for (var i = 0; i < n; i++) {
+      _init();
+      _hizala(1);
+      _boyut(1, 1); _kalin(true);
+      _satir(ad.length > 22 ? ad.substring(0, 22) : ad);
+      _kalin(false); _boyut(0, 0);
+      _besle(1);
+      _barkodCiz(barkod);
+      if (fiyat != null && fiyat.trim().isNotEmpty) {
+        _boyut(1, 1); _kalin(true); _hizala(1); _satir(fiyat); _hizala(0); _kalin(false); _boyut(0, 0);
+      }
+      if ((uretim ?? '').isNotEmpty) _satir('Uretim: $uretim');
+      if ((skt ?? '').isNotEmpty) { _kalin(true); _satir('SKT: $skt'); _kalin(false); }
+      _besle(3);
+      _kes();
+      final r = await _gonder(List<int>.from(_b));
+      if (r != 'ok') return r;
+    }
+    return 'ok';
+  }
 }
