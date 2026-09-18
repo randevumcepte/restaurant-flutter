@@ -22,6 +22,7 @@ import 'gider_screen.dart';
 import 'raporlar_screen.dart';
 import 'bagli_cihazlar_screen.dart';
 import 'hareketler_screen.dart';
+import 'yazici_ayarlari_screen.dart';
 import 'sebep_yonetimi_screen.dart';
 import 'asistan_screen.dart';
 
@@ -94,6 +95,7 @@ class YonetimDrawer extends StatelessWidget {
               if (patron) git(Icons.bar_chart_outlined, 'Raporlar', const RaporlarScreen()),
               if (patron) git(Icons.devices_other_outlined, 'Bağlı Cihazlar', const BagliCihazlarScreen(), renk: const Color(0xFF0EA5E9)),
               if (patron) git(Icons.history, 'Hareketler (Log)', const HareketlerScreen(), renk: const Color(0xFF7C3AED)),
+              if (patron) git(Icons.print_outlined, 'Yazıcı Ayarları', const YaziciAyarlariScreen(), renk: const Color(0xFF14B8A6)),
               if (patron) git(Icons.rule_folder_outlined, 'İptal / İkram Sebepleri', const SebepYonetimiScreen()),
               git(Icons.auto_awesome, 'Patron Asistan', const AsistanScreen(), renk: const Color(0xFFC4B5FD)),
             ]),

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
 import '../providers/tema_provider.dart';
 import '../services/api.dart';
+import '../services/yazici_servisi.dart';
 import 'ai_analiz_sheet.dart';
 import 'cari_hesaplar_screen.dart';
 import 'urun_ekle_screen.dart';
@@ -587,6 +588,37 @@ class _DetayScreenState extends State<DetayScreen> {
     }
   }
 
+  // Ağ (LAN) termal yazıcıya doğrudan hesap fişi bas (ESC/POS). Kerzz/POS'a dokunmaz.
+  Widget _agFisBtn() => GestureDetector(
+        onTap: _agFisiBas,
+        child: Container(
+          width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFF14B8A6).withValues(alpha: 0.5))),
+          child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Icon(Icons.print, color: Color(0xFF14B8A6), size: 18),
+            SizedBox(width: 8),
+            Text('Ağ Yazıcısına Bas', style: TextStyle(color: Color(0xFF14B8A6), fontWeight: FontWeight.bold, fontSize: 13)),
+          ]),
+        ),
+      );
+
+  Future<void> _agFisiBas() async {
+    if (widget.id == null) return;
+    if (!YaziciServisi().ayarli) { await YaziciServisi().yukle(); }
+    final auth = context.read<AuthProvider>();
+    try {
+      final res = await Api.fis(auth.token!, widget.id!);
+      if (!mounted) return;
+      if (res['ok'] != 1) { _snack(res['hata']?.toString() ?? 'Fiş alınamadı'); return; }
+      _snack('Yazıcıya gönderiliyor…');
+      final sonuc = await YaziciServisi().hesapFisi(res);
+      if (!mounted) return;
+      _snack(sonuc == 'ok' ? '✓ Fiş yazıcıya gönderildi' : sonuc);
+    } catch (_) {
+      if (mounted) _snack('Yazıcıya gönderilemedi');
+    }
+  }
+
   Future<int?> _masaSecici(String baslik, List masalar, {required bool adisyonDon}) {
     return showModalBottomSheet<int>(useRootNavigator: true, 
       context: context, backgroundColor: _card,
@@ -874,6 +906,8 @@ class _DetayScreenState extends State<DetayScreen> {
       ],
       const SizedBox(height: 10),
       _fisBtn(),
+      const SizedBox(height: 8),
+      _agFisBtn(),
       // Musteri (kayitliysa) - ozetin hemen altinda, VURGULU mor kart
       if (musteri != null) ...[
         const SizedBox(height: 12),
