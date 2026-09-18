@@ -42,16 +42,28 @@ class _BarkodYonetimScreenState extends State<BarkodYonetimScreen> {
     if (mounted) setState(() => loading = false);
   }
 
+  void _mesaj(String m, [bool hata = true]) {
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m), backgroundColor: hata ? const Color(0xFFDC2626) : const Color(0xFF16A34A)));
+  }
+
   Future<void> _ekle(String kod) async {
     kod = kod.trim();
-    if (kod.isEmpty || mesgul) return;
+    if (kod.isEmpty) { _mesaj('Önce barkod yaz ya da "Kamerayla Okut" ile okut.'); return; }
+    if (mesgul) return;
     setState(() => mesgul = true);
-    final auth = context.read<AuthProvider>();
-    final r = await Api.barkodEkle(auth.token!, kod, widget.tur, widget.hedefId);
-    if (!mounted) return;
-    setState(() => mesgul = false);
-    if (r['ok'] == 1) { _elle.clear(); _yukle(); }
-    else { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r['hata']?.toString() ?? 'Eklenemedi'), backgroundColor: const Color(0xFFDC2626))); }
+    try {
+      final auth = context.read<AuthProvider>();
+      final r = await Api.barkodEkle(auth.token!, kod, widget.tur, widget.hedefId);
+      if (!mounted) return;
+      if (r['ok'] == 1) { _elle.clear(); _mesaj('Barkod eklendi ✓', false); await _yukle(); }
+      else { _mesaj(r['hata']?.toString() ?? 'Eklenemedi'); }
+    } on ApiYetkiHatasi {
+      if (mounted) context.read<AuthProvider>().cikis();
+    } catch (_) {
+      _mesaj('Bağlantı hatası');
+    } finally {
+      if (mounted) setState(() => mesgul = false);
+    }
   }
 
   Future<void> _okut() async {
