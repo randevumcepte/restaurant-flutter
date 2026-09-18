@@ -33,6 +33,13 @@ class Api {
   static Future<Map<String, dynamic>> mesaiKonumAyarla(String token, double lat, double lng, {int yaricap = 150}) =>
       _post('/api/mesai/konum-ayarla', token, {'lat': '$lat', 'lng': '$lng', 'yaricap': '$yaricap'});
 
+  // ---------------- BARKOD ----------------
+  static Future<Map<String, dynamic>> barkodCoz(String token, String kod) => _get('/api/barkod/coz?kod=${Uri.encodeComponent(kod)}', token);
+  static Future<Map<String, dynamic>> barkodListe(String token, String tur, int hedefId) => _get('/api/barkod/liste?tur=$tur&hedef_id=$hedefId', token);
+  static Future<Map<String, dynamic>> barkodEkle(String token, String barkod, String tur, int hedefId) =>
+      _post('/api/barkod/ekle', token, {'barkod': barkod, 'tur': tur, 'hedef_id': '$hedefId'});
+  static Future<Map<String, dynamic>> barkodSil(String token, int id) => _post('/api/barkod/sil', token, {'id': '$id'});
+
   static Future<Map<String, dynamic>> _get(String path, String token) async {
     final r = await http.get(
       Uri.parse('$base$path'),

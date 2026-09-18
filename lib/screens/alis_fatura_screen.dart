@@ -6,6 +6,7 @@ import '../providers/tema_provider.dart';
 import '../services/api.dart';
 import '../responsive.dart';
 import '../ui/masaustu_kit.dart';
+import 'barkod_tarayici.dart';
 
 /// Alış Faturaları — liste (aylık, fiyat uyarısı renkli) + yeni fatura girişi.
 /// Kaydedince: stok girişi + ağırlıklı ort. maliyet güncelleme + otomatik gider.
@@ -361,7 +362,10 @@ class _AlisFaturaEkleScreenState extends State<AlisFaturaEkleScreen> {
                 const SizedBox(height: 16),
                 Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                   const Text('Kalemler', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
-                  TextButton.icon(onPressed: _kalemEkle, icon: const Icon(Icons.add, color: _mavi, size: 18), label: const Text('Kalem Ekle', style: TextStyle(color: _mavi))),
+                  Row(children: [
+                    IconButton(tooltip: 'Barkod okut', onPressed: _barkodKalem, icon: const Icon(Icons.qr_code_scanner, color: _mavi)),
+                    TextButton.icon(onPressed: _kalemEkle, icon: const Icon(Icons.add, color: _mavi, size: 18), label: const Text('Kalem Ekle', style: TextStyle(color: _mavi))),
+                  ]),
                 ]),
                 if (kalemler.isEmpty)
                   const Padding(padding: EdgeInsets.symmetric(vertical: 16), child: Text('Henüz kalem yok. "Kalem Ekle" ile malzeme girin.', style: TextStyle(color: _gri, fontSize: 13)))
@@ -409,10 +413,31 @@ class _AlisFaturaEkleScreenState extends State<AlisFaturaEkleScreen> {
         ]),
       );
 
-  Future<void> _kalemEkle() async {
+  // Barkod okut -> malzeme çöz -> o malzeme seçili gelecek şekilde Kalem Ekle sayfasını aç.
+  Future<void> _barkodKalem() async {
+    final kod = await BarkodTarayici.oku(context, baslik: 'Mal Kabul — Barkod Okut');
+    if (kod == null || !mounted) return;
+    final auth = context.read<AuthProvider>();
+    try {
+      final r = await Api.barkodCoz(auth.token!, kod);
+      if (!mounted) return;
+      if (r['ok'] == 1 && r['tur'] == 'malzeme') {
+        final id = _n(r['id']).toInt();
+        if (!malzemeler.any((m) => _n((m as Map)['id']).toInt() == id)) { _uyar('${r['ad']} malzeme listesinde yok — Stok\'tan ekleyin'); return; }
+        _kalemEkle(onMalzeme: id);
+      } else if (r['ok'] == 1 && r['tur'] == 'urun') {
+        _uyar('Bu bir ÜRÜN — mal kabulde malzeme barkodu okut.');
+      } else {
+        _uyar(r['hata']?.toString() ?? 'Barkod tanımlı değil');
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _kalemEkle({int? onMalzeme}) async {
     if (malzemeler.isEmpty) { _uyar('Önce Stok ekranından malzeme ekleyin'); return; }
-    int malzemeId = _n((malzemeler.first as Map)['id']).toInt();
-    int birimId = _n((malzemeler.first as Map)['temel_birim_id']).toInt();
+    int malzemeId = (onMalzeme != null && malzemeler.any((m) => _n((m as Map)['id']).toInt() == onMalzeme))
+        ? onMalzeme : _n((malzemeler.first as Map)['id']).toInt();
+    int birimId = _n((malzemeler.firstWhere((m) => _n((m as Map)['id']).toInt() == malzemeId) as Map)['temel_birim_id']).toInt();
     final miktarC = TextEditingController();
     final fiyatC = TextEditingController();
     final eklendi = await showModalBottomSheet<bool>(useRootNavigator: true, 

@@ -8,6 +8,7 @@ import '../providers/tema_provider.dart';
 import '../services/api.dart';
 import '../responsive.dart';
 import '../ui/masaustu_kit.dart';
+import 'barkod_yonetim_screen.dart';
 
 /// Menü Yönetimi — kategori bazlı: yeni yemek ekle, tüm detayları düzenle, fotoğraf yükle.
 /// Sadece Sahip/Müdür (backend ayrıca doğrular).
@@ -688,10 +689,23 @@ class _UrunDuzenleSayfaState extends State<_UrunDuzenleSayfa> {
                   : const Text('Kaydet', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
             ),
           ),
+          if (!yeni) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity, height: 48,
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => BarkodYonetimScreen(tur: 'urun', hedefId: urunId!, ad: adCtrl.text.trim().isEmpty ? 'Ürün' : adCtrl.text.trim()))),
+                style: OutlinedButton.styleFrom(side: BorderSide(color: t.mor1), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                icon: Icon(Icons.qr_code_2, color: t.mor1),
+                label: Text('Barkodları Yönet', style: TextStyle(color: t.mor1, fontSize: 15, fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ],
           if (yeni)
             Padding(
               padding: const EdgeInsets.only(top: 10),
-              child: Text('İpucu: Fotoğraf eklemek için karta dokunun — ürün otomatik kaydedilip fotoğraf yüklenir.',
+              child: Text('İpucu: Fotoğraf eklemek için karta dokunun — ürün otomatik kaydedilip fotoğraf yüklenir. (Barkod eklemek için önce kaydet.)',
                   textAlign: TextAlign.center, style: TextStyle(color: t.sub, fontSize: 12)),
             ),
         ],

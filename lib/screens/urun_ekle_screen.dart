@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
 import '../providers/tema_provider.dart';
 import '../services/api.dart';
+import 'barkod_tarayici.dart';
 
 /// Sipariş girişi (POS çekirdeği): menüden ürün seç -> sepet -> adisyona ekle.
 /// Hem patron app hem (ileride) garson terminali için ortak.
@@ -98,6 +99,25 @@ class _UrunEkleScreenState extends State<UrunEkleScreen> {
     }
   }
 
+  Future<void> _barkodOkut() async {
+    final kod = await BarkodTarayici.oku(context, baslik: 'Ürün Barkodu Okut');
+    if (kod == null || !mounted) return;
+    final auth = context.read<AuthProvider>();
+    try {
+      final r = await Api.barkodCoz(auth.token!, kod);
+      if (!mounted) return;
+      if (r['ok'] == 1 && r['tur'] == 'urun') {
+        final id = _n(r['id']).toInt();
+        setState(() => _sepet[id] = (_sepet[id] ?? 0) + 1);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${r['ad']} sepete eklendi'), backgroundColor: const Color(0xFF16A34A), duration: const Duration(seconds: 1)));
+      } else if (r['ok'] == 1 && r['tur'] == 'malzeme') {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Bu barkod bir MALZEME (${r['ad']}) — satışa eklenmez.'), backgroundColor: const Color(0xFFF59E0B)));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r['hata']?.toString() ?? 'Barkod tanımlı değil'), backgroundColor: const Color(0xFFDC2626)));
+      }
+    } catch (_) {}
+  }
+
   @override
   Widget build(BuildContext context) {
     final katUrun = urunler.where((u) => _n((u as Map)['kategori_id']).toInt() == (_kat ?? 0)).toList();
@@ -108,6 +128,9 @@ class _UrunEkleScreenState extends State<UrunEkleScreen> {
         elevation: 0,
         iconTheme: IconThemeData(color: _ink),
         title: Text(widget.baslik, style: TextStyle(color: _ink, fontSize: 17, fontWeight: FontWeight.bold)),
+        actions: [
+          IconButton(tooltip: 'Barkod okut', onPressed: _barkodOkut, icon: Icon(Icons.qr_code_scanner, color: _mor1)),
+        ],
       ),
       body: loading
           ? const Center(child: CircularProgressIndicator(color: _mor1))

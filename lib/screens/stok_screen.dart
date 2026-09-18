@@ -6,6 +6,7 @@ import '../providers/tema_provider.dart';
 import '../services/api.dart';
 import '../responsive.dart';
 import '../ui/masaustu_kit.dart';
+import 'barkod_yonetim_screen.dart';
 
 /// Stok / Malzeme — mevcut stok, değer, kritik uyarı; malzeme ekle/düzenle,
 /// manuel giriş/fire/düzeltme hareketi. Düzenleme = sahip.
@@ -367,6 +368,15 @@ class _StokScreenState extends State<StokScreen> {
               const SizedBox(width: 8),
               Expanded(child: _kbtn('Düzelt', Icons.tune, _mavi, () { Navigator.pop(ctx); _hareketDialog(id, 'duzeltme'); })),
             ]),
+          if (duzenleyebilir) ...[
+            const SizedBox(height: 8),
+            SizedBox(width: double.infinity, height: 44, child: OutlinedButton.icon(
+              onPressed: () { Navigator.pop(ctx); Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => BarkodYonetimScreen(tur: 'malzeme', hedefId: id, ad: dd['ad'].toString()))); },
+              style: OutlinedButton.styleFrom(side: const BorderSide(color: _mor1), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+              icon: const Icon(Icons.qr_code_2, color: _mor1),
+              label: const Text('Barkodları Yönet', style: TextStyle(color: _mor1, fontWeight: FontWeight.bold)))),
+          ],
           const SizedBox(height: 14),
           const Text('Son Hareketler', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           const SizedBox(height: 6),

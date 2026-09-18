@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import '../providers/tema_provider.dart';
 import '../services/api.dart';
 import 'menu_hamburger.dart';
+import 'barkod_tarayici.dart';
 
 final _f = NumberFormat.decimalPattern('tr');
 num _n(dynamic v) => v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0);
@@ -106,6 +107,31 @@ class _SayimScreenState extends State<SayimScreen> {
 
   void _uyar(String m) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m))); }
 
+  // Barkod okut -> ilgili malzemenin sayılan miktarını +1 (tally). Listeyi o malzemeye filtreler.
+  Future<void> _barkodOkut() async {
+    final kod = await BarkodTarayici.oku(context, baslik: 'Sayım — Barkod Okut');
+    if (kod == null || !mounted) return;
+    final auth = context.read<AuthProvider>();
+    try {
+      final r = await Api.barkodCoz(auth.token!, kod);
+      if (!mounted) return;
+      if (r['ok'] == 1 && r['tur'] == 'malzeme') {
+        final id = _n(r['id']).toInt();
+        final ctrl = _ctrl[id];
+        if (ctrl == null) { _uyar('${r['ad']} bu sayım listesinde değil'); return; }
+        final cur = double.tryParse(ctrl.text.replaceAll(',', '.')) ?? 0;
+        final yeni = cur + 1;
+        ctrl.text = yeni == yeni.roundToDouble() ? yeni.toStringAsFixed(0) : yeni.toString();
+        setState(() => _ara = r['ad']?.toString() ?? '');
+        _uyar('${r['ad']}: +1 → ${ctrl.text}');
+      } else if (r['ok'] == 1 && r['tur'] == 'urun') {
+        _uyar('Bu bir ÜRÜN — sayımda malzeme barkodu okut.');
+      } else {
+        _uyar(r['hata']?.toString() ?? 'Barkod tanımlı değil');
+      }
+    } catch (_) {}
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = context.watch<TemaProvider>();
@@ -116,7 +142,9 @@ class _SayimScreenState extends State<SayimScreen> {
       appBar: AppBar(
         backgroundColor: t.bg, elevation: 0, iconTheme: IconThemeData(color: t.ink),
         title: Text('Sayım', style: TextStyle(color: t.ink, fontSize: 17, fontWeight: FontWeight.bold)),
-        actions: [TextButton.icon(onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SayimGecmisScreen())),
+        actions: [
+          IconButton(tooltip: 'Barkod okut (+1)', onPressed: _barkodOkut, icon: Icon(Icons.qr_code_scanner, color: t.mor1)),
+          TextButton.icon(onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SayimGecmisScreen())),
             icon: Icon(Icons.history, color: t.mavi, size: 18), label: Text('Geçmiş', style: TextStyle(color: t.mavi, fontSize: 13))), const MenuHamburger()],
       ),
       body: loading
