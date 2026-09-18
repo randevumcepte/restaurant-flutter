@@ -346,6 +346,12 @@ class _MenuYonetimiScreenState extends State<MenuYonetimiScreen> {
               Text(_tl(u['fiyat']), style: TextStyle(color: t.gold, fontSize: 13.5, fontWeight: FontWeight.bold)),
             ]),
           ),
+          IconButton(
+            tooltip: 'Barkodlar',
+            visualDensity: VisualDensity.compact,
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => BarkodYonetimScreen(tur: 'urun', hedefId: int.tryParse('${u['id']}') ?? 0, ad: u['ad']?.toString() ?? 'Ürün'))),
+            icon: Icon(Icons.qr_code_2, color: _mor1)),
           Icon(Icons.chevron_right, color: t.sub),
         ]),
       ),
