@@ -400,7 +400,7 @@ class _YanMenuState extends State<_YanMenu> {
                   Divider(height: 1, color: t.line),
                   // Alt: tema + cikis
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    padding: EdgeInsets.symmetric(horizontal: acik ? 8 : 0, vertical: 6),
                     child: Column(children: [
                       _link(t, t.koyu ? Icons.light_mode : Icons.dark_mode, t.koyu ? 'Açık moda geç' : 'Koyu moda geç',
                           () => context.read<TemaProvider>().cevir(), renk: t.gold),
@@ -416,36 +416,65 @@ class _YanMenuState extends State<_YanMenu> {
     );
   }
 
-  Widget _marka(TemaProvider t, AuthProvider auth, bool acik) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-        child: Row(children: [
-          Container(
-            width: acik ? null : 40, height: 36, alignment: Alignment.center,
-            padding: acik ? const EdgeInsets.symmetric(horizontal: 10) : EdgeInsets.zero,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [_mor1, _mavi]),
-              borderRadius: BorderRadius.circular(9),
-            ),
-            child: acik
-                ? const Text('ResteOS', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold))
-                : const Icon(Icons.restaurant_menu, color: Colors.white, size: 20),
-          ),
-          if (acik) ...[
-            const SizedBox(width: 8),
-            Expanded(child: Text(auth.sube ?? '', maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: t.ink, fontSize: 13, fontWeight: FontWeight.w600))),
-          ],
-        ]),
+  Widget _marka(TemaProvider t, AuthProvider auth, bool acik) {
+    final logo = Container(
+      width: acik ? null : 40, height: 38, alignment: Alignment.center,
+      padding: acik ? const EdgeInsets.symmetric(horizontal: 10) : EdgeInsets.zero,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(colors: [_mor1, _mavi]),
+        borderRadius: BorderRadius.circular(9),
+      ),
+      child: acik
+          ? const Text('ResteOS', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold))
+          : const Icon(Icons.restaurant_menu, color: Colors.white, size: 20),
+    );
+    if (!acik) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        child: SizedBox(width: _YanMenu.darGenislik, child: Center(child: logo)),
       );
+    }
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      child: Row(children: [
+        logo,
+        const SizedBox(width: 8),
+        Expanded(child: Text(auth.sube ?? '', maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: t.ink, fontSize: 13, fontWeight: FontWeight.w600))),
+      ]),
+    );
+  }
 
   Widget _baslik(TemaProvider t, String s, bool acik) => acik
       ? Padding(
           padding: const EdgeInsets.fromLTRB(18, 8, 16, 6),
           child: Text(s, style: TextStyle(color: t.sub, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8)),
         )
-      : const SizedBox(height: 12);
+      : const SizedBox(height: 10);
 
   Widget _tab(TemaProvider t, _Sekme s, bool secili, VoidCallback onTap) {
+    final ikon = Icon(secili ? s.aktifIkon : s.ikon, color: secili ? _mor1 : t.sub2, size: 22);
+    // KAPALI: sadece ortalanmis ikon (secili ise arkasinda yuvarlak vurgu)
+    if (!_acik) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: SizedBox(
+          width: _YanMenu.darGenislik,
+          child: Center(
+            child: Material(
+              color: secili ? _mor1.withValues(alpha: 0.16) : Colors.transparent,
+              borderRadius: BorderRadius.circular(11),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(11),
+                onTap: onTap,
+                child: Container(width: 46, height: 40, alignment: Alignment.center, child: ikon),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    // ACIK: ikon + yazi
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       child: Material(
@@ -457,7 +486,7 @@ class _YanMenuState extends State<_YanMenu> {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
             child: Row(children: [
-              Icon(secili ? s.aktifIkon : s.ikon, color: secili ? _mor1 : t.sub2, size: 22),
+              ikon,
               const SizedBox(width: 14),
               Expanded(child: Text(s.label, maxLines: 1, overflow: TextOverflow.clip, softWrap: false,
                   style: TextStyle(color: secili ? t.ink : t.sub2, fontSize: 14, fontWeight: secili ? FontWeight.bold : FontWeight.w600))),
@@ -469,6 +498,27 @@ class _YanMenuState extends State<_YanMenu> {
   }
 
   Widget _asistanBtn(VoidCallback onTap, bool acik) {
+    if (!acik) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: SizedBox(
+          width: _YanMenu.darGenislik,
+          child: Center(
+            child: Material(
+              borderRadius: BorderRadius.circular(11), clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: onTap,
+                child: Container(
+                  width: 46, height: 40, alignment: Alignment.center,
+                  decoration: const BoxDecoration(gradient: LinearGradient(colors: [_mor1, _mavi])),
+                  child: const Icon(Icons.mic, color: Colors.white, size: 20),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: Material(
@@ -493,6 +543,20 @@ class _YanMenuState extends State<_YanMenu> {
 
   Widget _link(TemaProvider t, IconData ikon, String label, VoidCallback onTap, {Color? renk}) {
     final r = renk ?? t.sub2;
+    // KAPALI: sadece ortalanmis ikon
+    if (!_acik) {
+      return SizedBox(
+        width: _YanMenu.darGenislik,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            child: Container(height: 42, alignment: Alignment.center, child: Icon(ikon, color: r, size: 20)),
+          ),
+        ),
+      );
+    }
+    // ACIK: ikon + yazi
     return Material(
       color: Colors.transparent,
       child: InkWell(
