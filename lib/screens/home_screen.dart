@@ -119,33 +119,39 @@ class _HomeScreenState extends State<HomeScreen> {
     // ---- MASAUSTU: sol sabit menu + genis icerik ----
     if (genisMi(context)) {
       final tema = context.watch<TemaProvider>();
+      final yanMenu = _YanMenu(
+        patron: patron,
+        aktifIndex: _index,
+        sekmeler: _sekmeListesi(patron),
+        onSekme: (i) {
+          // Once sag bolmede acik yonetim ekranini kapat, sonra sekmeye gec
+          _icerikNav.currentState?.popUntil((r) => r.isFirst);
+          anaSekme.value = i;
+        },
+        onAsistan: patron
+            ? () => _icerikNav.currentState?.push(MaterialPageRoute(builder: (_) => const AsistanScreen()))
+            : null,
+        // Yonetim menusu: SAG bolmede ac (sol menu kalir). Tek seferde bir ekran.
+        onYonetim: (w) {
+          _icerikNav.currentState?.popUntil((r) => r.isFirst);
+          _icerikNav.currentState?.push(MaterialPageRoute(builder: (_) => w));
+        },
+      );
+      // Sol menu DAR bir ikon serididir; fareyle uzerine gelince saga dogru acilir
+      // (icerigi itmez, ustune biner) -> icerige daha cok yer kalir.
       return Scaffold(
         backgroundColor: tema.bg,
-        body: Row(children: [
-          _YanMenu(
-            patron: patron,
-            aktifIndex: _index,
-            sekmeler: _sekmeListesi(patron),
-            onSekme: (i) {
-              // Once sag bolmede acik yonetim ekranini kapat, sonra sekmeye gec
-              _icerikNav.currentState?.popUntil((r) => r.isFirst);
-              anaSekme.value = i;
-            },
-            onAsistan: patron
-                ? () => _icerikNav.currentState?.push(MaterialPageRoute(builder: (_) => const AsistanScreen()))
-                : null,
-            // Yonetim menusu: SAG bolmede ac (sol menu kalir). Tek seferde bir ekran.
-            onYonetim: (w) {
-              _icerikNav.currentState?.popUntil((r) => r.isFirst);
-              _icerikNav.currentState?.push(MaterialPageRoute(builder: (_) => w));
-            },
-          ),
-          Expanded(
-            child: Navigator(
-              key: _icerikNav,
-              onGenerateRoute: (s) => MaterialPageRoute(builder: (_) => _TabGovde(ekranlar: ekranlar)),
+        body: Stack(children: [
+          Row(children: [
+            const SizedBox(width: _YanMenu.darGenislik), // rail'in kapladigi sabit yer
+            Expanded(
+              child: Navigator(
+                key: _icerikNav,
+                onGenerateRoute: (s) => MaterialPageRoute(builder: (_) => _TabGovde(ekranlar: ekranlar)),
+              ),
             ),
-          ),
+          ]),
+          Positioned(left: 0, top: 0, bottom: 0, child: yanMenu),
         ]),
       );
     }
@@ -295,8 +301,9 @@ class _Sekme {
   const _Sekme(this.ikon, this.aktifIkon, this.label);
 }
 
-/// Masaustu sol SABIT menu — marka + panel sekmeleri + yonetim kisayollari + tema/cikis.
-class _YanMenu extends StatelessWidget {
+/// Masaustu sol menu — DAR ikon seridi; fareyle uzerine gelince saga dogru acilir
+/// (icerigi itmez, ustune biner). Kapaliyken sadece ikonlar, acikken ikon + yazi.
+class _YanMenu extends StatefulWidget {
   final bool patron;
   final int aktifIndex;
   final List<_Sekme> sekmeler;
@@ -312,103 +319,135 @@ class _YanMenu extends StatelessWidget {
     required this.onYonetim,
   });
 
+  static const double darGenislik = 72;   // kapali (sadece ikon)
+  static const double genisGenislik = 250; // acik (ikon + yazi)
+
+  @override
+  State<_YanMenu> createState() => _YanMenuState();
+}
+
+class _YanMenuState extends State<_YanMenu> {
   static const _mor1 = Color(0xFF7C3AED);
   static const _mavi = Color(0xFF4F46E5);
+  bool _acik = false;
 
   @override
   Widget build(BuildContext context) {
     final t = context.watch<TemaProvider>();
     final auth = context.watch<AuthProvider>();
+    final acik = _acik;
+    final patron = widget.patron;
 
-    // Yonetim ekranini SAG bolmede ac (sol sabit menu kalir).
-    void git(Widget ekran) => onYonetim?.call(ekran);
+    // Yonetim ekranini SAG bolmede ac (sol menu kalir).
+    void git(Widget ekran) => widget.onYonetim?.call(ekran);
 
-    return Container(
-      width: 244,
-      decoration: BoxDecoration(
-        color: t.card,
-        border: Border(right: BorderSide(color: t.line)),
-      ),
-      child: SafeArea(
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          // Marka + isletme
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-            child: Row(children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [_mor1, _mavi]),
-                  borderRadius: BorderRadius.circular(9),
-                ),
-                child: const Text('ResteOS', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+    return MouseRegion(
+      onEnter: (_) => setState(() => _acik = true),
+      onExit: (_) => setState(() => _acik = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 190),
+        curve: Curves.easeOutCubic,
+        width: acik ? _YanMenu.genisGenislik : _YanMenu.darGenislik,
+        decoration: BoxDecoration(
+          color: t.card,
+          border: Border(right: BorderSide(color: t.line)),
+          boxShadow: acik ? [BoxShadow(color: Colors.black.withValues(alpha: 0.20), blurRadius: 26, offset: const Offset(5, 0))] : null,
+        ),
+        // Icerik hep GENIS olcude cizilir; dar durumda saga tasan kisim kirpilir
+        // -> soldaki ikonlar hep gorunur, yazilar acilinca soldan saga "kayarak" belirir.
+        child: ClipRect(
+          child: OverflowBox(
+            alignment: Alignment.centerLeft,
+            minWidth: _YanMenu.genisGenislik,
+            maxWidth: _YanMenu.genisGenislik,
+            child: SizedBox(
+              width: _YanMenu.genisGenislik,
+              child: SafeArea(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  _marka(t, auth, acik),
+                  Divider(height: 1, color: t.line),
+                  Expanded(
+                    child: ListView(padding: const EdgeInsets.symmetric(vertical: 8), children: [
+                      _baslik(t, 'PANEL', acik),
+                      for (int i = 0; i < widget.sekmeler.length; i++)
+                        _tab(t, widget.sekmeler[i], i == widget.aktifIndex, () => widget.onSekme(i)),
+                      if (widget.onAsistan != null) ...[
+                        const SizedBox(height: 6),
+                        _asistanBtn(widget.onAsistan!, acik),
+                      ],
+                      const SizedBox(height: 10),
+                      Divider(height: 1, color: t.line, indent: 14, endIndent: 14),
+                      const SizedBox(height: 8),
+                      _baslik(t, 'YÖNETİM', acik),
+                      if (patron) _link(t, Icons.point_of_sale, 'Kasa (Vardiya)', () => git(const KasaScreen())),
+                      if (patron) _link(t, Icons.analytics_outlined, 'Finans / Kâr-Zarar', () => git(const FinansScreen())),
+                      if (patron) _link(t, Icons.inventory_2_outlined, 'Stok & Satın Alma', () => git(const IsletmeHubScreen())),
+                      if (patron) _link(t, Icons.restaurant_menu, 'Menü Yönetimi', () => git(const MenuYonetimiScreen())),
+                      if (patron) _link(t, Icons.palette_outlined, 'QR Menü Rengi', () => git(const TemaSecimScreen()), renk: t.gold),
+                      if (patron) _link(t, Icons.local_offer_outlined, 'İndirimler', () => git(const IndirimlerScreen()), renk: t.yesil),
+                      if (patron) _link(t, Icons.shield_outlined, 'Kaçak Önleme', () => git(const OdemeModuScreen()), renk: const Color(0xFFF43F5E)),
+                      _link(t, Icons.account_balance_wallet_outlined, 'Cari / Açık Hesaplar', () => git(const CariHesaplarScreen())),
+                      _link(t, Icons.event_available_outlined, 'Rezervasyonlar', () => git(const RezervasyonScreen())),
+                      if (patron) _link(t, Icons.badge_outlined, 'Personel & Maaş', () => git(const PersonelScreen())),
+                      if (patron) _link(t, Icons.table_restaurant_outlined, 'Masa & Bölge Atama', () => git(const MasaAtamaScreen())),
+                      if (patron) _link(t, Icons.emoji_events_outlined, 'Garson Performansı', () => git(const GarsonPerformansScreen()), renk: t.yesil),
+                      if (patron) _link(t, Icons.grid_on_outlined, 'Salon Şeması', () => git(const SalonSemaScreen()), renk: const Color(0xFF0EA5E9)),
+                      if (patron) _link(t, Icons.receipt_long_outlined, 'Giderler', () => git(const GiderScreen())),
+                      if (patron) _link(t, Icons.bar_chart_outlined, 'Raporlar', () => git(const RaporlarScreen())),
+                      if (patron) _link(t, Icons.rule_folder_outlined, 'İptal / İkram Sebepleri', () => git(const SebepYonetimiScreen())),
+                    ]),
+                  ),
+                  Divider(height: 1, color: t.line),
+                  // Alt: tema + cikis
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    child: Column(children: [
+                      _link(t, t.koyu ? Icons.light_mode : Icons.dark_mode, t.koyu ? 'Açık moda geç' : 'Koyu moda geç',
+                          () => context.read<TemaProvider>().cevir(), renk: t.gold),
+                      _link(t, Icons.logout, 'Çıkış', () => context.read<AuthProvider>().cikis(), renk: const Color(0xFFF87171)),
+                    ]),
+                  ),
+                ]),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(auth.sube ?? '', maxLines: 1, overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: t.ink, fontSize: 13, fontWeight: FontWeight.w600)),
-              ),
-            ]),
+            ),
           ),
-          Divider(height: 1, color: t.line),
-
-          // Kaydirilabilir orta bolum: panel sekmeleri + yonetim
-          Expanded(
-            child: ListView(padding: const EdgeInsets.symmetric(vertical: 8), children: [
-              _baslik(t, 'PANEL'),
-              for (int i = 0; i < sekmeler.length; i++)
-                _tab(t, sekmeler[i], i == aktifIndex, () => onSekme(i)),
-              if (onAsistan != null) ...[
-                const SizedBox(height: 6),
-                _asistanBtn(context, onAsistan!),
-              ],
-              const SizedBox(height: 10),
-              Divider(height: 1, color: t.line, indent: 14, endIndent: 14),
-              const SizedBox(height: 8),
-              _baslik(t, 'YÖNETİM'),
-              if (patron) _link(t, Icons.point_of_sale, 'Kasa (Vardiya)', () => git(const KasaScreen())),
-              if (patron) _link(t, Icons.analytics_outlined, 'Finans / Kâr-Zarar', () => git(const FinansScreen())),
-              if (patron) _link(t, Icons.inventory_2_outlined, 'Stok & Satın Alma', () => git(const IsletmeHubScreen())),
-              if (patron) _link(t, Icons.restaurant_menu, 'Menü Yönetimi', () => git(const MenuYonetimiScreen())),
-              if (patron) _link(t, Icons.palette_outlined, 'QR Menü Rengi', () => git(const TemaSecimScreen()), renk: t.gold),
-              if (patron) _link(t, Icons.local_offer_outlined, 'İndirimler', () => git(const IndirimlerScreen()), renk: t.yesil),
-              if (patron) _link(t, Icons.shield_outlined, 'Kaçak Önleme', () => git(const OdemeModuScreen()), renk: const Color(0xFFF43F5E)),
-              _link(t, Icons.account_balance_wallet_outlined, 'Cari / Açık Hesaplar', () => git(const CariHesaplarScreen())),
-              _link(t, Icons.event_available_outlined, 'Rezervasyonlar', () => git(const RezervasyonScreen())),
-              if (patron) _link(t, Icons.badge_outlined, 'Personel & Maaş', () => git(const PersonelScreen())),
-              if (patron) _link(t, Icons.table_restaurant_outlined, 'Masa & Bölge Atama', () => git(const MasaAtamaScreen())),
-              if (patron) _link(t, Icons.emoji_events_outlined, 'Garson Performansı', () => git(const GarsonPerformansScreen()), renk: t.yesil),
-              if (patron) _link(t, Icons.grid_on_outlined, 'Salon Şeması', () => git(const SalonSemaScreen()), renk: const Color(0xFF0EA5E9)),
-              if (patron) _link(t, Icons.receipt_long_outlined, 'Giderler', () => git(const GiderScreen())),
-              if (patron) _link(t, Icons.bar_chart_outlined, 'Raporlar', () => git(const RaporlarScreen())),
-              if (patron) _link(t, Icons.rule_folder_outlined, 'İptal / İkram Sebepleri', () => git(const SebepYonetimiScreen())),
-            ]),
-          ),
-
-          Divider(height: 1, color: t.line),
-          // Alt: tema + cikis
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            child: Column(children: [
-              _link(t, t.koyu ? Icons.light_mode : Icons.dark_mode, t.koyu ? 'Açık moda geç' : 'Koyu moda geç',
-                  () => context.read<TemaProvider>().cevir(), renk: t.gold),
-              _link(t, Icons.logout, 'Çıkış', () => context.read<AuthProvider>().cikis(), renk: const Color(0xFFF87171)),
-            ]),
-          ),
-        ]),
+        ),
       ),
     );
   }
 
-  Widget _baslik(TemaProvider t, String s) => Padding(
-        padding: const EdgeInsets.fromLTRB(18, 8, 16, 6),
-        child: Text(s, style: TextStyle(color: t.sub, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8)),
+  Widget _marka(TemaProvider t, AuthProvider auth, bool acik) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+        child: Row(children: [
+          Container(
+            width: acik ? null : 40, height: 36, alignment: Alignment.center,
+            padding: acik ? const EdgeInsets.symmetric(horizontal: 10) : EdgeInsets.zero,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [_mor1, _mavi]),
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: acik
+                ? const Text('ResteOS', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold))
+                : const Icon(Icons.restaurant_menu, color: Colors.white, size: 20),
+          ),
+          if (acik) ...[
+            const SizedBox(width: 8),
+            Expanded(child: Text(auth.sube ?? '', maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: t.ink, fontSize: 13, fontWeight: FontWeight.w600))),
+          ],
+        ]),
       );
 
+  Widget _baslik(TemaProvider t, String s, bool acik) => acik
+      ? Padding(
+          padding: const EdgeInsets.fromLTRB(18, 8, 16, 6),
+          child: Text(s, style: TextStyle(color: t.sub, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8)),
+        )
+      : const SizedBox(height: 12);
+
   Widget _tab(TemaProvider t, _Sekme s, bool secili, VoidCallback onTap) {
-    final renk = secili ? _mor1 : t.sub2;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       child: Material(
         color: secili ? _mor1.withValues(alpha: 0.14) : Colors.transparent,
         borderRadius: BorderRadius.circular(12),
@@ -416,16 +455,12 @@ class _YanMenu extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
             child: Row(children: [
-              Container(
-                width: 3.5, height: 20,
-                margin: const EdgeInsets.only(right: 10),
-                decoration: BoxDecoration(color: secili ? _mor1 : Colors.transparent, borderRadius: BorderRadius.circular(3)),
-              ),
-              Icon(secili ? s.aktifIkon : s.ikon, color: renk, size: 21),
-              const SizedBox(width: 12),
-              Text(s.label, style: TextStyle(color: secili ? t.ink : t.sub2, fontSize: 14, fontWeight: secili ? FontWeight.bold : FontWeight.w600)),
+              Icon(secili ? s.aktifIkon : s.ikon, color: secili ? _mor1 : t.sub2, size: 22),
+              const SizedBox(width: 14),
+              Expanded(child: Text(s.label, maxLines: 1, overflow: TextOverflow.clip, softWrap: false,
+                  style: TextStyle(color: secili ? t.ink : t.sub2, fontSize: 14, fontWeight: secili ? FontWeight.bold : FontWeight.w600))),
             ]),
           ),
         ),
@@ -433,7 +468,7 @@ class _YanMenu extends StatelessWidget {
     );
   }
 
-  Widget _asistanBtn(BuildContext context, VoidCallback onTap) {
+  Widget _asistanBtn(VoidCallback onTap, bool acik) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: Material(
@@ -442,12 +477,13 @@ class _YanMenu extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
             decoration: const BoxDecoration(gradient: LinearGradient(colors: [_mor1, _mavi])),
             child: Row(children: const [
               Icon(Icons.mic, color: Colors.white, size: 20),
-              SizedBox(width: 10),
-              Text('Patron Asistan', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+              SizedBox(width: 12),
+              Expanded(child: Text('Patron Asistan', maxLines: 1, overflow: TextOverflow.clip, softWrap: false,
+                  style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold))),
             ]),
           ),
         ),
@@ -462,11 +498,12 @@ class _YanMenu extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
           child: Row(children: [
-            Icon(ikon, color: r, size: 19),
-            const SizedBox(width: 12),
-            Expanded(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: r, fontSize: 13.5, fontWeight: FontWeight.w600))),
+            Icon(ikon, color: r, size: 20),
+            const SizedBox(width: 14),
+            Expanded(child: Text(label, maxLines: 1, overflow: TextOverflow.clip, softWrap: false,
+                style: TextStyle(color: r, fontSize: 13.5, fontWeight: FontWeight.w600))),
           ]),
         ),
       ),
