@@ -429,9 +429,12 @@ class _YanMenuState extends State<_YanMenu> {
           : const Icon(Icons.restaurant_menu, color: Colors.white, size: 20),
     );
     if (!acik) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        child: SizedBox(width: _YanMenu.darGenislik, child: Center(child: logo)),
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          child: SizedBox(width: _YanMenu.darGenislik, child: Center(child: logo)),
+        ),
       );
     }
     return Padding(
@@ -456,18 +459,21 @@ class _YanMenuState extends State<_YanMenu> {
     final ikon = Icon(secili ? s.aktifIkon : s.ikon, color: secili ? _mor1 : t.sub2, size: 22);
     // KAPALI: sadece ortalanmis ikon (secili ise arkasinda yuvarlak vurgu)
     if (!_acik) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 3),
-        child: SizedBox(
-          width: _YanMenu.darGenislik,
-          child: Center(
-            child: Material(
-              color: secili ? _mor1.withValues(alpha: 0.16) : Colors.transparent,
-              borderRadius: BorderRadius.circular(11),
-              child: InkWell(
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 3),
+          child: SizedBox(
+            width: _YanMenu.darGenislik,
+            child: Center(
+              child: Material(
+                color: secili ? _mor1.withValues(alpha: 0.16) : Colors.transparent,
                 borderRadius: BorderRadius.circular(11),
-                onTap: onTap,
-                child: Container(width: 46, height: 40, alignment: Alignment.center, child: ikon),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(11),
+                  onTap: onTap,
+                  child: Container(width: 46, height: 40, alignment: Alignment.center, child: ikon),
+                ),
               ),
             ),
           ),
@@ -499,19 +505,22 @@ class _YanMenuState extends State<_YanMenu> {
 
   Widget _asistanBtn(VoidCallback onTap, bool acik) {
     if (!acik) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: SizedBox(
-          width: _YanMenu.darGenislik,
-          child: Center(
-            child: Material(
-              borderRadius: BorderRadius.circular(11), clipBehavior: Clip.antiAlias,
-              child: InkWell(
-                onTap: onTap,
-                child: Container(
-                  width: 46, height: 40, alignment: Alignment.center,
-                  decoration: const BoxDecoration(gradient: LinearGradient(colors: [_mor1, _mavi])),
-                  child: const Icon(Icons.mic, color: Colors.white, size: 20),
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: SizedBox(
+            width: _YanMenu.darGenislik,
+            child: Center(
+              child: Material(
+                borderRadius: BorderRadius.circular(11), clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: onTap,
+                  child: Container(
+                    width: 46, height: 40, alignment: Alignment.center,
+                    decoration: const BoxDecoration(gradient: LinearGradient(colors: [_mor1, _mavi])),
+                    child: const Icon(Icons.mic, color: Colors.white, size: 20),
+                  ),
                 ),
               ),
             ),
