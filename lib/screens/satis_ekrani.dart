@@ -8,6 +8,7 @@ import '../services/yazici_servisi.dart';
 import '../responsive.dart';
 import 'cari_hesaplar_screen.dart';
 import 'barkod_tarayici.dart';
+import 'fis.dart';
 
 /// SATIŞ EKRANI (POS) — masaya tıklayınca: SOLDA resimli ürün ızgarası (kategori sekmeli),
 /// SAĞDA o masanın adisyonu + toplam + hızlı ödeme. Kerzz/Adisyo tarzı tek-ekran POS.
@@ -216,6 +217,200 @@ class _SatisEkraniState extends State<SatisEkrani> {
     Navigator.of(context).pop(true);
   }
 
+  // ---- İKİNCİL İŞLEMLER (iskonto/ikram/iptal) ----
+  Future<void> _islemUygula(String islem, {double? oran, double? tutar, String? onayPin}) async {
+    setState(() => _mesgul = true);
+    final auth = context.read<AuthProvider>();
+    try {
+      final res = await Api.adisyonIslem(auth.token!, islem: islem, adisyonId: widget.adisyonId, oran: oran, tutar: tutar, onayPin: onayPin);
+      if (!mounted) return;
+      setState(() => _mesgul = false);
+      if (res['ok'] == 1) {
+        _snack(res['mesaj']?.toString() ?? 'Tamamlandı', _yesil);
+        if (islem == 'iptal') { Navigator.of(context).pop(true); } else { await _yukle(); }
+      } else if (res['onay_gerek'] == true) {
+        final pin = await _pinSor(res['hata']?.toString() ?? 'Yetkili PIN onayı gerekli');
+        if (pin != null && pin.trim().isNotEmpty) await _islemUygula(islem, oran: oran, tutar: tutar, onayPin: pin.trim());
+      } else {
+        _snack(res['hata']?.toString() ?? 'İşlem başarısız', _kirmizi);
+      }
+    } catch (_) {
+      if (mounted) { setState(() => _mesgul = false); _snack('Bağlantı hatası', _kirmizi); }
+    }
+  }
+
+  Future<void> _iskonto() async {
+    final oran = await _sayiDialog('İskonto Uygula', 'Yüzde (%)', '%');
+    if (oran == null || oran <= 0) return;
+    await _islemUygula('iskonto', oran: oran);
+  }
+
+  Future<void> _ikram() async {
+    final tutar = await _sayiDialog('İkram Uygula', 'Tutar (TL)', 'TL');
+    if (tutar == null || tutar <= 0) return;
+    await _islemUygula('ikram', tutar: tutar);
+  }
+
+  Future<void> _iptal() async {
+    final onay = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        final t = ctx.read<TemaProvider>();
+        return AlertDialog(
+          backgroundColor: t.card, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text('Adisyonu İptal Et', style: TextStyle(color: t.ink, fontSize: 16)),
+          content: Text('${widget.masaAd} adisyonu iptal edilsin mi? Bu işlem geri alınamaz.', style: TextStyle(color: t.sub, fontSize: 14)),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Vazgeç', style: TextStyle(color: t.sub))),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), style: FilledButton.styleFrom(backgroundColor: _kirmizi), child: const Text('İptal Et')),
+          ],
+        );
+      },
+    );
+    if (onay == true) await _islemUygula('iptal');
+  }
+
+  Future<void> _fisBas() async {
+    if (_pending.isNotEmpty) { final ok = await _kaydet(); if (!ok) return; }
+    if (_fis == null) return;
+    final y = YaziciServisi();
+    await y.yukle();
+    if (y.ayarli) {
+      final s = await y.hesapFisi(_fis!);
+      _snack(s == 'ok' ? '✓ Fiş yazıcıya gönderildi' : s, s == 'ok' ? _yesil : _kirmizi);
+    } else if (mounted) {
+      await fisYazdir(context, _fis!); // yazıcı yoksa PDF önizleme
+    }
+  }
+
+  Future<String?> _pinSor(String mesaj) {
+    final c = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) {
+        final t = ctx.read<TemaProvider>();
+        return AlertDialog(
+          backgroundColor: t.card, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text('🔒 Yetkili Onayı', style: TextStyle(color: t.ink, fontSize: 16)),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            Text(mesaj, style: TextStyle(color: t.sub, fontSize: 13)),
+            const SizedBox(height: 12),
+            TextField(controller: c, keyboardType: TextInputType.number, obscureText: true, autofocus: true,
+                style: TextStyle(color: t.ink, letterSpacing: 6), textAlign: TextAlign.center,
+                decoration: InputDecoration(hintText: 'Müdür/Sahip PIN', filled: true, fillColor: t.card2, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none))),
+          ]),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Vazgeç', style: TextStyle(color: t.sub))),
+            FilledButton(onPressed: () => Navigator.pop(ctx, c.text), style: FilledButton.styleFrom(backgroundColor: _mor), child: const Text('Onayla')),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<double?> _sayiDialog(String baslik, String ipuc, String suffix) {
+    final c = TextEditingController();
+    return showDialog<double>(
+      context: context,
+      builder: (ctx) {
+        final t = ctx.read<TemaProvider>();
+        return AlertDialog(
+          backgroundColor: t.card, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(baslik, style: TextStyle(color: t.ink, fontSize: 16)),
+          content: TextField(controller: c, keyboardType: TextInputType.number, autofocus: true,
+              style: TextStyle(color: t.ink, fontSize: 18),
+              decoration: InputDecoration(hintText: ipuc, suffixText: suffix, filled: true, fillColor: t.card2, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none))),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Vazgeç', style: TextStyle(color: t.sub))),
+            FilledButton(onPressed: () => Navigator.pop(ctx, double.tryParse(c.text.replaceAll(',', '.'))), style: FilledButton.styleFrom(backgroundColor: _mor), child: const Text('Uygula')),
+          ],
+        );
+      },
+    );
+  }
+
+  // ---- KISMI / BÖL / PARA ÜSTÜ (numpad sheet) ----
+  Future<void> _kismiSheet() async {
+    if (_pending.isNotEmpty) { final ok = await _kaydet(); if (!ok) return; }
+    if (!mounted || _kayitliToplam <= 0) return;
+    String giris = '';
+    await showModalBottomSheet(
+      context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final t = ctx.read<TemaProvider>();
+        return StatefulBuilder(builder: (ctx, setSt) {
+          final kalan = _kayitliToplam;
+          final girilen = double.tryParse(giris) ?? 0;
+          final paraUstu = girilen > kalan ? girilen - kalan : 0.0;
+          void bas(String d) => setSt(() { if (d == '.' && giris.contains('.')) return; if (giris.length < 9) giris += d; });
+          Future<void> al(String tip) async {
+            final istenen = giris.isEmpty ? kalan : girilen;
+            if (istenen <= 0) return;
+            final uygulanan = istenen > kalan ? kalan : istenen;
+            Navigator.pop(ctx);
+            setState(() => _mesgul = true);
+            final auth = context.read<AuthProvider>();
+            try {
+              final res = await Api.adisyonIslem(auth.token!, islem: 'ode', adisyonId: widget.adisyonId, odemeTip: tip, tutar: uygulanan);
+              if (!mounted) return;
+              setState(() => _mesgul = false);
+              if (res['ok'] == 1) {
+                if (tip == 'nakit' && paraUstu > 0) _snack('Para üstü: ${_tl(paraUstu)}', _turuncu);
+                if (res['kapandi'] == true) { await _bitir(); } else { await _yukle(); }
+              } else {
+                _snack(res['hata']?.toString() ?? 'Ödeme alınamadı', _kirmizi);
+              }
+            } catch (_) {
+              if (mounted) { setState(() => _mesgul = false); _snack('Bağlantı hatası', _kirmizi); }
+            }
+          }
+          Widget tus(String d, {IconData? ikon, VoidCallback? onTap}) => Expanded(child: Padding(padding: const EdgeInsets.all(4), child: Material(
+            color: t.card2, borderRadius: BorderRadius.circular(12),
+            child: InkWell(borderRadius: BorderRadius.circular(12), onTap: onTap ?? () => bas(d), child: Container(height: 46, alignment: Alignment.center, child: ikon != null ? Icon(ikon, color: t.ink) : Text(d, style: TextStyle(color: t.ink, fontSize: 20, fontWeight: FontWeight.bold)))),
+          )));
+          Widget odeK(String tip, String ad, Color renk) => Expanded(child: Padding(padding: const EdgeInsets.all(4), child: Material(
+            color: renk, borderRadius: BorderRadius.circular(12),
+            child: InkWell(borderRadius: BorderRadius.circular(12), onTap: () => al(tip), child: Container(height: 46, alignment: Alignment.center, child: Text(ad, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)))),
+          )));
+          return Container(
+            padding: EdgeInsets.only(left: 14, right: 14, top: 14, bottom: MediaQuery.of(ctx).viewInsets.bottom + 16),
+            decoration: BoxDecoration(color: t.card, borderRadius: const BorderRadius.vertical(top: Radius.circular(22))),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 14), decoration: BoxDecoration(color: t.line, borderRadius: BorderRadius.circular(2))),
+              Row(children: [
+                Text('Kalan', style: TextStyle(color: t.sub, fontSize: 13)),
+                const Spacer(),
+                Text(_tl(kalan), style: TextStyle(color: t.mor1, fontSize: 22, fontWeight: FontWeight.bold)),
+              ]),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(color: t.card2, borderRadius: BorderRadius.circular(12)),
+                child: Row(children: [
+                  Text('Alınan', style: TextStyle(color: t.sub, fontSize: 13)),
+                  const Spacer(),
+                  Text(giris.isEmpty ? '—' : '${_f.format(girilen)} TL', style: TextStyle(color: t.ink, fontSize: 22, fontWeight: FontWeight.bold)),
+                ]),
+              ),
+              if (paraUstu > 0) Padding(padding: const EdgeInsets.only(top: 8), child: Row(children: [
+                Text('Para Üstü', style: TextStyle(color: _turuncu, fontSize: 13, fontWeight: FontWeight.bold)),
+                const Spacer(),
+                Text(_tl(paraUstu), style: const TextStyle(color: _turuncu, fontSize: 18, fontWeight: FontWeight.bold)),
+              ])),
+              const SizedBox(height: 6),
+              Row(children: [tus('1'), tus('2'), tus('3')]),
+              Row(children: [tus('4'), tus('5'), tus('6')]),
+              Row(children: [tus('7'), tus('8'), tus('9')]),
+              Row(children: [tus('.'), tus('0'), tus('', ikon: Icons.backspace_outlined, onTap: () => setSt(() { if (giris.isNotEmpty) giris = giris.substring(0, giris.length - 1); }))]),
+              const SizedBox(height: 6),
+              Row(children: [odeK('nakit', 'Nakit', _yesil), odeK('kredi', 'Kart', _mavi), odeK('yemek_karti', 'Yemek K.', _turuncu)]),
+            ]),
+          );
+        });
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = context.watch<TemaProvider>();
@@ -355,80 +550,160 @@ class _SatisEkraniState extends State<SatisEkrani> {
 
   // ---------- SAĞ: adisyon + ödeme ----------
   Widget _adisyonPaneli(TemaProvider t) {
+    final araToplam = _n(_fis?['ara_toplam']).toDouble();
+    final iskonto = _n(_fis?['indirim']).toDouble();
+    final ikram = _n(_fis?['ikram']).toDouble();
+    final kalemSayi = _kalemler.fold<int>(0, (a, k) => a + _n((k as Map)['adet']).toInt()) + _pendingAdet;
     return Column(children: [
-      // Kayıtlı kalemler + bekleyenler
+      // Başlık şeridi (gradient)
+      Container(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        decoration: const BoxDecoration(gradient: LinearGradient(colors: [_mor, _mavi])),
+        child: Row(children: [
+          const Icon(Icons.table_restaurant, color: Colors.white, size: 22),
+          const SizedBox(width: 10),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(widget.masaAd, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+            Text('Adisyon${_fis?['adisyon_no'] != null ? ' #${_fis!['adisyon_no']}' : ''} · $kalemSayi ürün', style: const TextStyle(color: Color(0xFFE9D5FF), fontSize: 11.5)),
+          ])),
+        ]),
+      ),
+      // Kalemler
       Expanded(
         child: (_kalemler.isEmpty && _pending.isEmpty)
-            ? Center(child: Text('Ürün ekleyin', style: TextStyle(color: t.sub, fontSize: 14)))
-            : ListView(padding: const EdgeInsets.all(12), children: [
-                for (final k in _kalemler)
-                  _satir(t, '${_n((k as Map)['adet']).toInt()}x ${k['ad']}', _tl(_n(k['tutar'])), kayitli: true),
+            ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.receipt_long_outlined, color: t.sub.withValues(alpha: 0.4), size: 40),
+                const SizedBox(height: 8),
+                Text('Soldan ürün ekleyin', style: TextStyle(color: t.sub, fontSize: 14)),
+              ]))
+            : ListView(padding: const EdgeInsets.fromLTRB(12, 12, 12, 6), children: [
+                for (final k in _kalemler) _kalemSatir(t, k as Map),
                 if (_pending.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Row(children: [
+                    Container(width: 6, height: 6, decoration: const BoxDecoration(color: _turuncu, shape: BoxShape.circle)),
+                    const SizedBox(width: 6),
+                    Text('YENİ · kaydedilmedi', style: TextStyle(color: _turuncu, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.4)),
+                  ]),
                   const SizedBox(height: 4),
-                  Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Text('YENİ (kaydedilmedi)', style: TextStyle(color: _turuncu, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5))),
-                  for (final e in _pending.entries)
-                    _pendingSatir(t, e.key, e.value),
+                  for (final e in _pending.entries) _pendingSatir(t, e.key, e.value),
                 ],
               ]),
       ),
-      // Toplam + aksiyonlar
+      // Alt panel: döküm + aksiyon + ödeme
       Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: t.card, border: Border(top: BorderSide(color: t.line))),
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+        decoration: BoxDecoration(
+          color: t.card,
+          border: Border(top: BorderSide(color: t.line)),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 12, offset: const Offset(0, -3))],
+        ),
         child: Column(children: [
+          // Döküm
+          if (iskonto > 0 || ikram > 0) ...[
+            _dokum(t, 'Ara Toplam', _tl(araToplam), t.sub),
+            if (iskonto > 0) _dokum(t, 'İskonto', '-${_tl(iskonto)}', _yesil),
+            if (ikram > 0) _dokum(t, 'İkram', '-${_tl(ikram)}', _turuncu),
+            const SizedBox(height: 4),
+          ],
           Row(children: [
-            Text('Genel Toplam', style: TextStyle(color: t.sub, fontSize: 13)),
+            Text('Genel Toplam', style: TextStyle(color: t.ink, fontSize: 14, fontWeight: FontWeight.w600)),
             const Spacer(),
-            Text(_tl(_genelToplam), style: TextStyle(color: t.ink, fontSize: 24, fontWeight: FontWeight.bold)),
+            Text(_tl(_genelToplam), style: TextStyle(color: t.mor1, fontSize: 26, fontWeight: FontWeight.bold)),
           ]),
-          const SizedBox(height: 12),
-          if (_pending.isNotEmpty)
+          const SizedBox(height: 10),
+          // İkincil aksiyonlar
+          Row(children: [
+            _ikincil(t, Icons.local_offer_outlined, 'İskonto', _yesil, _iskonto),
+            const SizedBox(width: 7),
+            _ikincil(t, Icons.card_giftcard, 'İkram', _turuncu, _ikram),
+            const SizedBox(width: 7),
+            _ikincil(t, Icons.print_outlined, 'Fiş', _mavi, _fisBas),
+            const SizedBox(width: 7),
+            _ikincil(t, Icons.cancel_outlined, 'İptal', _kirmizi, _iptal),
+          ]),
+          const SizedBox(height: 10),
+          if (_pending.isNotEmpty) ...[
             SizedBox(width: double.infinity, child: FilledButton.icon(
               onPressed: _mesgul ? null : () => _kaydet(),
               icon: const Icon(Icons.save_outlined, size: 19),
               label: Text('Siparişi Kaydet ($_pendingAdet)', style: const TextStyle(fontWeight: FontWeight.bold)),
-              style: FilledButton.styleFrom(backgroundColor: _mor, padding: const EdgeInsets.symmetric(vertical: 13)),
+              style: FilledButton.styleFrom(backgroundColor: _mor, padding: const EdgeInsets.symmetric(vertical: 13), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13))),
             )),
-          if (_pending.isNotEmpty) const SizedBox(height: 10),
+            const SizedBox(height: 10),
+          ],
           // Ödeme yöntemleri
           Row(children: [
             _odeBtn(t, 'nakit', 'Nakit', Icons.payments_outlined, _yesil),
-            const SizedBox(width: 8),
+            const SizedBox(width: 9),
             _odeBtn(t, 'kredi', 'Kart', Icons.credit_card, _mavi),
           ]),
-          const SizedBox(height: 8),
+          const SizedBox(height: 9),
           Row(children: [
             _odeBtn(t, 'yemek_karti', 'Yemek K.', Icons.restaurant, _turuncu),
-            const SizedBox(width: 8),
-            _odeBtn(t, 'acik_hesap', 'Açık Hesap', Icons.receipt_long, _mor),
+            const SizedBox(width: 9),
+            _odeBtn(t, 'acik_hesap', 'Açık Hesap', Icons.account_balance_wallet_outlined, _mor),
           ]),
+          const SizedBox(height: 8),
+          // Kısmi / böl / para üstü
+          GestureDetector(
+            onTap: _mesgul ? null : _kismiSheet,
+            child: Container(
+              width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 11), alignment: Alignment.center,
+              decoration: BoxDecoration(color: t.card2, borderRadius: BorderRadius.circular(12), border: Border.all(color: t.line)),
+              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                Icon(Icons.call_split, size: 17, color: t.sub2),
+                const SizedBox(width: 7),
+                Text('Kısmi / Böl · Para Üstü', style: TextStyle(color: t.sub2, fontSize: 13, fontWeight: FontWeight.bold)),
+              ]),
+            ),
+          ),
         ]),
       ),
     ]);
   }
 
-  Widget _satir(TemaProvider t, String sol, String sag, {bool kayitli = false}) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 5),
+  Widget _dokum(TemaProvider t, String s, String v, Color renk) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
         child: Row(children: [
-          Expanded(child: Text(sol, style: TextStyle(color: t.ink, fontSize: 13.5))),
-          const SizedBox(width: 8),
-          Text(sag, style: TextStyle(color: t.sub2, fontSize: 13.5, fontWeight: FontWeight.w600)),
+          Text(s, style: TextStyle(color: t.sub, fontSize: 12.5)),
+          const Spacer(),
+          Text(v, style: TextStyle(color: renk, fontSize: 12.5, fontWeight: FontWeight.w600)),
         ]),
       );
+
+  Widget _kalemSatir(TemaProvider t, Map k) {
+    final adet = _n(k['adet']).toInt();
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6), padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      decoration: BoxDecoration(color: t.card2, borderRadius: BorderRadius.circular(10)),
+      child: Row(children: [
+        Container(
+          width: 26, height: 26, alignment: Alignment.center,
+          decoration: BoxDecoration(color: t.mor1.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(8)),
+          child: Text('$adet', style: TextStyle(color: t.mor1, fontSize: 12.5, fontWeight: FontWeight.bold)),
+        ),
+        const SizedBox(width: 10),
+        Expanded(child: Text(k['ad'].toString(), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.ink, fontSize: 13.5, fontWeight: FontWeight.w500))),
+        const SizedBox(width: 8),
+        Text(_tl(_n(k['tutar'])), style: TextStyle(color: t.ink, fontSize: 13.5, fontWeight: FontWeight.w700)),
+      ]),
+    );
+  }
 
   Widget _pendingSatir(TemaProvider t, int id, int adet) {
     final u = _urunById[id];
     final ad = u?['ad']?.toString() ?? '';
     final tutar = _n(u?['fiyat']).toDouble() * adet;
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 3), padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: _turuncu.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(8)),
+      margin: const EdgeInsets.only(bottom: 6), padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(color: _turuncu.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(10), border: Border.all(color: _turuncu.withValues(alpha: 0.30))),
       child: Row(children: [
-        Expanded(child: Text(ad, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.ink, fontSize: 13.5))),
+        Expanded(child: Text(ad, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.ink, fontSize: 13.5, fontWeight: FontWeight.w500))),
         _miniIkon(Icons.remove, () => _azalt(id), t),
-        SizedBox(width: 26, child: Text('$adet', textAlign: TextAlign.center, style: TextStyle(color: t.ink, fontSize: 14, fontWeight: FontWeight.bold))),
+        SizedBox(width: 28, child: Text('$adet', textAlign: TextAlign.center, style: TextStyle(color: t.ink, fontSize: 14, fontWeight: FontWeight.bold))),
         _miniIkon(Icons.add, () => _ekle(id), t),
-        const SizedBox(width: 6),
+        const SizedBox(width: 8),
         SizedBox(width: 66, child: Text(_tl(tutar), textAlign: TextAlign.right, style: TextStyle(color: t.sub2, fontSize: 13, fontWeight: FontWeight.w600))),
       ]),
     );
@@ -436,22 +711,37 @@ class _SatisEkraniState extends State<SatisEkrani> {
 
   Widget _miniIkon(IconData i, VoidCallback onTap, TemaProvider t) => GestureDetector(
         onTap: onTap,
-        child: Container(width: 26, height: 26, alignment: Alignment.center, decoration: BoxDecoration(color: t.card, borderRadius: BorderRadius.circular(7), border: Border.all(color: t.line)), child: Icon(i, size: 15, color: t.ink)),
+        child: Container(width: 28, height: 28, alignment: Alignment.center, decoration: BoxDecoration(color: t.card, borderRadius: BorderRadius.circular(8), border: Border.all(color: t.line)), child: Icon(i, size: 16, color: t.ink)),
+      );
+
+  Widget _ikincil(TemaProvider t, IconData ikon, String ad, Color renk, VoidCallback onTap) => Expanded(
+        child: GestureDetector(
+          onTap: _mesgul ? null : onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 9), alignment: Alignment.center,
+            decoration: BoxDecoration(color: renk.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(11), border: Border.all(color: renk.withValues(alpha: 0.32))),
+            child: Column(children: [
+              Icon(ikon, size: 18, color: renk), const SizedBox(height: 3),
+              Text(ad, style: TextStyle(color: renk, fontSize: 11, fontWeight: FontWeight.bold)),
+            ]),
+          ),
+        ),
       );
 
   Widget _odeBtn(TemaProvider t, String tip, String ad, IconData ikon, Color renk) => Expanded(
         child: Opacity(
           opacity: _mesgul ? 0.5 : 1,
           child: Material(
-            color: renk, borderRadius: BorderRadius.circular(12),
+            color: renk, borderRadius: BorderRadius.circular(14),
+            elevation: 2, shadowColor: renk.withValues(alpha: 0.4),
             child: InkWell(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(14),
               onTap: _mesgul ? null : () => _ode(tip),
               child: Container(
-                height: 58, alignment: Alignment.center,
+                height: 62, alignment: Alignment.center,
                 child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Icon(ikon, color: Colors.white, size: 21), const SizedBox(height: 3),
-                  Text(ad, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                  Icon(ikon, color: Colors.white, size: 22), const SizedBox(height: 3),
+                  Text(ad, style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.bold)),
                 ]),
               ),
             ),
