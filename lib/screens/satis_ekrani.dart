@@ -26,8 +26,10 @@ class _SatisEkraniState extends State<SatisEkrani> {
   List urunler = [];
   final Map<int, Map> _urunById = {};
   final Map<int, int> _pending = {}; // yeni eklenecek: urunId -> adet
-  List _kalemler = []; // adisyonda KAYITLI kalemler (fis)
-  double _kayitliToplam = 0;
+  List _kalemler = []; // KAYITLI kalemler (id + odeme_durum)
+  final Set<int> _secili = {}; // kalem-bazlı böl: seçili kalem id'leri
+  double _toplamHepsi = 0;
+  double _kayitliToplam = 0; // ödenmemiş (kalan) toplam
   int? _kat;
   String _ara = '';
   bool loading = true;
@@ -55,6 +57,16 @@ class _SatisEkraniState extends State<SatisEkrani> {
   double get _genelToplam => _kayitliToplam + _pendingTutar;
   int get _pendingAdet => _pending.values.fold(0, (a, b) => a + b);
 
+  double get _seciliTutar {
+    double t = 0;
+    for (final k in _kalemler) {
+      final m = k as Map;
+      if (_secili.contains(_n(m['id']).toInt()) && m['odeme_durum'] != 'odendi') t += _n(m['tutar']).toDouble();
+    }
+    return t;
+  }
+  double get _odenecek => _secili.isEmpty ? _kayitliToplam : _seciliTutar;
+
   @override
   void initState() {
     super.initState();
@@ -67,6 +79,7 @@ class _SatisEkraniState extends State<SatisEkrani> {
     try {
       final menu = await Api.menu(auth.token!);
       final fis = await Api.fis(auth.token!, widget.adisyonId);
+      final kl = await Api.adisyonKalemleri(auth.token!, widget.adisyonId);
       if (!mounted) return;
       kategoriler = (menu['kategoriler'] as List?) ?? [];
       urunler = (menu['urunler'] as List?) ?? [];
@@ -75,11 +88,13 @@ class _SatisEkraniState extends State<SatisEkrani> {
         _urunById[_n((u as Map)['id']).toInt()] = u;
       }
       _kat ??= kategoriler.isNotEmpty ? _n((kategoriler.first as Map)['id']).toInt() : null;
-      if (fis['ok'] == 1) {
-        _fis = fis;
-        _kalemler = (fis['kalemler'] as List?) ?? [];
-        _kayitliToplam = _n(fis['toplam']).toDouble();
+      if (fis['ok'] == 1) _fis = fis;
+      if (kl['ok'] == 1) {
+        _kalemler = (kl['kalemler'] as List?) ?? [];
+        _toplamHepsi = _n(kl['toplam']).toDouble();
+        _kayitliToplam = _n(kl['kalan']).toDouble();
       }
+      _secili.removeWhere((id) => !_kalemler.any((k) => _n((k as Map)['id']).toInt() == id && k['odeme_durum'] != 'odendi'));
       setState(() => loading = false);
     } on ApiYetkiHatasi {
       if (mounted) context.read<AuthProvider>().cikis();
@@ -143,24 +158,25 @@ class _SatisEkraniState extends State<SatisEkrani> {
   // ---- ÖDEME ----
   Future<void> _ode(String tip) async {
     if (_mesgul) return;
-    if (_genelToplam <= 0) { _snack('Adisyon boş', _turuncu); return; }
-    // Önce bekleyen ürünleri kaydet
-    if (_pending.isNotEmpty) {
+    final secimVar = _secili.isNotEmpty;
+    if (!secimVar && _genelToplam <= 0) { _snack('Adisyon boş', _turuncu); return; }
+    // Seçim yoksa bekleyen ürünleri önce kaydet (tümünü öde). Seçim varsa sadece seçilenleri öde.
+    if (!secimVar && _pending.isNotEmpty) {
       final ok = await _kaydet();
       if (!ok) return;
     }
     if (tip == 'acik_hesap') { await _acikHesap(); return; }
-
     final onay = await _odeOnay(tip);
     if (onay != true || !mounted) return;
     setState(() => _mesgul = true);
     final auth = context.read<AuthProvider>();
     try {
-      final res = await Api.adisyonIslem(auth.token!, islem: 'ode', adisyonId: widget.adisyonId, odemeTip: tip, tutar: _kayitliToplam);
+      final res = await Api.adisyonIslem(auth.token!, islem: 'ode', adisyonId: widget.adisyonId, odemeTip: tip,
+          tutar: secimVar ? 0 : _kayitliToplam, kalemIdler: secimVar ? _secili.join(',') : null);
       if (!mounted) return;
       if (res['ok'] == 1) {
-        setState(() => _mesgul = false);
-        if (res['kapandi'] == true) { await _bitir(); } else { await _yukle(); }
+        setState(() { _mesgul = false; _secili.clear(); });
+        if (res['kapandi'] == true) { await _bitir(); } else { await _yukle(); _snack(res['mesaj']?.toString() ?? 'Ödeme alındı', _yesil); }
       } else {
         setState(() => _mesgul = false);
         _snack(res['hata']?.toString() ?? 'Ödeme alınamadı', _kirmizi);
@@ -181,7 +197,9 @@ class _SatisEkraniState extends State<SatisEkrani> {
           backgroundColor: t.card,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text('$ad ile Öde', style: TextStyle(color: t.ink, fontSize: 16)),
-          content: Text('${_tl(_kayitliToplam)} tahsil edilip masa kapatılsın mı?', style: TextStyle(color: t.sub, fontSize: 14)),
+          content: Text(_secili.isEmpty
+              ? '${_tl(_odenecek)} tahsil edilip masa kapatılsın mı?'
+              : 'Seçili ${_secili.length} kalem için ${_tl(_odenecek)} tahsil edilsin mi?', style: TextStyle(color: t.sub, fontSize: 14)),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Vazgeç', style: TextStyle(color: t.sub))),
             FilledButton(onPressed: () => Navigator.pop(ctx, true), style: FilledButton.styleFrom(backgroundColor: renk), child: const Text('Onayla')),
@@ -606,11 +624,22 @@ class _SatisEkraniState extends State<SatisEkrani> {
             if (ikram > 0) _dokum(t, 'İkram', '-${_tl(ikram)}', _turuncu),
             const SizedBox(height: 4),
           ],
+          if (_toplamHepsi > _kayitliToplam + 0.5)
+            Padding(padding: const EdgeInsets.only(bottom: 4), child: Row(children: [
+              Text('Toplam ${_tl(_toplamHepsi)}', style: TextStyle(color: t.sub, fontSize: 11.5)),
+              const Spacer(),
+              Text('Ödenen ${_tl(_toplamHepsi - _kayitliToplam)}', style: const TextStyle(color: _yesil, fontSize: 11.5, fontWeight: FontWeight.w600)),
+            ])),
           Row(children: [
-            Text('Genel Toplam', style: TextStyle(color: t.ink, fontSize: 14, fontWeight: FontWeight.w600)),
+            Text(_secili.isEmpty ? 'Genel Toplam' : 'Seçili ${_secili.length} kalem', style: TextStyle(color: _secili.isEmpty ? t.ink : t.mor1, fontSize: 14, fontWeight: FontWeight.w700)),
             const Spacer(),
-            Text(_tl(_genelToplam), style: TextStyle(color: t.mor1, fontSize: 26, fontWeight: FontWeight.bold)),
+            Text(_tl(_secili.isEmpty ? _genelToplam : _seciliTutar), style: TextStyle(color: t.mor1, fontSize: 26, fontWeight: FontWeight.bold)),
           ]),
+          if (_secili.isNotEmpty)
+            Align(alignment: Alignment.centerRight, child: GestureDetector(
+              onTap: () => setState(() => _secili.clear()),
+              child: Padding(padding: const EdgeInsets.only(top: 2), child: Text('Seçimi temizle', style: TextStyle(color: t.sub, fontSize: 11.5, decoration: TextDecoration.underline))),
+            )),
           const SizedBox(height: 10),
           // İkincil aksiyonlar
           Row(children: [
@@ -673,21 +702,44 @@ class _SatisEkraniState extends State<SatisEkrani> {
       );
 
   Widget _kalemSatir(TemaProvider t, Map k) {
+    final id = _n(k['id']).toInt();
     final adet = _n(k['adet']).toInt();
-    return Container(
-      margin: const EdgeInsets.only(bottom: 6), padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-      decoration: BoxDecoration(color: t.card2, borderRadius: BorderRadius.circular(10)),
-      child: Row(children: [
-        Container(
-          width: 26, height: 26, alignment: Alignment.center,
-          decoration: BoxDecoration(color: t.mor1.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(8)),
-          child: Text('$adet', style: TextStyle(color: t.mor1, fontSize: 12.5, fontWeight: FontWeight.bold)),
+    final odendi = k['odeme_durum'] == 'odendi';
+    final secili = _secili.contains(id);
+    return GestureDetector(
+      onTap: odendi ? null : () => setState(() { secili ? _secili.remove(id) : _secili.add(id); }),
+      child: Opacity(
+        opacity: odendi ? 0.55 : 1,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 6), padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+          decoration: BoxDecoration(
+            color: secili ? t.mor1.withValues(alpha: 0.12) : t.card2,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: secili ? t.mor1 : Colors.transparent, width: 1.4),
+          ),
+          child: Row(children: [
+            // Seçim kutusu / ödendi işareti
+            odendi
+                ? const Icon(Icons.check_circle, color: _yesil, size: 22)
+                : Container(
+                    width: 22, height: 22, alignment: Alignment.center,
+                    decoration: BoxDecoration(color: secili ? t.mor1 : Colors.transparent, borderRadius: BorderRadius.circular(7), border: Border.all(color: secili ? t.mor1 : t.line, width: 1.6)),
+                    child: secili ? const Icon(Icons.check, color: Colors.white, size: 15) : null,
+                  ),
+            const SizedBox(width: 10),
+            Container(
+              width: 26, height: 26, alignment: Alignment.center,
+              decoration: BoxDecoration(color: t.mor1.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(8)),
+              child: Text('$adet', style: TextStyle(color: t.mor1, fontSize: 12.5, fontWeight: FontWeight.bold)),
+            ),
+            const SizedBox(width: 10),
+            Expanded(child: Text(k['ad'].toString(), maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: t.ink, fontSize: 13.5, fontWeight: FontWeight.w500, decoration: odendi ? TextDecoration.lineThrough : null))),
+            const SizedBox(width: 8),
+            Text(_tl(_n(k['tutar'])), style: TextStyle(color: odendi ? t.sub : t.ink, fontSize: 13.5, fontWeight: FontWeight.w700)),
+          ]),
         ),
-        const SizedBox(width: 10),
-        Expanded(child: Text(k['ad'].toString(), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.ink, fontSize: 13.5, fontWeight: FontWeight.w500))),
-        const SizedBox(width: 8),
-        Text(_tl(_n(k['tutar'])), style: TextStyle(color: t.ink, fontSize: 13.5, fontWeight: FontWeight.w700)),
-      ]),
+      ),
     );
   }
 
