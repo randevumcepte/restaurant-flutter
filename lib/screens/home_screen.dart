@@ -543,15 +543,18 @@ class _YanMenuState extends State<_YanMenu> {
 
   Widget _link(TemaProvider t, IconData ikon, String label, VoidCallback onTap, {Color? renk}) {
     final r = renk ?? t.sub2;
-    // KAPALI: sadece ortalanmis ikon
+    // KAPALI: sadece ortalanmis ikon (72px seride sola sabitli)
     if (!_acik) {
-      return SizedBox(
-        width: _YanMenu.darGenislik,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
-            child: Container(height: 42, alignment: Alignment.center, child: Icon(ikon, color: r, size: 20)),
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: SizedBox(
+          width: _YanMenu.darGenislik,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onTap,
+              child: Container(height: 42, alignment: Alignment.center, child: Icon(ikon, color: r, size: 20)),
+            ),
           ),
         ),
       );
