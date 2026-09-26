@@ -6,7 +6,7 @@ import '../providers/tema_provider.dart';
 import '../services/api.dart';
 import '../services/yazici_servisi.dart';
 import 'ai_analiz_sheet.dart';
-import 'cari_hesaplar_screen.dart';
+import 'odeme_ekrani.dart';
 import 'urun_ekle_screen.dart';
 import 'sebep_yonetimi_screen.dart';
 import 'fis.dart';
@@ -1296,8 +1296,8 @@ class _DetayScreenState extends State<DetayScreen> {
         SizedBox(
           width: double.infinity,
           child: FilledButton.icon(
-            onPressed: _kapatDialog,
-            icon: const Icon(Icons.check_circle_outline, size: 20),
+            onPressed: _odemeEkraniAc,
+            icon: const Icon(Icons.point_of_sale, size: 20),
             label: const Text('Öde & Masayı Kapat', style: TextStyle(fontWeight: FontWeight.bold)),
             style: FilledButton.styleFrom(backgroundColor: _yesil, padding: const EdgeInsets.symmetric(vertical: 13), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
           ),
@@ -1374,41 +1374,12 @@ class _DetayScreenState extends State<DetayScreen> {
     );
   }
 
-  Future<void> _kapatDialog() async {
-    final secim = await showDialog<String>(useRootNavigator: true, 
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: _card,
-        title: Text('Ödeme Al & Kapat', style: TextStyle(color: _ink, fontSize: 16)),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          _odemeSecenek(ctx, 'nakit', '💵 Nakit'),
-          _odemeSecenek(ctx, 'kredi', '💳 Kredi Kartı'),
-          _odemeSecenek(ctx, 'yemek_karti', '🍽️ Yemek Kartı'),
-          _odemeSecenek(ctx, 'acik_hesap', '🧾 Açık Hesap (Bana Yaz)'),
-        ]),
-        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Vazgeç', style: TextStyle(color: _sub)))],
-      ),
-    );
-    if (secim == 'acik_hesap') {
-      if (!mounted) return;
-      final cari = await Navigator.of(context).push<Map>(MaterialPageRoute(builder: (_) => const CariHesaplarScreen(secmeMod: true)));
-      if (cari != null) _islemCagir('kapat', odemeTip: 'acik_hesap', cariId: _n(cari['id']).toInt());
-    } else if (secim != null) {
-      _islemCagir('kapat', odemeTip: secim);
-    }
+  // Tam ekran KASA ödeme ekranını aç (rakam tuş takımı + bölünmüş ödeme + para üstü + oto fiş).
+  Future<void> _odemeEkraniAc() async {
+    if (widget.id == null) return;
+    final sonuc = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => OdemeEkrani(adisyonId: widget.id!)));
+    if (sonuc == true && mounted) Navigator.of(context).pop(true); // masa kapandı -> listeye dön
   }
-
-  Widget _odemeSecenek(BuildContext ctx, String tip, String metin) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: SizedBox(
-          width: double.infinity,
-          child: FilledButton(
-            onPressed: () => Navigator.pop(ctx, tip),
-            style: FilledButton.styleFrom(backgroundColor: _card2, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-            child: Text(metin, style: TextStyle(color: _ink, fontSize: 14)),
-          ),
-        ),
-      );
 
   Future<void> _iskontoDialog() async {
     final oranC = TextEditingController();
