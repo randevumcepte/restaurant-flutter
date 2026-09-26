@@ -7,7 +7,7 @@ import '../providers/tema_provider.dart';
 import '../responsive.dart';
 import '../services/api.dart';
 import '../widgets/sef_garson_serit.dart';
-import 'detay_screen.dart';
+import 'satis_ekrani.dart';
 
 class MasalarScreen extends StatefulWidget {
   const MasalarScreen({super.key});
@@ -125,7 +125,7 @@ class _MasalarScreenState extends State<MasalarScreen> {
       if (!mounted) return;
       if (res['ok'] == 1 && res['adisyon_id'] != null) {
         await Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => DetayScreen(tip: 'adisyon', id: _n(res['adisyon_id']).toInt(), baslikFallback: m['ad'].toString())));
+            builder: (_) => SatisEkrani(adisyonId: _n(res['adisyon_id']).toInt(), masaAd: m['ad'].toString())));
         _yukle();
       } else {
         _uyar(res['hata']?.toString() ?? 'Masa açılamadı');
@@ -320,11 +320,11 @@ class _MasalarScreenState extends State<MasalarScreen> {
       onTap: () async {
         if (birlesik && m['birlesik_hedef_adisyon_id'] != null) {
           await Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => DetayScreen(tip: 'adisyon', id: _n(m['birlesik_hedef_adisyon_id']).toInt(), baslikFallback: m['birlesik_hedef_ad']?.toString() ?? m['ad'].toString())));
+              builder: (_) => SatisEkrani(adisyonId: _n(m['birlesik_hedef_adisyon_id']).toInt(), masaAd: m['birlesik_hedef_ad']?.toString() ?? m['ad'].toString())));
           _yukle();
         } else if (acik) {
           await Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => DetayScreen(tip: 'adisyon', id: _n(m['adisyon_id']).toInt(), baslikFallback: m['ad'].toString())));
+              builder: (_) => SatisEkrani(adisyonId: _n(m['adisyon_id']).toInt(), masaAd: m['ad'].toString())));
           _yukle();
         } else {
           await _masaAc(m);
@@ -546,8 +546,8 @@ class _MasalarScreenState extends State<MasalarScreen> {
         // Yeni birlesik masa acildiysa hemen siparise gec
         if (res['yeni_acildi'] == true && res['adisyon_id'] != null) {
           await Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => DetayScreen(tip: 'adisyon', id: _n(res['adisyon_id']).toInt(),
-                  baslikFallback: '${source['ad']} + ${target['ad']}')));
+              builder: (_) => SatisEkrani(adisyonId: _n(res['adisyon_id']).toInt(),
+                  masaAd: '${source['ad']} + ${target['ad']}')));
         }
         _yukle();
       }
