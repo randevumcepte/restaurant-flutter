@@ -30,6 +30,7 @@ class _SatisEkraniState extends State<SatisEkrani> {
   final Set<int> _secili = {}; // kalem-bazlı böl: seçili kalem id'leri
   double _toplamHepsi = 0;
   double _kayitliToplam = 0; // ödenmemiş (kalan) toplam
+  bool _kalemUcuVar = false; // /api/patron/adisyon-kalemleri deploy oldu mu (kalem seçim aktif)
   int? _kat;
   String _ara = '';
   bool loading = true;
@@ -79,7 +80,8 @@ class _SatisEkraniState extends State<SatisEkrani> {
     try {
       final menu = await Api.menu(auth.token!);
       final fis = await Api.fis(auth.token!, widget.adisyonId);
-      final kl = await Api.adisyonKalemleri(auth.token!, widget.adisyonId);
+      Map<String, dynamic>? kl;
+      try { kl = await Api.adisyonKalemleri(auth.token!, widget.adisyonId); } catch (_) {}
       if (!mounted) return;
       kategoriler = (menu['kategoriler'] as List?) ?? [];
       urunler = (menu['urunler'] as List?) ?? [];
@@ -89,10 +91,18 @@ class _SatisEkraniState extends State<SatisEkrani> {
       }
       _kat ??= kategoriler.isNotEmpty ? _n((kategoriler.first as Map)['id']).toInt() : null;
       if (fis['ok'] == 1) _fis = fis;
-      if (kl['ok'] == 1) {
+      if (kl != null && kl['ok'] == 1) {
+        // Yeni uç deploy oldu → kalem-bazlı seçim aktif
+        _kalemUcuVar = true;
         _kalemler = (kl['kalemler'] as List?) ?? [];
         _toplamHepsi = _n(kl['toplam']).toDouble();
         _kayitliToplam = _n(kl['kalan']).toDouble();
+      } else if (fis['ok'] == 1) {
+        // Eski sunucu (uç yok): fiş kalemleriyle GÖSTER (seçim/böl deploy olunca açılır)
+        _kalemUcuVar = false;
+        _kalemler = (fis['kalemler'] as List?) ?? [];
+        _toplamHepsi = _n(fis['toplam']).toDouble();
+        _kayitliToplam = _n(fis['toplam']).toDouble();
       }
       _secili.removeWhere((id) => !_kalemler.any((k) => _n((k as Map)['id']).toInt() == id && k['odeme_durum'] != 'odendi'));
       setState(() => loading = false);
@@ -706,8 +716,9 @@ class _SatisEkraniState extends State<SatisEkrani> {
     final adet = _n(k['adet']).toInt();
     final odendi = k['odeme_durum'] == 'odendi';
     final secili = _secili.contains(id);
+    final secilebilir = _kalemUcuVar && !odendi;
     return GestureDetector(
-      onTap: odendi ? null : () => setState(() { secili ? _secili.remove(id) : _secili.add(id); }),
+      onTap: secilebilir ? () => setState(() { secili ? _secili.remove(id) : _secili.add(id); }) : null,
       child: Opacity(
         opacity: odendi ? 0.55 : 1,
         child: Container(
@@ -718,15 +729,15 @@ class _SatisEkraniState extends State<SatisEkrani> {
             border: Border.all(color: secili ? t.mor1 : Colors.transparent, width: 1.4),
           ),
           child: Row(children: [
-            // Seçim kutusu / ödendi işareti
-            odendi
-                ? const Icon(Icons.check_circle, color: _yesil, size: 22)
-                : Container(
-                    width: 22, height: 22, alignment: Alignment.center,
-                    decoration: BoxDecoration(color: secili ? t.mor1 : Colors.transparent, borderRadius: BorderRadius.circular(7), border: Border.all(color: secili ? t.mor1 : t.line, width: 1.6)),
-                    child: secili ? const Icon(Icons.check, color: Colors.white, size: 15) : null,
-                  ),
-            const SizedBox(width: 10),
+            // Seçim kutusu / ödendi işareti (yalnızca kalem ucu deploy ise seçilebilir)
+            if (odendi)
+              const Padding(padding: EdgeInsets.only(right: 10), child: Icon(Icons.check_circle, color: _yesil, size: 22))
+            else if (_kalemUcuVar)
+              Padding(padding: const EdgeInsets.only(right: 10), child: Container(
+                width: 22, height: 22, alignment: Alignment.center,
+                decoration: BoxDecoration(color: secili ? t.mor1 : Colors.transparent, borderRadius: BorderRadius.circular(7), border: Border.all(color: secili ? t.mor1 : t.line, width: 1.6)),
+                child: secili ? const Icon(Icons.check, color: Colors.white, size: 15) : null,
+              )),
             Container(
               width: 26, height: 26, alignment: Alignment.center,
               decoration: BoxDecoration(color: t.mor1.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(8)),
