@@ -216,46 +216,49 @@ class _SatisEkraniState extends State<SatisEkrani> {
         final t = ctx.read<TemaProvider>();
         return Dialog(
           backgroundColor: t.card,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 40),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+          insetPadding: const EdgeInsets.all(24),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           clipBehavior: Clip.antiAlias,
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            // Gradient başlık
-            Container(
-              width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 20),
-              decoration: BoxDecoration(gradient: LinearGradient(colors: grad, begin: Alignment.topLeft, end: Alignment.bottomRight)),
-              child: Column(children: [
-                Container(width: 58, height: 58, decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.22), shape: BoxShape.circle), child: Icon(ikon, color: Colors.white, size: 30)),
-                const SizedBox(height: 10),
-                Text('$ad${marka != null ? ' · $marka' : ''} ile Öde', style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
-              ]),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(22, 20, 22, 20),
-              child: Column(children: [
-                Text(_secili.isEmpty ? 'Tahsil edilecek tutar' : 'Seçili ${_secili.length} kalem için', style: TextStyle(color: t.sub, fontSize: 13)),
-                const SizedBox(height: 6),
-                Text(_tl(_odenecek), style: TextStyle(color: renk, fontSize: 34, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
-                Text(_secili.isEmpty ? 'Ödeme sonrası masa kapanır' : 'Ödenmeyen kalemler açık kalır', style: TextStyle(color: t.sub, fontSize: 11.5)),
-                const SizedBox(height: 20),
-                Row(children: [
-                  Expanded(child: OutlinedButton(
-                    onPressed: () => Navigator.pop(ctx, false),
-                    style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14), side: BorderSide(color: t.line), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13))),
-                    child: Text('Vazgeç', style: TextStyle(color: t.sub2, fontWeight: FontWeight.w600)),
-                  )),
-                  const SizedBox(width: 10),
-                  Expanded(flex: 2, child: FilledButton.icon(
-                    onPressed: () => Navigator.pop(ctx, true),
-                    icon: const Icon(Icons.check_circle_outline, size: 19),
-                    label: const Text('Onayla', style: TextStyle(fontWeight: FontWeight.bold)),
-                    style: FilledButton.styleFrom(backgroundColor: renk, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13))),
-                  )),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 340),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              // Gradient başlık (kompakt)
+              Container(
+                width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 16),
+                decoration: BoxDecoration(gradient: LinearGradient(colors: grad, begin: Alignment.topLeft, end: Alignment.bottomRight)),
+                child: Column(children: [
+                  Container(width: 46, height: 46, decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.22), shape: BoxShape.circle), child: Icon(ikon, color: Colors.white, size: 24)),
+                  const SizedBox(height: 8),
+                  Text('$ad${marka != null ? ' · $marka' : ''} ile Öde', style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
                 ]),
-              ]),
-            ),
-          ]),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+                child: Column(children: [
+                  Text(_secili.isEmpty ? 'Tahsil edilecek tutar' : 'Seçili ${_secili.length} kalem için', style: TextStyle(color: t.sub, fontSize: 12)),
+                  const SizedBox(height: 4),
+                  Text(_tl(_odenecek), style: TextStyle(color: renk, fontSize: 30, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 3),
+                  Text(_secili.isEmpty ? 'Ödeme sonrası masa kapanır' : 'Ödenmeyen kalemler açık kalır', style: TextStyle(color: t.sub, fontSize: 11)),
+                  const SizedBox(height: 16),
+                  Row(children: [
+                    Expanded(child: OutlinedButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12), side: BorderSide(color: t.line), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                      child: Text('Vazgeç', style: TextStyle(color: t.sub2, fontWeight: FontWeight.w600)),
+                    )),
+                    const SizedBox(width: 9),
+                    Expanded(flex: 3, child: FilledButton.icon(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      icon: const Icon(Icons.check_circle_outline, size: 18),
+                      label: const Text('Onayla', style: TextStyle(fontWeight: FontWeight.bold)),
+                      style: FilledButton.styleFrom(backgroundColor: renk, padding: const EdgeInsets.symmetric(vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                    )),
+                  ]),
+                ]),
+              ),
+            ]),
+          ),
         );
       },
     );
