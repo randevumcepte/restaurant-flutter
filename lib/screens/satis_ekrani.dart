@@ -176,13 +176,18 @@ class _SatisEkraniState extends State<SatisEkrani> {
       if (!ok) return;
     }
     if (tip == 'acik_hesap') { await _acikHesap(); return; }
-    final onay = await _odeOnay(tip);
+    String? marka;
+    if (tip == 'yemek_karti') {
+      marka = await _yemekKartiSec();
+      if (marka == null || !mounted) return;
+    }
+    final onay = await _odeOnay(tip, marka: marka);
     if (onay != true || !mounted) return;
     setState(() => _mesgul = true);
     final auth = context.read<AuthProvider>();
     try {
       final res = await Api.adisyonIslem(auth.token!, islem: 'ode', adisyonId: widget.adisyonId, odemeTip: tip,
-          tutar: secimVar ? 0 : _kayitliToplam, kalemIdler: secimVar ? _secili.join(',') : null);
+          tutar: secimVar ? 0 : _kayitliToplam, kalemIdler: secimVar ? _secili.join(',') : null, marka: marka);
       if (!mounted) return;
       if (res['ok'] == 1) {
         setState(() { _mesgul = false; _secili.clear(); });
@@ -196,24 +201,97 @@ class _SatisEkraniState extends State<SatisEkrani> {
     }
   }
 
-  Future<bool?> _odeOnay(String tip) {
+  Future<bool?> _odeOnay(String tip, {String? marka}) {
     final ad = {'nakit': 'Nakit', 'kredi': 'Kredi Kartı', 'yemek_karti': 'Yemek Kartı'}[tip] ?? tip;
-    final renk = {'nakit': _yesil, 'kredi': _mavi, 'yemek_karti': _turuncu}[tip] ?? _mor;
+    final ikon = {'nakit': Icons.payments_outlined, 'kredi': Icons.credit_card, 'yemek_karti': Icons.restaurant}[tip] ?? Icons.point_of_sale;
+    final grad = {
+      'nakit': [const Color(0xFF10B981), const Color(0xFF059669)],
+      'kredi': [const Color(0xFF3B82F6), const Color(0xFF2563EB)],
+      'yemek_karti': [const Color(0xFFF59E0B), const Color(0xFFD97706)],
+    }[tip] ?? [_mor, _mavi];
+    final renk = grad[0];
     return showDialog<bool>(
       context: context,
       builder: (ctx) {
         final t = ctx.read<TemaProvider>();
-        return AlertDialog(
+        return Dialog(
           backgroundColor: t.card,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text('$ad ile Öde', style: TextStyle(color: t.ink, fontSize: 16)),
-          content: Text(_secili.isEmpty
-              ? '${_tl(_odenecek)} tahsil edilip masa kapatılsın mı?'
-              : 'Seçili ${_secili.length} kalem için ${_tl(_odenecek)} tahsil edilsin mi?', style: TextStyle(color: t.sub, fontSize: 14)),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Vazgeç', style: TextStyle(color: t.sub))),
-            FilledButton(onPressed: () => Navigator.pop(ctx, true), style: FilledButton.styleFrom(backgroundColor: renk), child: const Text('Onayla')),
-          ],
+          insetPadding: const EdgeInsets.symmetric(horizontal: 40),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+          clipBehavior: Clip.antiAlias,
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            // Gradient başlık
+            Container(
+              width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 20),
+              decoration: BoxDecoration(gradient: LinearGradient(colors: grad, begin: Alignment.topLeft, end: Alignment.bottomRight)),
+              child: Column(children: [
+                Container(width: 58, height: 58, decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.22), shape: BoxShape.circle), child: Icon(ikon, color: Colors.white, size: 30)),
+                const SizedBox(height: 10),
+                Text('$ad${marka != null ? ' · $marka' : ''} ile Öde', style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
+              ]),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(22, 20, 22, 20),
+              child: Column(children: [
+                Text(_secili.isEmpty ? 'Tahsil edilecek tutar' : 'Seçili ${_secili.length} kalem için', style: TextStyle(color: t.sub, fontSize: 13)),
+                const SizedBox(height: 6),
+                Text(_tl(_odenecek), style: TextStyle(color: renk, fontSize: 34, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                Text(_secili.isEmpty ? 'Ödeme sonrası masa kapanır' : 'Ödenmeyen kalemler açık kalır', style: TextStyle(color: t.sub, fontSize: 11.5)),
+                const SizedBox(height: 20),
+                Row(children: [
+                  Expanded(child: OutlinedButton(
+                    onPressed: () => Navigator.pop(ctx, false),
+                    style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14), side: BorderSide(color: t.line), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13))),
+                    child: Text('Vazgeç', style: TextStyle(color: t.sub2, fontWeight: FontWeight.w600)),
+                  )),
+                  const SizedBox(width: 10),
+                  Expanded(flex: 2, child: FilledButton.icon(
+                    onPressed: () => Navigator.pop(ctx, true),
+                    icon: const Icon(Icons.check_circle_outline, size: 19),
+                    label: const Text('Onayla', style: TextStyle(fontWeight: FontWeight.bold)),
+                    style: FilledButton.styleFrom(backgroundColor: renk, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13))),
+                  )),
+                ]),
+              ]),
+            ),
+          ]),
+        );
+      },
+    );
+  }
+
+  // Yemek kartı markası seç (Multinet/Sodexo/Ticket…) — rapor için kayda geçer.
+  Future<String?> _yemekKartiSec() {
+    const markalar = ['Multinet', 'Sodexo/Pluxee', 'Ticket (Edenred)', 'Setcard', 'Metropol', 'Paye', 'Diğer'];
+    return showModalBottomSheet<String>(
+      context: context, backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final t = ctx.read<TemaProvider>();
+        return Container(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 26),
+          decoration: BoxDecoration(color: t.card, borderRadius: const BorderRadius.vertical(top: Radius.circular(22))),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Center(child: Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 14), decoration: BoxDecoration(color: t.line, borderRadius: BorderRadius.circular(2)))),
+            Row(children: [
+              const Icon(Icons.restaurant, color: _turuncu, size: 20), const SizedBox(width: 8),
+              Text('Yemek Kartı Markası', style: TextStyle(color: t.ink, fontSize: 16, fontWeight: FontWeight.bold)),
+            ]),
+            const SizedBox(height: 4),
+            Text('Hangi kartla ödeniyor?', style: TextStyle(color: t.sub, fontSize: 12.5)),
+            const SizedBox(height: 14),
+            Wrap(spacing: 10, runSpacing: 10, children: [
+              for (final m in markalar)
+                GestureDetector(
+                  onTap: () => Navigator.pop(ctx, m),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(color: _turuncu.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(12), border: Border.all(color: _turuncu.withValues(alpha: 0.35))),
+                    child: Text(m, style: const TextStyle(color: Color(0xFFD97706), fontSize: 14, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+            ]),
+          ]),
         );
       },
     );
@@ -375,11 +453,14 @@ class _SatisEkraniState extends State<SatisEkrani> {
             final istenen = giris.isEmpty ? kalan : girilen;
             if (istenen <= 0) return;
             final uygulanan = istenen > kalan ? kalan : istenen;
+            String? marka;
+            if (tip == 'yemek_karti') { marka = await _yemekKartiSec(); if (marka == null) return; }
+            if (!ctx.mounted || !mounted) return;
             Navigator.pop(ctx);
             setState(() => _mesgul = true);
             final auth = context.read<AuthProvider>();
             try {
-              final res = await Api.adisyonIslem(auth.token!, islem: 'ode', adisyonId: widget.adisyonId, odemeTip: tip, tutar: uygulanan);
+              final res = await Api.adisyonIslem(auth.token!, islem: 'ode', adisyonId: widget.adisyonId, odemeTip: tip, tutar: uygulanan, marka: marka);
               if (!mounted) return;
               setState(() => _mesgul = false);
               if (res['ok'] == 1) {
