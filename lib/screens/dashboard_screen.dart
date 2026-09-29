@@ -875,6 +875,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  // Okunur sure: 52 dk / 3 sa 10 dk / 2 gün
+  String _sure(int dk) {
+    if (dk >= 1440) return '${dk ~/ 1440} gün';
+    if (dk >= 60) {
+      final s = dk ~/ 60, k = dk % 60;
+      return k > 0 ? '$s sa $k dk' : '$s sa';
+    }
+    return '$dk dk';
+  }
+
   Widget _bekleyenSatir(String ad, int dk) {
     final renk = dk >= 45 ? _kirmizi : (dk >= 25 ? const Color(0xFFF59E0B) : _yesil);
     return Padding(
@@ -883,7 +893,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Container(width: 8, height: 8, decoration: BoxDecoration(color: renk, shape: BoxShape.circle)),
         const SizedBox(width: 10),
         Expanded(child: Text(ad, style: TextStyle(color: _sub2, fontSize: 12.5, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis)),
-        Text('$dk dk', style: TextStyle(color: renk, fontSize: 12, fontWeight: FontWeight.bold)),
+        Text(_sure(dk), style: TextStyle(color: renk, fontSize: 12, fontWeight: FontWeight.bold)),
       ]),
     );
   }
