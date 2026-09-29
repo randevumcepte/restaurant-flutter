@@ -26,6 +26,9 @@ import 'rezervasyon_screen.dart';
 import 'personel_screen.dart';
 import 'gider_screen.dart';
 import 'raporlar_screen.dart';
+import 'hareketler_screen.dart';
+import 'bagli_cihazlar_screen.dart';
+import 'yazici_ayarlari_screen.dart';
 import 'sebep_yonetimi_screen.dart';
 import 'masa_atama_screen.dart';
 import 'garson_performans_screen.dart';
@@ -399,6 +402,9 @@ class _YanMenuState extends State<_YanMenu> {
                       if (patron) _link(t, Icons.grid_on_outlined, 'Salon Şeması', () => git(const SalonSemaScreen()), renk: const Color(0xFF0EA5E9)),
                       if (patron) _link(t, Icons.receipt_long_outlined, 'Giderler', () => git(const GiderScreen())),
                       if (patron) _link(t, Icons.bar_chart_outlined, 'Raporlar', () => git(const RaporlarScreen())),
+                      if (patron) _link(t, Icons.history, 'Hareketler (Log)', () => git(const HareketlerScreen()), renk: const Color(0xFF7C3AED)),
+                      if (patron) _link(t, Icons.devices_other_outlined, 'Bağlı Cihazlar', () => git(const BagliCihazlarScreen()), renk: const Color(0xFF0EA5E9)),
+                      if (patron) _link(t, Icons.print_outlined, 'Yazıcı Ayarları', () => git(const YaziciAyarlariScreen()), renk: const Color(0xFF14B8A6)),
                       if (patron) _link(t, Icons.rule_folder_outlined, 'İptal / İkram Sebepleri', () => git(const SebepYonetimiScreen())),
                     ]),
                   ),
