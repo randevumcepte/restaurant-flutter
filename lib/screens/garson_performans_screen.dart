@@ -158,9 +158,12 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
                         if (garsonlar.isEmpty)
                           Padding(padding: const EdgeInsets.all(24), child: Center(child: Text('Bu dönemde veri yok.', style: TextStyle(color: t.sub))))
                         else if (genisMi(context))
-                          Wrap(spacing: 14, runSpacing: 14, children: [
-                            for (final g in garsonlar) SizedBox(width: 620, child: _karneKart(t, g)),
-                          ])
+                          LayoutBuilder(builder: (ctx, c) {
+                            final w = (c.maxWidth - 14) / 2; // tam ikili (sag bosluk kalmasin)
+                            return Wrap(spacing: 14, runSpacing: 14, children: [
+                              for (final g in garsonlar) SizedBox(width: w, child: _karneKart(t, g)),
+                            ]);
+                          })
                         else
                           for (final g in garsonlar) _karneKart(t, g),
                       ]),
