@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
 import '../providers/tema_provider.dart';
 import '../services/api.dart';
+import '../responsive.dart';
 import 'menu_hamburger.dart';
 
 /// Hareketler / Aktivite Log — TÜM hareketler tek zaman akışında (satış, ödeme, iskonto/ikram/void,
@@ -151,26 +152,44 @@ class _HareketlerScreenState extends State<HareketlerScreen> {
               ? Center(child: CircularProgressIndicator(color: t.mor1))
               : hareketler.isEmpty
                   ? Center(child: Text('Bu filtrede hareket yok.', style: TextStyle(color: t.sub, fontSize: 14)))
-                  : RefreshIndicator(
-                      onRefresh: _yukle, color: t.mor1, backgroundColor: t.card,
-                      child: ListView.builder(
-                        controller: _kaydir,
-                        padding: const EdgeInsets.fromLTRB(12, 6, 12, 24),
-                        itemCount: hareketler.length + (dahaYukleniyor ? 1 : 0),
-                        itemBuilder: (ctx, i) {
-                          if (i >= hareketler.length) {
-                            return const Padding(padding: EdgeInsets.all(16), child: Center(child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2))));
-                          }
-                          final h = hareketler[i] as Map;
-                          final oncekiGun = i > 0 ? (hareketler[i - 1] as Map)['gun_key'] : null;
-                          final gunBasi = i == 0 || h['gun_key'] != oncekiGun;
-                          return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            if (gunBasi) _gunBaslik(t, h['tarih']?.toString() ?? ''),
-                            _satir(t, h, i),
-                          ]);
-                        },
-                      ),
-                    ),
+                  : (genisMi(context)
+                      // ---- MASAÜSTÜ: tam tablo (tüm sütunlar açık) ----
+                      ? Column(children: [
+                          _tabloBaslik(t),
+                          Expanded(child: RefreshIndicator(
+                            onRefresh: _yukle, color: t.mor1, backgroundColor: t.card,
+                            child: ListView.builder(
+                              controller: _kaydir,
+                              padding: const EdgeInsets.fromLTRB(12, 2, 12, 24),
+                              itemCount: hareketler.length + (dahaYukleniyor ? 1 : 0),
+                              itemBuilder: (ctx, i) {
+                                if (i >= hareketler.length) return const Padding(padding: EdgeInsets.all(16), child: Center(child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2))));
+                                return _tabloSatir(t, hareketler[i] as Map);
+                              },
+                            ),
+                          )),
+                        ])
+                      // ---- TELEFON: kart + tıkla-detay ----
+                      : RefreshIndicator(
+                          onRefresh: _yukle, color: t.mor1, backgroundColor: t.card,
+                          child: ListView.builder(
+                            controller: _kaydir,
+                            padding: const EdgeInsets.fromLTRB(12, 6, 12, 24),
+                            itemCount: hareketler.length + (dahaYukleniyor ? 1 : 0),
+                            itemBuilder: (ctx, i) {
+                              if (i >= hareketler.length) {
+                                return const Padding(padding: EdgeInsets.all(16), child: Center(child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2))));
+                              }
+                              final h = hareketler[i] as Map;
+                              final oncekiGun = i > 0 ? (hareketler[i - 1] as Map)['gun_key'] : null;
+                              final gunBasi = i == 0 || h['gun_key'] != oncekiGun;
+                              return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                if (gunBasi) _gunBaslik(t, h['tarih']?.toString() ?? ''),
+                                _satir(t, h, i),
+                              ]);
+                            },
+                          ),
+                        )),
         ),
       ]),
     );
@@ -278,6 +297,99 @@ class _HareketlerScreenState extends State<HareketlerScreen> {
         padding: const EdgeInsets.fromLTRB(4, 14, 4, 6),
         child: Text(tarih, style: TextStyle(color: t.sub, fontSize: 12, fontWeight: FontWeight.bold)),
       );
+
+  Color _rolRenk(String? rol) {
+    switch (rol) {
+      case 'Sahip': return const Color(0xFF7C3AED);
+      case 'Müdür': return const Color(0xFF2563EB);
+      case 'Garson': return const Color(0xFF0D9488);
+      case 'Kasa': return const Color(0xFFEA580C);
+      default: return const Color(0xFF64748B);
+    }
+  }
+
+  // ---- MASAÜSTÜ TABLO ----
+  Widget _tabloBaslik(TemaProvider t) {
+    Widget b(String s, int f, {TextAlign a = TextAlign.left}) => Expanded(flex: f, child: Text(s, textAlign: a, style: TextStyle(color: t.sub, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.4)));
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+      padding: const EdgeInsets.fromLTRB(17, 11, 12, 11),
+      decoration: BoxDecoration(color: t.card2, borderRadius: BorderRadius.circular(10), border: Border.all(color: t.line)),
+      child: Row(children: [
+        b('ZAMAN', 20), b('KULLANICI', 22), b('İŞLEM', 30), b('HEDEF', 16), b('KAYNAK / IP', 24), b('AÇIKLAMA', 28), b('TUTAR', 14, a: TextAlign.right),
+      ]),
+    );
+  }
+
+  Widget _tabloSatir(TemaProvider t, Map h) {
+    final kat = _kategori(h);
+    final bilgi = _katBilgi(kat);
+    final renk = bilgi[0] as Color;
+    final etiket = bilgi[2] as String;
+    final tutar = h['tutar'] == null ? null : _n(h['tutar']).toDouble();
+    final yon = h['yon']?.toString();
+    final personel = h['personel']?.toString();
+    final rol = h['rol']?.toString();
+    final kaynak = h['kaynak']?.toString();
+    final cihaz = h['cihaz']?.toString();
+    final ip = h['ip']?.toString();
+    final rr = _rolRenk(rol);
+    final bas = (personel != null && personel.trim().isNotEmpty) ? personel.trim()[0].toUpperCase() : 'S';
+    final saat = (h['saat']?.toString().isNotEmpty ?? false) ? h['saat'].toString() : (h['zaman_tam']?.toString().split(' ').last ?? '');
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      decoration: BoxDecoration(color: t.card, borderRadius: BorderRadius.circular(11), border: Border.all(color: t.line)),
+      clipBehavior: Clip.antiAlias,
+      child: IntrinsicHeight(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Container(width: 5, color: renk),
+        Expanded(child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+            // ZAMAN
+            Expanded(flex: 20, child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+              Text(h['tarih']?.toString() ?? '', style: TextStyle(color: t.ink, fontSize: 12.5, fontWeight: FontWeight.w700)),
+              Text(saat, style: TextStyle(color: t.sub, fontSize: 11.5)),
+            ])),
+            // KULLANICI
+            Expanded(flex: 22, child: Row(children: [
+              Container(width: 30, height: 30, alignment: Alignment.center, decoration: BoxDecoration(color: rr, shape: BoxShape.circle), child: Text(bas, style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.bold))),
+              const SizedBox(width: 8),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                Text(personel ?? 'Sistem', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.ink, fontSize: 12.5, fontWeight: FontWeight.w600)),
+                if (rol != null) Text(rol, style: TextStyle(color: rr, fontSize: 10.5, fontWeight: FontWeight.w600)),
+              ])),
+            ])),
+            // İŞLEM
+            Expanded(flex: 30, child: Row(children: [
+              Container(width: 34, height: 34, alignment: Alignment.center, decoration: BoxDecoration(color: renk.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(10)), child: Icon(bilgi[1] as IconData, color: renk, size: 18)),
+              const SizedBox(width: 9),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                Text(h['baslik']?.toString() ?? '—', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.ink, fontSize: 12.5, fontWeight: FontWeight.w700)),
+                Container(margin: const EdgeInsets.only(top: 2), padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1), decoration: BoxDecoration(color: renk.withValues(alpha: 0.13), borderRadius: BorderRadius.circular(20)), child: Text(etiket, style: TextStyle(color: renk, fontSize: 10, fontWeight: FontWeight.bold))),
+              ])),
+            ])),
+            // HEDEF
+            Expanded(flex: 16, child: Text(h['hedef']?.toString() ?? '—', maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.sub2, fontSize: 11.5, fontWeight: FontWeight.w500))),
+            // KAYNAK / IP
+            Expanded(flex: 24, child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+              if (kaynak != null) Row(children: [
+                Icon(kaynak == 'Kasa' ? Icons.point_of_sale : (kaynak == 'Mobil' ? Icons.smartphone : Icons.devices_other), size: 12, color: t.mavi), const SizedBox(width: 3),
+                Flexible(child: Text('$kaynak${cihaz != null ? ' · $cihaz' : ''}', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.mavi, fontSize: 11, fontWeight: FontWeight.w600))),
+              ]),
+              if (ip != null) Text(ip, style: TextStyle(color: t.sub, fontSize: 10.5)),
+              if (kaynak == null && ip == null) Text('—', style: TextStyle(color: t.sub, fontSize: 11.5)),
+            ])),
+            // AÇIKLAMA
+            Expanded(flex: 28, child: Text(h['aciklama']?.toString() ?? '—', maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.sub, fontSize: 11.5, height: 1.25))),
+            // TUTAR
+            Expanded(flex: 14, child: Align(alignment: Alignment.centerRight, child: (tutar != null && tutar != 0)
+                ? Text('${yon == 'cikis' ? '−' : (yon == 'giris' ? '+' : '')}${_tl(tutar)}', style: TextStyle(color: yon == 'cikis' ? const Color(0xFFF43F5E) : (yon == 'giris' ? t.yesil : t.ink), fontSize: 13, fontWeight: FontWeight.bold))
+                : Text('—', style: TextStyle(color: t.sub, fontSize: 12)))),
+          ]),
+        )),
+      ])),
+    );
+  }
 
   Widget _satir(TemaProvider t, Map h, int idx) {
     final kat = _kategori(h);
