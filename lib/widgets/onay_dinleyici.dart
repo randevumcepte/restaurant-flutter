@@ -53,10 +53,19 @@ class _OnayDinleyiciState extends State<OnayDinleyici> {
     _islenen.add(id);
     HapticFeedback.vibrate();
     final tipAd = {'iskonto': 'İskonto', 'ikram': 'İkram', 'iptal': 'Adisyon İptali', 'odeme_geri_al': 'Ödeme Geri Al'}[o['tip']] ?? 'Onay';
-    final onay = await showDialog<bool>(
+    final auth0 = context.read<AuthProvider>();
+    Timer? kapatma;
+    final cevap = await showDialog<String>(
       useRootNavigator: true, context: context, barrierDismissible: false,
       builder: (ctx) {
         final t = ctx.read<TemaProvider>();
+        // İstek başka cihazda/yönetici tarafından yanıtlandıysa bu popup'ı otomatik kapat.
+        kapatma ??= Timer.periodic(const Duration(seconds: 2), (_) async {
+          try {
+            final d = await Api.onayDurum(auth0.token!, id);
+            if (d['durum'] != null && d['durum'] != 'bekliyor' && ctx.mounted) { kapatma?.cancel(); Navigator.pop(ctx, 'otomatik'); }
+          } catch (_) {}
+        });
         return Dialog(
           backgroundColor: t.card, insetPadding: const EdgeInsets.all(24),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), clipBehavior: Clip.antiAlias,
@@ -87,13 +96,13 @@ class _OnayDinleyiciState extends State<OnayDinleyici> {
                   const SizedBox(height: 18),
                   Row(children: [
                     Expanded(child: OutlinedButton(
-                      onPressed: () => Navigator.pop(ctx, false),
+                      onPressed: () => Navigator.pop(ctx, 'red'),
                       style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 13), side: const BorderSide(color: _kirmizi), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                       child: const Text('Reddet', style: TextStyle(color: _kirmizi, fontWeight: FontWeight.bold)),
                     )),
                     const SizedBox(width: 10),
                     Expanded(flex: 2, child: FilledButton.icon(
-                      onPressed: () => Navigator.pop(ctx, true),
+                      onPressed: () => Navigator.pop(ctx, 'onay'),
                       icon: const Icon(Icons.check_circle_outline, size: 18),
                       label: const Text('Onayla', style: TextStyle(fontWeight: FontWeight.bold)),
                       style: FilledButton.styleFrom(backgroundColor: _yesil, padding: const EdgeInsets.symmetric(vertical: 13), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
@@ -106,10 +115,11 @@ class _OnayDinleyiciState extends State<OnayDinleyici> {
         );
       },
     );
-    if (onay != null && mounted) {
+    kapatma?.cancel();
+    if ((cevap == 'onay' || cevap == 'red') && mounted) {
       try {
         final auth = context.read<AuthProvider>();
-        final res = await Api.onayCevap(auth.token!, id, onay ? 'onay' : 'red');
+        final res = await Api.onayCevap(auth.token!, id, cevap == 'onay' ? 'onay' : 'red');
         if (mounted) {
           final durum = res['durum']?.toString();
           final msg = durum == 'onaylandi' ? (res['mesaj']?.toString() ?? '✓ Onaylandı') : (durum == 'reddedildi' ? 'Reddedildi' : (res['hata']?.toString() ?? 'İşlenemedi'));
