@@ -29,6 +29,7 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
   bool loading = true;
   List<Map<String, dynamic>> garsonlar = [];
   Map<String, dynamic> isi = {};
+  Map<String, dynamic> _isiler = {}; // TUM garsonlarin isisi (anahtar: 'tum' + garson id) -> secim ANINDA
   Map<String, dynamic> sema = {}; // salon_sema veri (parsel/bolge/nokta/masa konum) — ısı zemini
   final Map<String, String> _sekil = {}; // masa id -> kare|yuvarlak
   final Map<String, int> _kapasite = {}; // masa id -> kişi/sandalye sayısı
@@ -64,11 +65,14 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
     final auth = context.read<AuthProvider>();
     setState(() => loading = true);
     try {
-      final res = await Api.garsonPerformans(auth.token!, period: period, garsonId: isiGarson);
+      // garsonId GONDERMIYORUZ -> backend TUM garsonlarin isisini tek seferde doner (isiler); secim client-side aninda
+      final res = await Api.garsonPerformans(auth.token!, period: period);
       if (!mounted) return;
       if (res['ok'] == 1) {
         garsonlar = ((res['garsonlar'] as List?) ?? []).map((e) => Map<String, dynamic>.from(e)).toList();
-        isi = (res['isi'] is Map) ? Map<String, dynamic>.from(res['isi']) : {};
+        _isiler = (res['isiler'] is Map) ? Map<String, dynamic>.from(res['isiler']) : {};
+        if (_isiler.isEmpty && res['isi'] is Map) _isiler = {'tum': res['isi']}; // eski backend yedegi
+        isi = _seciliIsi();
       }
       // Salon şemasını bir kez çek (ısı zemini)
       if (!_semaAlindi) {
@@ -92,6 +96,13 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
   }
 
   String _tl(num v) => '${_f.format(v.round())} TL';
+
+  // Secili garsonun (ya da tum salon) onbellekteki isi haritasi — backend'e gitmeden
+  Map<String, dynamic> _seciliIsi() {
+    final key = isiGarson?.toString() ?? 'tum';
+    final v = _isiler[key] ?? _isiler['tum'];
+    return v is Map ? Map<String, dynamic>.from(v) : {};
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -464,7 +475,7 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: GestureDetector(
-        onTap: () { setState(() => isiGarson = id); _yukle(); },
+        onTap: () => setState(() { isiGarson = id; isi = _seciliIsi(); }), // ANINDA (onbellekten)
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
