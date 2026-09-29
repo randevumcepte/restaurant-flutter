@@ -1501,10 +1501,12 @@ class _DetayScreenState extends State<DetayScreen> {
   // Kompakt responsive stat grid: dar 2, genis 3-4 sutun; kartlar kucuk/renkli (dev/bos kalmasin)
   Widget _statGrid(List<MapEntry> entries) {
     return LayoutBuilder(builder: (ctx, c) {
-      final cols = (c.maxWidth / 240).floor().clamp(2, 4);
+      // Genis ekranda 5'e kadar tek satir; kart sayisi azsa bos slot birakma
+      final maxCols = (c.maxWidth / 200).floor().clamp(2, 5);
+      final cols = entries.isEmpty ? 1 : (entries.length < maxCols ? entries.length : maxCols);
       return GridView.count(
         crossAxisCount: cols, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
-        childAspectRatio: 1.85, mainAxisSpacing: 12, crossAxisSpacing: 12,
+        childAspectRatio: 1.7, mainAxisSpacing: 12, crossAxisSpacing: 12,
         children: entries.map((e) => _statKart(e.key.toString(), e.value.toString())).toList(),
       );
     });
