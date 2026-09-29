@@ -56,6 +56,30 @@ class _HareketlerScreenState extends State<HareketlerScreen> {
   };
   List<dynamic> _katBilgi(String k) => _kat[k] ?? _kat['diger']!;
 
+  // Kategori backend'de 'diger' ise başlık/açıklamadan anlamlı renk/kategori türet.
+  String _kategori(Map h) {
+    final k = (h['kategori'] ?? '').toString();
+    if (k.isNotEmpty && k != 'diger' && _kat.containsKey(k)) return k;
+    final s = '${h['baslik'] ?? ''} ${h['aciklama'] ?? ''}'.toLowerCase();
+    bool c(List<String> ks) => ks.any((x) => s.contains(x));
+    if (c(['iptal', 'geri alın', 'geri alind', 'void', 'iskonto', 'indirim', 'ikram', 'fire'])) return 'kayip';
+    if (c(['ödeme', 'odeme', 'tahsil', 'nakit', 'kredi', 'kart', 'yemek kart'])) return 'odeme';
+    if (c(['masa', 'adisyon', 'sipariş', 'siparis', 'satış', 'satis', 'birleştir', 'taşın', 'tasin', 'böl', 'bol'])) return 'satis';
+    if (c(['stok', 'malzeme', 'sayım', 'sayim', 'alış', 'alis', 'tedarik'])) return 'stok';
+    if (c(['kasa', 'çekmece', 'cekmece', 'vardiya'])) return 'kasa';
+    if (c(['cari', 'açık hesap', 'acik hesap', 'borç', 'borc'])) return 'cari';
+    if (c(['personel', 'maaş', 'maas', 'yetki', 'avans'])) return 'personel';
+    if (c(['mesai', 'puantaj'])) return 'mesai';
+    if (c(['gider', 'masraf'])) return 'gider';
+    if (c(['menü', 'menu', 'ürün', 'urun', 'kategori'])) return 'menu';
+    if (c(['reçete', 'recete', 'yarı mamül', 'yari mamul'])) return 'recete';
+    if (c(['fiş', 'fis', 'fatura'])) return 'fis';
+    if (c(['giriş', 'giris', 'login', 'çıkış', 'cikis', 'logout'])) return 'giris';
+    if (c(['ayar', 'tema', 'şema', 'sema'])) return 'ayar';
+    if (c(['çağrı', 'cagri', 'garson'])) return 'cagri';
+    return k.isNotEmpty ? k : 'diger';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -241,7 +265,7 @@ class _HareketlerScreenState extends State<HareketlerScreen> {
       margin: const EdgeInsets.fromLTRB(12, 6, 12, 2), padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(color: t.card, borderRadius: BorderRadius.circular(12), border: Border.all(color: t.line)),
       child: Row(children: [
-        Text('${_n(ozet['toplam']).toInt()} hareket', style: TextStyle(color: t.ink, fontSize: 13, fontWeight: FontWeight.bold)),
+        Text('${(_n(ozet['toplam']).toInt() > 0 ? _n(ozet['toplam']).toInt() : hareketler.length)} hareket', style: TextStyle(color: t.ink, fontSize: 13, fontWeight: FontWeight.bold)),
         const Spacer(),
         if (giris > 0) ...[Icon(Icons.south_west, size: 14, color: t.yesil), const SizedBox(width: 2), Text(_tl(giris), style: TextStyle(color: t.yesil, fontSize: 12.5, fontWeight: FontWeight.w600)), const SizedBox(width: 12)],
         if (cikis > 0) ...[const Icon(Icons.north_east, size: 14, color: Color(0xFFF43F5E)), const SizedBox(width: 2), Text(_tl(cikis), style: const TextStyle(color: Color(0xFFF43F5E), fontSize: 12.5, fontWeight: FontWeight.w600))],
@@ -255,35 +279,68 @@ class _HareketlerScreenState extends State<HareketlerScreen> {
       );
 
   Widget _satir(TemaProvider t, Map h) {
-    final bilgi = _katBilgi(h['kategori'].toString());
+    final kat = _kategori(h);
+    final bilgi = _katBilgi(kat);
     final renk = bilgi[0] as Color;
+    final etiket = bilgi[2] as String;
     final tutar = h['tutar'] == null ? null : _n(h['tutar']).toDouble();
     final yon = h['yon']?.toString();
     final aciklama = h['aciklama']?.toString() ?? '';
     return Container(
-      margin: const EdgeInsets.only(bottom: 7), padding: const EdgeInsets.all(11),
-      decoration: BoxDecoration(color: t.card, borderRadius: BorderRadius.circular(12), border: Border.all(color: t.line)),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Container(width: 38, height: 38, alignment: Alignment.center, decoration: BoxDecoration(color: renk.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(11)), child: Icon(bilgi[1] as IconData, color: renk, size: 20)),
-        const SizedBox(width: 11),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(h['baslik']?.toString() ?? '—', style: TextStyle(color: t.ink, fontSize: 13.5, fontWeight: FontWeight.w600)),
-          if (aciklama.isNotEmpty) ...[
-            const SizedBox(height: 2),
-            Text(aciklama, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.sub, fontSize: 11.5, height: 1.25)),
-          ],
-          const SizedBox(height: 3),
-          Row(children: [
-            if (h['personel'] != null) ...[Icon(Icons.person, size: 11, color: t.sub2), const SizedBox(width: 2), Flexible(child: Text(h['personel'].toString(), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.sub2, fontSize: 11))), const SizedBox(width: 8)],
-            Text(h['saat']?.toString() ?? '', style: TextStyle(color: t.sub, fontSize: 11)),
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: t.card, borderRadius: BorderRadius.circular(14), border: Border.all(color: t.line),
+        boxShadow: [BoxShadow(color: renk.withValues(alpha: 0.06), blurRadius: 8, offset: const Offset(0, 2))],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: IntrinsicHeight(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        // Sol renkli şerit (kategori rengi)
+        Container(width: 5, color: renk),
+        Expanded(child: Padding(
+          padding: const EdgeInsets.all(11),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            // Büyük renkli ikon dairesi
+            Container(width: 44, height: 44, alignment: Alignment.center,
+                decoration: BoxDecoration(color: renk.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(12)),
+                child: Icon(bilgi[1] as IconData, color: renk, size: 22)),
+            const SizedBox(width: 12),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Expanded(child: Text(h['baslik']?.toString() ?? '—', maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: t.ink, fontSize: 14, fontWeight: FontWeight.w700))),
+                const SizedBox(width: 8),
+                // Kategori rozeti
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(color: renk.withValues(alpha: 0.13), borderRadius: BorderRadius.circular(20)),
+                  child: Text(etiket, style: TextStyle(color: renk, fontSize: 10.5, fontWeight: FontWeight.bold)),
+                ),
+              ]),
+              if (aciklama.isNotEmpty) ...[
+                const SizedBox(height: 3),
+                Text(aciklama, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.sub, fontSize: 11.5, height: 1.3)),
+              ],
+              const SizedBox(height: 5),
+              Row(children: [
+                if (h['personel'] != null) ...[
+                  Icon(Icons.person, size: 12, color: t.sub2), const SizedBox(width: 3),
+                  Flexible(child: Text(h['personel'].toString(), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.sub2, fontSize: 11.5, fontWeight: FontWeight.w600))),
+                  const SizedBox(width: 10),
+                ],
+                Icon(Icons.access_time, size: 11, color: t.sub), const SizedBox(width: 3),
+                Text(h['saat']?.toString() ?? '', style: TextStyle(color: t.sub, fontSize: 11)),
+              ]),
+            ])),
+            if (tutar != null && tutar != 0) ...[
+              const SizedBox(width: 8),
+              Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisAlignment: MainAxisAlignment.center, children: [
+                Text('${yon == 'cikis' ? '−' : (yon == 'giris' ? '+' : '')}${_tl(tutar)}',
+                    style: TextStyle(color: yon == 'cikis' ? const Color(0xFFF43F5E) : (yon == 'giris' ? t.yesil : t.ink), fontSize: 14.5, fontWeight: FontWeight.bold)),
+              ]),
+            ],
           ]),
-        ])),
-        if (tutar != null && tutar != 0) ...[
-          const SizedBox(width: 6),
-          Text('${yon == 'cikis' ? '-' : (yon == 'giris' ? '+' : '')}${_tl(tutar)}',
-              style: TextStyle(color: yon == 'cikis' ? const Color(0xFFF43F5E) : (yon == 'giris' ? t.yesil : t.sub2), fontSize: 13, fontWeight: FontWeight.bold)),
-        ],
-      ]),
+        )),
+      ])),
     );
   }
 }
