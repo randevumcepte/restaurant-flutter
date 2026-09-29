@@ -98,7 +98,7 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
   String _durumAd(String d) => {
         'bekliyor': 'BEKLİYOR', 'onaylandi': 'ONAYLI', 'geldi': 'GELDİ', 'iptal': 'İPTAL', 'gelmedi': 'GELMEDİ',
       }[d] ?? d.toUpperCase();
-  String _kaynakIkon(String k) => {'web': '🌐', 'telefon': '📞', 'qr': '📱'}[k] ?? '•';
+  String _kaynakIkon(String k) => {'web': '🌐', 'telefon': '📞', 'qr': '📱', 'walk_in': '🚶', 'walkin': '🚶', 'admin': '🖥️'}[k] ?? '•';
 
   // ---- gün etiketi ----
   static const _gunAd = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
