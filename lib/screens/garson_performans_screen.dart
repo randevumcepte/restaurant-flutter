@@ -24,7 +24,7 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
   TemaProvider get _t => context.watch<TemaProvider>();
   final _f = NumberFormat.decimalPattern('tr');
 
-  String period = 'gunluk';
+  String period = 'aylik'; // isi haritasi birikimli -> acilista dolu gelsin (gunluk cok seyrek)
   int? isiGarson; // null = tüm salon
   bool loading = true;
   List<Map<String, dynamic>> garsonlar = [];
@@ -204,13 +204,11 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
       _isiChip(t, null, 'Tüm salon'),
       for (final g in garsonlar) _isiChip(t, g['id'] as int, g['ad']?.toString() ?? ''),
     ]));
-    // Sag panel (infografik sirasi): Isı Haritası Renkleri -> Gözlemler -> Toplam Yürüyüş Mesafesi -> AI
+    // Sag panel (infografik): Isı Haritası Renkleri -> Gözlemler -> Toplam Yürüyüş Mesafesi -> AI (hepsi HER ZAMAN)
     final List<Widget> paneller = [
-      if (semaVar || veriVar) _lejantDikey(t),
-      if (veriVar) ...[
-        const SizedBox(height: 14),
-        ..._gozlemler(t, bolgeler, bolgeTop, enBolge, bolgeAd, enMasa, noktaTipleri),
-      ],
+      _lejantDikey(t),
+      const SizedBox(height: 14),
+      ..._gozlemler(t, bolgeler, bolgeTop, enBolge, bolgeAd, enMasa, noktaTipleri),
       const SizedBox(height: 14),
       _yuruyusPanel(t),
       if (veriVar) ...[
@@ -289,7 +287,10 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
     if (sakin.isNotEmpty) {
       rows.add([Icons.chair_alt, '${sakin.take(2).join(', ')} daha az ziyaret ediliyor (köşe/arka bölgeler).']);
     }
-    if (rows.isEmpty) return [];
+    // Veri yoksa da kart görünsün (infografikteki gibi bölüm hep dursun)
+    if (rows.isEmpty) {
+      rows.add([Icons.info_outline, 'Bu dönemde yeterli hareket verisi yok. Dönemi genişlet (Aylık) ya da salon şemasını çiz.']);
+    }
     return [
       Container(
         padding: const EdgeInsets.all(14),
@@ -514,18 +515,21 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('Isı Haritası Renkleri', style: TextStyle(color: t.ink, fontSize: 13.5, fontWeight: FontWeight.w900)),
         const SizedBox(height: 14),
-        Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          SizedBox(height: 150, child: Container(width: 16, decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
-              colors: [Color(0xFFEF4444), Color(0xFFF97316), Color(0xFFEAB308), Color(0xFF22C55E), Color(0xFF06B6D4), Color(0xFF1D4ED8)])))),
-          const SizedBox(width: 14),
-          Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.spaceBetween, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            satir(const Color(0xFFEF4444), 'En çok yürüdüğü alanlar'),
-            satir(const Color(0xFF22C55E), 'Sık yürüdüğü alanlar'),
-            satir(const Color(0xFF1D4ED8), 'En az yürüdüğü alanlar'),
-          ])),
-        ]),
+        SizedBox(
+          height: 156,
+          child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Container(width: 18, decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(9),
+              gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                colors: [Color(0xFFEF4444), Color(0xFFF97316), Color(0xFFEAB308), Color(0xFF22C55E), Color(0xFF06B6D4), Color(0xFF1D4ED8)]))),
+            const SizedBox(width: 14),
+            Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.spaceBetween, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              satir(const Color(0xFFEF4444), 'En çok yürüdüğü alanlar'),
+              satir(const Color(0xFF22C55E), 'Sık yürüdüğü alanlar'),
+              satir(const Color(0xFF1D4ED8), 'En az yürüdüğü alanlar'),
+            ])),
+          ]),
+        ),
       ]),
     );
   }
