@@ -224,7 +224,12 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
           // MASAUSTU: harita solda buyuk, paneller sagda (mockup gibi)
           ? Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Expanded(flex: 6, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                baslikSatir, const SizedBox(height: 10), cipler, const SizedBox(height: 12), harita,
+                baslikSatir, const SizedBox(height: 10), cipler, const SizedBox(height: 12),
+                // Harita ilk acilista viewport'a sigsin (cok uzayip altta kalmasin)
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxHeight: (MediaQuery.of(context).size.height - 250).clamp(320.0, 1100.0)),
+                  child: Align(alignment: Alignment.topCenter, child: harita),
+                ),
               ])),
               const SizedBox(width: 16),
               Expanded(flex: 4, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: paneller)),
@@ -291,21 +296,23 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
     if (rows.isEmpty) {
       rows.add([Icons.info_outline, 'Bu dönemde yeterli hareket verisi yok. Dönemi genişlet (Aylık) ya da salon şemasını çiz.']);
     }
+    const renkler = [Color(0xFF7C3AED), Color(0xFFEA580C), Color(0xFFDC2626), Color(0xFF0891B2), Color(0xFF16A34A)];
     return [
       Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: t.card2, borderRadius: BorderRadius.circular(14)),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(color: t.card2, borderRadius: BorderRadius.circular(16), border: Border.all(color: t.line)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Gözlemler', style: TextStyle(color: t.ink, fontSize: 13.5, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 10),
+          Text('Gözlemler', style: TextStyle(color: t.ink, fontSize: 15.5, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 12),
           for (var i = 0; i < rows.length; i++) ...[
             Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-              Container(width: 38, height: 38, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: t.line, width: 1.4)),
-                  child: Icon(rows[i][0] as IconData, size: 19, color: t.sub2)),
+              Container(width: 42, height: 42,
+                  decoration: BoxDecoration(color: renkler[i % renkler.length].withValues(alpha: 0.14), borderRadius: BorderRadius.circular(12)),
+                  child: Icon(rows[i][0] as IconData, size: 22, color: renkler[i % renkler.length])),
               const SizedBox(width: 12),
-              Expanded(child: Text(rows[i][1] as String, style: TextStyle(color: t.sub2, fontSize: 12.5, height: 1.35))),
+              Expanded(child: Text(rows[i][1] as String, style: TextStyle(color: t.ink, fontSize: 13.5, height: 1.35, fontWeight: FontWeight.w500))),
             ]),
-            if (i < rows.length - 1) Padding(padding: const EdgeInsets.symmetric(vertical: 9), child: Divider(height: 1, color: t.line)),
+            if (i < rows.length - 1) Padding(padding: const EdgeInsets.symmetric(vertical: 10), child: Divider(height: 1, color: t.line)),
           ],
         ]),
       ),
@@ -504,16 +511,16 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
     Widget satir(Color c, String s) => Padding(
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: Row(children: [
-            Container(width: 10, height: 10, decoration: BoxDecoration(color: c, shape: BoxShape.circle)),
-            const SizedBox(width: 8),
-            Expanded(child: Text(s, style: TextStyle(color: t.sub2, fontSize: 12))),
+            Container(width: 13, height: 13, decoration: BoxDecoration(color: c, shape: BoxShape.circle)),
+            const SizedBox(width: 10),
+            Expanded(child: Text(s, style: TextStyle(color: t.ink, fontSize: 13.5, fontWeight: FontWeight.w600))),
           ]),
         );
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: t.card2, borderRadius: BorderRadius.circular(14)),
+      decoration: BoxDecoration(color: t.card2, borderRadius: BorderRadius.circular(16), border: Border.all(color: t.line)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Isı Haritası Renkleri', style: TextStyle(color: t.ink, fontSize: 13.5, fontWeight: FontWeight.w900)),
+        Text('Isı Haritası Renkleri', style: TextStyle(color: t.ink, fontSize: 15.5, fontWeight: FontWeight.w900)),
         const SizedBox(height: 14),
         SizedBox(
           height: 156,
@@ -541,9 +548,9 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
     final kmStr = km >= 1 ? km.toStringAsFixed(1) : km.toStringAsFixed(2);
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: t.card2, borderRadius: BorderRadius.circular(14)),
+      decoration: BoxDecoration(color: t.card2, borderRadius: BorderRadius.circular(16), border: Border.all(color: t.line)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Toplam Yürüyüş Mesafesi', style: TextStyle(color: t.ink, fontSize: 13.5, fontWeight: FontWeight.w900)),
+        Text('Toplam Yürüyüş Mesafesi', style: TextStyle(color: t.ink, fontSize: 15.5, fontWeight: FontWeight.w900)),
         const SizedBox(height: 12),
         Row(children: [
           Container(width: 46, height: 46, decoration: BoxDecoration(color: const Color(0xFF16A34A).withValues(alpha: 0.14), borderRadius: BorderRadius.circular(13)),
@@ -584,8 +591,10 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
     ((sema['masalar'] as Map?) ?? {}).forEach((k, v) { final mm = Map<String, dynamic>.from(v); if (_n(mm['kat']).toInt() == kat) masaYer[k.toString()] = mm; });
 
     return LayoutBuilder(builder: (ctx, c) {
-      final w = c.maxWidth;
-      final h = w * 1.35;
+      double w = c.maxWidth;
+      double h = w * 1.35;
+      // Yukseklik siniri varsa (masaustunde viewport'a sigsin) -> yukseklige gore kucult, oran korunur
+      if (c.maxHeight.isFinite && h > c.maxHeight) { h = c.maxHeight; w = h / 1.35; }
       double sx(num v) => v / 1000 * w;
       double sy(num v) => v / 1000 * h;
       final tablolar = <_Masa>[];
