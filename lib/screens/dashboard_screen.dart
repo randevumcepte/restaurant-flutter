@@ -1061,39 +1061,51 @@ class _DashboardScreenState extends State<DashboardScreen> {
       'Tahsil Edilemeyen': const Color(0xFFF43F5E),
     }[baslik] ?? _mor1;
     final yuzdeStr = '%${yuzde % 1 == 0 ? yuzde.toInt() : yuzde.toStringAsFixed(1).replaceAll('.', ',')}';
+    const beyaz = Colors.white;
     return Container(
-      padding: const EdgeInsets.all(14),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
+        // Normal: temiz kart + sol renk cubugu. Kritik: dolgun renkli (uyari).
+        color: vurgu ? null : _card,
         gradient: vurgu
-            ? LinearGradient(colors: [renk.withValues(alpha: 0.92), Color.lerp(renk, Colors.black, 0.42)!], begin: Alignment.topLeft, end: Alignment.bottomRight)
+            ? LinearGradient(colors: [renk, Color.lerp(renk, Colors.black, 0.4)!], begin: Alignment.topLeft, end: Alignment.bottomRight)
             : null,
-        color: vurgu ? null : renk.withValues(alpha: _t.koyu ? 0.15 : 0.10),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: vurgu ? renk.withValues(alpha: 0.6) : renk.withValues(alpha: 0.28)),
+        border: vurgu ? null : Border.all(color: _t.card2),
         boxShadow: _t.golge,
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Container(
-            width: 36, height: 36,
-            decoration: BoxDecoration(color: vurgu ? Colors.white24 : renk.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(11)),
-            child: Icon(ikon, size: 20, color: vurgu ? Colors.white : renk),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(color: vurgu ? Colors.white24 : renk.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(9)),
-            child: Text(yuzdeStr, style: TextStyle(color: vurgu ? Colors.white : renk, fontSize: 11.5, fontWeight: FontWeight.bold)),
+      child: IntrinsicHeight(
+        child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Container(width: 5, color: vurgu ? beyaz.withValues(alpha: 0.35) : renk),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(13),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Container(
+                    width: 34, height: 34,
+                    decoration: BoxDecoration(color: vurgu ? beyaz.withValues(alpha: 0.22) : renk.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
+                    child: Icon(ikon, size: 19, color: vurgu ? beyaz : renk),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(color: vurgu ? beyaz.withValues(alpha: 0.22) : renk.withValues(alpha: 0.13), borderRadius: BorderRadius.circular(9)),
+                    child: Text(yuzdeStr, style: TextStyle(color: vurgu ? beyaz : renk, fontSize: 11.5, fontWeight: FontWeight.bold)),
+                  ),
+                ]),
+                const SizedBox(height: 10),
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft,
+                      child: Text(_tam(tutar), style: TextStyle(color: vurgu ? beyaz : _ink, fontSize: 26, fontWeight: FontWeight.bold))),
+                  const SizedBox(height: 3),
+                  Text(adet != null ? '$baslik · ${_n(adet).toInt()} adet' : baslik,
+                      style: TextStyle(color: vurgu ? beyaz.withValues(alpha: 0.85) : _sub, fontSize: 12.5, fontWeight: FontWeight.w500)),
+                ]),
+              ]),
+            ),
           ),
         ]),
-        const SizedBox(height: 10),
-        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft,
-              child: Text(_tam(tutar), style: TextStyle(color: vurgu ? Colors.white : _ink, fontSize: 26, fontWeight: FontWeight.bold))),
-          const SizedBox(height: 3),
-          Text(adet != null ? '$baslik · ${_n(adet).toInt()} adet' : baslik,
-              style: TextStyle(color: vurgu ? Colors.white70 : _sub, fontSize: 12.5, fontWeight: FontWeight.w500)),
-        ]),
-      ]),
+      ),
     );
   }
 
