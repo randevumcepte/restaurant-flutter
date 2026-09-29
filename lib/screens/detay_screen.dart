@@ -124,7 +124,12 @@ class _DetayScreenState extends State<DetayScreen> {
               ? Center(child: Text(hata!, style: const TextStyle(color: _kirmizi)))
               : RefreshIndicator(
                   onRefresh: _yukle, color: _mor2, backgroundColor: _card,
-                  child: ListView(padding: const EdgeInsets.all(14), children: [..._aiOnek(), ..._icerik()]),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 920),
+                      child: ListView(padding: const EdgeInsets.all(16), children: [..._aiOnek(), ..._icerik()]),
+                    ),
+                  ),
                 ),
     );
   }
@@ -221,11 +226,7 @@ class _DetayScreenState extends State<DetayScreen> {
 
     return [
       // Ozet chip grid
-      GridView.count(
-        crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
-        childAspectRatio: 2.4, mainAxisSpacing: 10, crossAxisSpacing: 10,
-        children: ozet.entries.map((e) => _statKart(e.key, e.value.toString())).toList(),
-      ),
+      _statGrid(ozet.entries.toList()),
       const SizedBox(height: 14),
       // Recete maliyet
       _kutu('🧾 Reçete & Maliyet', [
@@ -890,11 +891,7 @@ class _DetayScreenState extends State<DetayScreen> {
       _ozetSerit(_tam(_n(d!['toplam'])), '${d!['kanal']} · ${d!['acilis']}${d!['kapanis'] != null ? ' → ${d!['kapanis']}' : ' (açık)'}', _mavi),
       if (masaVar) _masaBanner(masa),
       const SizedBox(height: 12),
-      GridView.count(
-        crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
-        childAspectRatio: 2.4, mainAxisSpacing: 10, crossAxisSpacing: 10,
-        children: ozetGirdiler.map((e) => _statKart(e.key, e.value.toString())).toList(),
-      ),
+      _statGrid(ozetGirdiler),
       // Acik adisyon -> once URUN EKLE, sonra islem butonlari (yetki kontrolu backend'de)
       if (d!['durum'] == 'acik') ...[
         const SizedBox(height: 12),
@@ -1207,11 +1204,7 @@ class _DetayScreenState extends State<DetayScreen> {
       ],
       const SizedBox(height: 12),
       // Ozet chips
-      GridView.count(
-        crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
-        childAspectRatio: 2.4, mainAxisSpacing: 10, crossAxisSpacing: 10,
-        children: ozet.entries.map((e) => _statKart(e.key, e.value.toString())).toList(),
-      ),
+      _statGrid(ozet.entries.toList()),
       const SizedBox(height: 14),
       // Favori urunler
       if (favori.isNotEmpty) ...[
@@ -1510,13 +1503,25 @@ class _DetayScreenState extends State<DetayScreen> {
         ),
       );
 
+  // Responsive stat grid: dar ekranda 2, genis ekranda 3-4 sutun; kartlar kompakt (dev/bos kalmasin)
+  Widget _statGrid(List<MapEntry> entries) {
+    return LayoutBuilder(builder: (ctx, c) {
+      final cols = (c.maxWidth / 210).floor().clamp(2, 4);
+      return GridView.count(
+        crossAxisCount: cols, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+        childAspectRatio: 1.95, mainAxisSpacing: 12, crossAxisSpacing: 12,
+        children: entries.map((e) => _statKart(e.key, e.value.toString())).toList(),
+      );
+    });
+  }
+
   Widget _statKart(String baslik, String deger) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(14), boxShadow: _t.golge),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(14), boxShadow: _t.golge, border: Border.all(color: _card2)),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-          Text(baslik, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: _sub, fontSize: 11)),
-          const SizedBox(height: 2),
-          FittedBox(fit: BoxFit.scaleDown, child: Text(deger, maxLines: 1, style: TextStyle(color: _ink, fontSize: 16, fontWeight: FontWeight.bold))),
+          Text(baslik, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: _sub, fontSize: 11.5, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 5),
+          FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(deger, maxLines: 1, style: TextStyle(color: _ink, fontSize: 20, fontWeight: FontWeight.bold))),
         ]),
       );
 
