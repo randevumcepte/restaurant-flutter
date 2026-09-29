@@ -7,6 +7,7 @@ import '../responsive.dart';
 import '../services/api.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'yonetim_drawer.dart';
+import '../widgets/onay_dinleyici.dart';
 import 'dashboard_screen.dart';
 import 'garson_ozet_screen.dart';
 import 'masalar_screen.dart';
@@ -152,6 +153,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ]),
           Positioned(left: 0, top: 0, bottom: 0, child: yanMenu),
+          const OnayDinleyici(),
         ]),
       );
     }
@@ -175,10 +177,13 @@ class _HomeScreenState extends State<HomeScreen> {
           onGit: (e) => _govdeNav.currentState?.push(MaterialPageRoute(builder: (_) => e)),
           onWeb: (p) async { try { await launchUrl(Uri.parse('${Api.base}$p'), mode: LaunchMode.externalApplication); } catch (_) {} },
         ),
-        body: Navigator(
-          key: _govdeNav,
-          onGenerateRoute: (s) => MaterialPageRoute(builder: (_) => _TabGovde(ekranlar: ekranlar)),
-        ),
+        body: Stack(children: [
+          Navigator(
+            key: _govdeNav,
+            onGenerateRoute: (s) => MaterialPageRoute(builder: (_) => _TabGovde(ekranlar: ekranlar)),
+          ),
+          const OnayDinleyici(),
+        ]),
         // Klavye acikken mikrofonu gizle: centerDocked FAB klavyenin ustune cikip
         // alt-ekran butonlarinin (ör. "Kaydet") uzerine biniyordu. Yazarken zaten gerekmez.
         floatingActionButton: (patron && MediaQuery.of(context).viewInsets.bottom < 1) ? _mikrofon() : null,

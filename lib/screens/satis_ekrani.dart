@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -303,24 +304,15 @@ class _SatisEkraniState extends State<SatisEkrani> {
         List ods = List.from(ilk);
         return StatefulBuilder(builder: (ctx, setSt) {
           Future<void> geriAl(Map o) async {
-            final onay = await showDialog<bool>(
-              context: ctx,
-              builder: (c) => AlertDialog(
-                backgroundColor: t.card, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                title: Text('Ödemeyi Geri Al', style: TextStyle(color: t.ink, fontSize: 16)),
-                content: Text('${_tl(_n(o['tutar']))} ${(_odemeTipBilgi[o['tip']]?[0] ?? o['tip'])} ödeme geri alınsın mı? (Müdür/Sahip onayı gerekir)', style: TextStyle(color: t.sub, fontSize: 14)),
-                actions: [
-                  TextButton(onPressed: () => Navigator.pop(c, false), child: Text('Vazgeç', style: TextStyle(color: t.sub))),
-                  FilledButton(onPressed: () => Navigator.pop(c, true), style: FilledButton.styleFrom(backgroundColor: _kirmizi), child: const Text('Geri Al')),
-                ],
-              ),
+            final tipAd = (_odemeTipBilgi[o['tip']]?[0] ?? o['tip']).toString();
+            await _onayIste(
+              tip: 'odeme_geri_al', refId: _n(o['id']).toInt(), tutar: _n(o['tutar']).toDouble(),
+              baslik: '${widget.masaAd} · ${_tl(_n(o['tutar']))} $tipAd ödeme geri al',
+              pinIle: (pin) async { await _odemeGeriAl(_n(o['id']).toInt(), pin: pin); },
+              onOnaylandi: () async { await _yukle(); },
             );
-            if (onay != true) return;
-            final ok = await _odemeGeriAl(_n(o['id']).toInt());
-            if (ok) {
-              try { final r = await Api.adisyonOdemeler(auth.token!, widget.adisyonId); ods = (r['odemeler'] as List?) ?? []; } catch (_) {}
-              if (ctx.mounted) setSt(() {});
-            }
+            try { final r = await Api.adisyonOdemeler(auth.token!, widget.adisyonId); ods = (r['odemeler'] as List?) ?? []; } catch (_) {}
+            if (ctx.mounted) setSt(() {});
           }
           return Container(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
@@ -460,13 +452,140 @@ class _SatisEkraniState extends State<SatisEkrani> {
   Future<void> _iskonto() async {
     final oran = await _sayiDialog('İskonto Uygula', 'Yüzde (%)', '%');
     if (oran == null || oran <= 0) return;
-    await _islemUygula('iskonto', oran: oran);
+    await _onayIste(tip: 'iskonto', oran: oran, baslik: '${widget.masaAd} · %${oran.round()} iskonto',
+        pinIle: (pin) => _islemUygula('iskonto', oran: oran, onayPin: pin));
   }
 
   Future<void> _ikram() async {
     final tutar = await _sayiDialog('İkram Uygula', 'Tutar (TL)', 'TL');
     if (tutar == null || tutar <= 0) return;
-    await _islemUygula('ikram', tutar: tutar);
+    await _onayIste(tip: 'ikram', tutar: tutar, baslik: '${widget.masaAd} · ${_tl(tutar)} ikram',
+        pinIle: (pin) => _islemUygula('ikram', tutar: tutar, onayPin: pin));
+  }
+
+  // ---- YÖNETİCİ ONAY AKIŞI (kasiyer tarafı) ----
+  Future<void> _onayIste({
+    required String tip,
+    required String baslik,
+    int? refId, double? tutar, double? oran, String? kalemIdler,
+    Future<void> Function(String pin)? pinIle,
+    Future<void> Function()? onOnaylandi,
+  }) async {
+    final auth = context.read<AuthProvider>();
+    Map yon = {};
+    try { yon = await Api.mesaidekiYoneticiler(auth.token!); } catch (_) {}
+    if (!mounted) return;
+    final yoneticiler = ((yon['yoneticiler'] as List?) ?? []).map((e) => Map<String, dynamic>.from(e)).toList();
+    final secim = await _yoneticiSecSheet(yoneticiler, yon['yedek'] == true, pinIle != null);
+    if (secim == null || !mounted) return;
+    if (secim['pin'] == true) {
+      if (pinIle != null) {
+        final pin = await _pinSor('Müdür/Sahip PIN gir');
+        if (pin != null && pin.trim().isNotEmpty) await pinIle(pin.trim());
+      }
+      return;
+    }
+    final res = await Api.onayIste(auth.token!, {
+      'tip': tip, 'baslik': baslik,
+      if (widget.adisyonId != 0) 'adisyon_id': '${widget.adisyonId}',
+      if (refId != null) 'ref_id': '$refId',
+      if (tutar != null) 'tutar': '$tutar',
+      if (oran != null) 'oran': '$oran',
+      if (kalemIdler != null && kalemIdler.isNotEmpty) 'kalem_idler': kalemIdler,
+      'hedef_id': '${secim['id']}',
+    });
+    if (!mounted) return;
+    if (res['ok'] != 1) { _snack(res['hata']?.toString() ?? 'İstek gönderilemedi', _kirmizi); return; }
+    await _onayBekle(_n(res['istek_id']).toInt(), secim['ad']?.toString() ?? 'Yönetici', onOnaylandi ?? _yukle);
+  }
+
+  Future<Map<String, dynamic>?> _yoneticiSecSheet(List yoneticiler, bool yedek, bool pinVar) {
+    return showModalBottomSheet<Map<String, dynamic>>(
+      context: context, backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final t = ctx.read<TemaProvider>();
+        return Container(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 26),
+          decoration: BoxDecoration(color: t.card, borderRadius: const BorderRadius.vertical(top: Radius.circular(22))),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Center(child: Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 14), decoration: BoxDecoration(color: t.line, borderRadius: BorderRadius.circular(2)))),
+            Row(children: [Icon(Icons.verified_user, color: t.mor1, size: 20), const SizedBox(width: 8), Text('Onaya Gönder', style: TextStyle(color: t.ink, fontSize: 16, fontWeight: FontWeight.bold))]),
+            const SizedBox(height: 4),
+            Text(yedek ? 'Şu an mesaide yönetici yok — tümü listelendi.' : 'Mesaideki bir yöneticiden onay iste (telefonuna düşer).', style: TextStyle(color: t.sub, fontSize: 12)),
+            const SizedBox(height: 12),
+            if (yoneticiler.isEmpty)
+              Padding(padding: const EdgeInsets.symmetric(vertical: 16), child: Text('Yönetici bulunamadı.', style: TextStyle(color: t.sub))),
+            for (final y in yoneticiler)
+              GestureDetector(
+                onTap: () => Navigator.pop(ctx, y),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 8), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  decoration: BoxDecoration(color: t.card2, borderRadius: BorderRadius.circular(12), border: Border.all(color: t.line)),
+                  child: Row(children: [
+                    Container(width: 38, height: 38, alignment: Alignment.center, decoration: BoxDecoration(color: t.mor1.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(10)), child: Icon(Icons.person, color: t.mor1, size: 20)),
+                    const SizedBox(width: 11),
+                    Expanded(child: Text(y['ad']?.toString() ?? '', style: TextStyle(color: t.ink, fontSize: 14.5, fontWeight: FontWeight.w600))),
+                    Text(y['rol'] == 'sahip' ? 'Sahip' : 'Müdür', style: TextStyle(color: t.sub, fontSize: 12)),
+                    const SizedBox(width: 6),
+                    Icon(Icons.chevron_right, color: t.sub, size: 20),
+                  ]),
+                ),
+              ),
+            if (pinVar) ...[
+              const SizedBox(height: 4),
+              GestureDetector(
+                onTap: () => Navigator.pop(ctx, {'pin': true}),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12), alignment: Alignment.center,
+                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), border: Border.all(color: t.line)),
+                  child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Icon(Icons.password, size: 17, color: t.sub2), const SizedBox(width: 7),
+                    Text('Bunun yerine PIN ile onayla', style: TextStyle(color: t.sub2, fontSize: 13, fontWeight: FontWeight.w600)),
+                  ]),
+                ),
+              ),
+            ],
+          ]),
+        );
+      },
+    );
+  }
+
+  Future<void> _onayBekle(int istekId, String yoneticiAd, Future<void> Function() onOnaylandi) async {
+    final auth = context.read<AuthProvider>();
+    Timer? tmr;
+    final sonuc = await showDialog<String>(
+      context: context, barrierDismissible: false,
+      builder: (ctx) {
+        final t = ctx.read<TemaProvider>();
+        tmr ??= Timer.periodic(const Duration(seconds: 2), (_) async {
+          try {
+            final res = await Api.onayDurum(auth.token!, istekId);
+            final d = res['durum']?.toString();
+            if ((d == 'onaylandi' || d == 'reddedildi') && ctx.mounted) { tmr?.cancel(); Navigator.pop(ctx, d); }
+          } catch (_) {}
+        });
+        return PopScope(canPop: false, child: Dialog(
+          backgroundColor: t.card, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 320), child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              SizedBox(width: 46, height: 46, child: CircularProgressIndicator(color: t.mor1, strokeWidth: 3)),
+              const SizedBox(height: 16),
+              Text('Onay bekleniyor', style: TextStyle(color: t.ink, fontSize: 16, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              Text('$yoneticiAd onaylıyor…', textAlign: TextAlign.center, style: TextStyle(color: t.sub, fontSize: 13)),
+              const SizedBox(height: 18),
+              TextButton(onPressed: () => Navigator.pop(ctx, 'vazgec'), child: Text('Vazgeç', style: TextStyle(color: t.sub, fontWeight: FontWeight.w600))),
+            ]),
+          )),
+        ));
+      },
+    );
+    tmr?.cancel();
+    if (!mounted) return;
+    if (sonuc == 'onaylandi') { _snack('✓ Yönetici onayladı', _yesil); await onOnaylandi(); }
+    else if (sonuc == 'reddedildi') { _snack('Yönetici reddetti', _kirmizi); }
   }
 
   Future<void> _iptal() async {
@@ -485,7 +604,11 @@ class _SatisEkraniState extends State<SatisEkrani> {
         );
       },
     );
-    if (onay == true) await _islemUygula('iptal');
+    if (onay == true) {
+      await _onayIste(tip: 'iptal', baslik: '${widget.masaAd} · adisyon iptal',
+          pinIle: (pin) => _islemUygula('iptal', onayPin: pin),
+          onOnaylandi: () async { if (mounted) Navigator.of(context).pop(true); });
+    }
   }
 
   Future<void> _fisBas() async {

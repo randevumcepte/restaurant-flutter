@@ -276,6 +276,14 @@ class Api {
   static Future<Map<String, dynamic>> adisyonOdemeler(String token, int adisyonId) => _get('/api/patron/adisyon-odemeler?adisyon_id=$adisyonId', token);
   static Future<Map<String, dynamic>> odemeGeriAl(String token, int odemeId, {String? onayPin}) =>
       _post('/api/patron/odeme-geri-al', token, {'odeme_id': '$odemeId', if (onayPin != null && onayPin.isNotEmpty) 'onay_pin': onayPin});
+
+  // ---- YÖNETİCİ ONAY SİSTEMİ ----
+  static Future<Map<String, dynamic>> mesaidekiYoneticiler(String token) => _get('/api/patron/mesaideki-yoneticiler', token);
+  static Future<Map<String, dynamic>> onayIste(String token, Map<String, String> v) => _post('/api/patron/onay-iste', token, v);
+  static Future<Map<String, dynamic>> onayDurum(String token, int id) => _get('/api/patron/onay-durum?id=$id', token);
+  static Future<Map<String, dynamic>> bekleyenOnaylar(String token) => _get('/api/patron/bekleyen-onaylar', token);
+  static Future<Map<String, dynamic>> onayCevap(String token, int istekId, String cevap) =>
+      _post('/api/patron/onay-cevap', token, {'istek_id': '$istekId', 'cevap': cevap});
   static Future<Map<String, dynamic>> zRaporu(String token, {String? tarih}) => _get('/api/patron/z-raporu${tarih != null ? '?tarih=$tarih' : ''}', token);
 
   // ---- MENU YONETIMI (sahip/mudur) ----
