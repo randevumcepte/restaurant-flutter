@@ -28,6 +28,7 @@ class _HareketlerScreenState extends State<HareketlerScreen> {
   String ara = '';
   int sayfa = 1;
   int toplam = 0;
+  final Set<int> _acikSatir = {}; // tıklanınca detay açılan satırlar
   bool sonSayfa = false;
   bool loading = true;
   bool dahaYukleniyor = false;
@@ -165,7 +166,7 @@ class _HareketlerScreenState extends State<HareketlerScreen> {
                           final gunBasi = i == 0 || h['gun_key'] != oncekiGun;
                           return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                             if (gunBasi) _gunBaslik(t, h['tarih']?.toString() ?? ''),
-                            _satir(t, h),
+                            _satir(t, h, i),
                           ]);
                         },
                       ),
@@ -278,7 +279,7 @@ class _HareketlerScreenState extends State<HareketlerScreen> {
         child: Text(tarih, style: TextStyle(color: t.sub, fontSize: 12, fontWeight: FontWeight.bold)),
       );
 
-  Widget _satir(TemaProvider t, Map h) {
+  Widget _satir(TemaProvider t, Map h, int idx) {
     final kat = _kategori(h);
     final bilgi = _katBilgi(kat);
     final renk = bilgi[0] as Color;
@@ -286,61 +287,102 @@ class _HareketlerScreenState extends State<HareketlerScreen> {
     final tutar = h['tutar'] == null ? null : _n(h['tutar']).toDouble();
     final yon = h['yon']?.toString();
     final aciklama = h['aciklama']?.toString() ?? '';
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: t.card, borderRadius: BorderRadius.circular(14), border: Border.all(color: t.line),
-        boxShadow: [BoxShadow(color: renk.withValues(alpha: 0.06), blurRadius: 8, offset: const Offset(0, 2))],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: IntrinsicHeight(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        // Sol renkli şerit (kategori rengi)
-        Container(width: 5, color: renk),
-        Expanded(child: Padding(
-          padding: const EdgeInsets.all(11),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            // Büyük renkli ikon dairesi
-            Container(width: 44, height: 44, alignment: Alignment.center,
-                decoration: BoxDecoration(color: renk.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(12)),
-                child: Icon(bilgi[1] as IconData, color: renk, size: 22)),
-            const SizedBox(width: 12),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [
-                Expanded(child: Text(h['baslik']?.toString() ?? '—', maxLines: 1, overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: t.ink, fontSize: 14, fontWeight: FontWeight.w700))),
+    final acik = _acikSatir.contains(idx);
+    final kaynak = h['kaynak']?.toString();
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => setState(() => acik ? _acikSatir.remove(idx) : _acikSatir.add(idx)),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          color: t.card, borderRadius: BorderRadius.circular(14), border: Border.all(color: acik ? renk.withValues(alpha: 0.4) : t.line),
+          boxShadow: [BoxShadow(color: renk.withValues(alpha: 0.06), blurRadius: 8, offset: const Offset(0, 2))],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: IntrinsicHeight(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Container(width: 5, color: renk),
+          Expanded(child: Column(children: [
+            // ---- ANA SATIR ----
+            Padding(
+              padding: const EdgeInsets.all(11),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Container(width: 44, height: 44, alignment: Alignment.center,
+                    decoration: BoxDecoration(color: renk.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(12)),
+                    child: Icon(bilgi[1] as IconData, color: renk, size: 22)),
+                const SizedBox(width: 12),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    Expanded(child: Text(h['baslik']?.toString() ?? '—', maxLines: 1, overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: t.ink, fontSize: 14, fontWeight: FontWeight.w700))),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(color: renk.withValues(alpha: 0.13), borderRadius: BorderRadius.circular(20)),
+                      child: Text(etiket, style: TextStyle(color: renk, fontSize: 10.5, fontWeight: FontWeight.bold)),
+                    ),
+                  ]),
+                  if (aciklama.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Text(aciklama, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.sub, fontSize: 11.5, height: 1.3)),
+                  ],
+                  const SizedBox(height: 5),
+                  Row(children: [
+                    if (h['personel'] != null) ...[
+                      Icon(Icons.person, size: 12, color: t.sub2), const SizedBox(width: 3),
+                      Flexible(child: Text(h['personel'].toString(), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.sub2, fontSize: 11.5, fontWeight: FontWeight.w600))),
+                      const SizedBox(width: 10),
+                    ],
+                    Icon(Icons.access_time, size: 11, color: t.sub), const SizedBox(width: 3),
+                    Text(h['saat']?.toString() ?? '', style: TextStyle(color: t.sub, fontSize: 11)),
+                    if (kaynak != null) ...[
+                      const SizedBox(width: 8),
+                      Icon(kaynak == 'Kasa' ? Icons.point_of_sale : (kaynak == 'Mobil' ? Icons.smartphone : Icons.devices_other), size: 11, color: t.mavi),
+                      const SizedBox(width: 2),
+                      Text(kaynak, style: TextStyle(color: t.mavi, fontSize: 10.5, fontWeight: FontWeight.w600)),
+                    ],
+                  ]),
+                ])),
                 const SizedBox(width: 8),
-                // Kategori rozeti
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(color: renk.withValues(alpha: 0.13), borderRadius: BorderRadius.circular(20)),
-                  child: Text(etiket, style: TextStyle(color: renk, fontSize: 10.5, fontWeight: FontWeight.bold)),
-                ),
+                Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
+                  if (tutar != null && tutar != 0)
+                    Text('${yon == 'cikis' ? '−' : (yon == 'giris' ? '+' : '')}${_tl(tutar)}',
+                        style: TextStyle(color: yon == 'cikis' ? const Color(0xFFF43F5E) : (yon == 'giris' ? t.yesil : t.ink), fontSize: 14.5, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 2),
+                  Icon(acik ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, color: t.sub, size: 18),
+                ]),
               ]),
-              if (aciklama.isNotEmpty) ...[
-                const SizedBox(height: 3),
-                Text(aciklama, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.sub, fontSize: 11.5, height: 1.3)),
-              ],
-              const SizedBox(height: 5),
-              Row(children: [
-                if (h['personel'] != null) ...[
-                  Icon(Icons.person, size: 12, color: t.sub2), const SizedBox(width: 3),
-                  Flexible(child: Text(h['personel'].toString(), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.sub2, fontSize: 11.5, fontWeight: FontWeight.w600))),
-                  const SizedBox(width: 10),
-                ],
-                Icon(Icons.access_time, size: 11, color: t.sub), const SizedBox(width: 3),
-                Text(h['saat']?.toString() ?? '', style: TextStyle(color: t.sub, fontSize: 11)),
+            ),
+            // ---- DETAY (tıklayınca) ----
+            if (acik) Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+              decoration: BoxDecoration(color: t.card2, border: Border(top: BorderSide(color: t.line))),
+              child: Column(children: [
+                _detaySatir(t, Icons.event, 'Tarih & Saat', h['zaman_tam']?.toString() ?? '${h['tarih'] ?? ''} ${h['saat'] ?? ''}'),
+                _detaySatir(t, Icons.badge_outlined, 'Kim', h['personel'] != null ? '${h['personel']}${h['rol'] != null ? ' · ${h['rol']}' : ''}' : null),
+                _detaySatir(t, Icons.devices_other, 'Kaynak', kaynak),
+                _detaySatir(t, Icons.print_outlined, 'Cihaz', h['cihaz']?.toString()),
+                _detaySatir(t, Icons.lan_outlined, 'IP Adresi', h['ip']?.toString()),
+                _detaySatir(t, Icons.my_location, 'Hedef', h['hedef']?.toString()),
+                _detaySatir(t, Icons.category_outlined, 'Kategori', etiket),
+                _detaySatir(t, Icons.route_outlined, 'İşlem yolu', h['yol']?.toString()),
               ]),
-            ])),
-            if (tutar != null && tutar != 0) ...[
-              const SizedBox(width: 8),
-              Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisAlignment: MainAxisAlignment.center, children: [
-                Text('${yon == 'cikis' ? '−' : (yon == 'giris' ? '+' : '')}${_tl(tutar)}',
-                    style: TextStyle(color: yon == 'cikis' ? const Color(0xFFF43F5E) : (yon == 'giris' ? t.yesil : t.ink), fontSize: 14.5, fontWeight: FontWeight.bold)),
-              ]),
-            ],
-          ]),
-        )),
-      ])),
+            ),
+          ])),
+        ])),
+      ),
+    );
+  }
+
+  Widget _detaySatir(TemaProvider t, IconData ikon, String etiket, String? deger) {
+    if (deger == null || deger.trim().isEmpty || deger.trim() == '·') return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Icon(ikon, size: 14, color: t.sub2), const SizedBox(width: 8),
+        SizedBox(width: 92, child: Text(etiket, style: TextStyle(color: t.sub, fontSize: 12))),
+        Expanded(child: Text(deger, style: TextStyle(color: t.ink, fontSize: 12.5, fontWeight: FontWeight.w600))),
+      ]),
     );
   }
 }
