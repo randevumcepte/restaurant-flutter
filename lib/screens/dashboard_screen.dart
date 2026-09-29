@@ -493,9 +493,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
         const SizedBox(height: 20),
-        // Grafik (sol genis) + Odeme/Servis (sag kolon)
+        // Grafik + Satış-Maliyet (sol genis) + Odeme/Servis (sag kolon) — bosluk kalmasin
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Expanded(flex: 6, child: _grafikKart(gunluk)),
+          Expanded(flex: 6, child: Column(children: [
+            _grafikKart(gunluk),
+            const SizedBox(height: 16),
+            _salesCostsKart(urunler),
+          ])),
           const SizedBox(width: 16),
           Expanded(flex: 4, child: Column(children: [
             _dagilimKart('💳 Ödeme Tipi', odeme, 'tip', ciro),
@@ -503,8 +507,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             _dagilimKart('🍽️ Servis Tipi', servis, 'ad', ciro),
           ])),
         ]),
-        const SizedBox(height: 20),
-        _salesCostsKart(urunler),
         const SizedBox(height: 10),
         Center(child: Text('Tek bakışta, anlık ve doğru. · ResteOS', style: TextStyle(color: _sub, fontSize: 11))),
       ],
