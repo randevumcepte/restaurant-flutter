@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
 import '../providers/tema_provider.dart';
+import '../responsive.dart';
 import '../services/api.dart';
 
 /// GARSON PERFORMANS + ISI HARITASI (patron).
@@ -133,18 +134,27 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
               : RefreshIndicator(
                   onRefresh: _yukle,
                   color: t.mor1,
-                  child: ListView(padding: const EdgeInsets.fromLTRB(14, 14, 14, 28), children: [
-                    _isiBolumu(t),
-                    const SizedBox(height: 20),
-                    Text('Garson Karnesi', style: TextStyle(color: t.ink, fontSize: 16, fontWeight: FontWeight.w900)),
-                    const SizedBox(height: 4),
-                    Text('Ciroya göre sıralı', style: TextStyle(color: t.sub, fontSize: 12)),
-                    const SizedBox(height: 10),
-                    if (garsonlar.isEmpty)
-                      Padding(padding: const EdgeInsets.all(24), child: Center(child: Text('Bu dönemde veri yok.', style: TextStyle(color: t.sub))))
-                    else
-                      for (final g in garsonlar) _karneKart(t, g),
-                  ]),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 1280),
+                      child: ListView(padding: const EdgeInsets.fromLTRB(14, 14, 14, 28), children: [
+                        _isiBolumu(t),
+                        const SizedBox(height: 20),
+                        Text('Garson Karnesi', style: TextStyle(color: t.ink, fontSize: 16, fontWeight: FontWeight.w900)),
+                        const SizedBox(height: 4),
+                        Text('Ciroya göre sıralı', style: TextStyle(color: t.sub, fontSize: 12)),
+                        const SizedBox(height: 10),
+                        if (garsonlar.isEmpty)
+                          Padding(padding: const EdgeInsets.all(24), child: Center(child: Text('Bu dönemde veri yok.', style: TextStyle(color: t.sub))))
+                        else if (genisMi(context))
+                          Wrap(spacing: 14, runSpacing: 14, children: [
+                            for (final g in garsonlar) SizedBox(width: 620, child: _karneKart(t, g)),
+                          ])
+                        else
+                          for (final g in garsonlar) _karneKart(t, g),
+                      ]),
+                    ),
+                  ),
                 ),
         ),
       ]),
@@ -176,41 +186,66 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
     final sakinAdlar = bolgeler.where((b) => (bolgeTop[_n(b['id']).toInt()] ?? 0) == 0)
         .map((b) => b['ad']?.toString() ?? '').where((x) => x.isNotEmpty).toList();
 
+    // Harita widget'i (sema/izgara/uyari) — tek parca
+    final Widget harita = semaVar
+        ? _semaHarita(t, agir, adMap, maxA)
+        : (veriVar
+            ? Column(crossAxisAlignment: CrossAxisAlignment.start,
+                children: [for (final b in bolgeler) ..._bolgeBlok(t, b, masalar, maxA, bolgeTop[_n(b['id']).toInt()] ?? 0)])
+            : Padding(padding: const EdgeInsets.symmetric(vertical: 16), child: Center(child: Text(
+                'Salon şemasını "Salon Şeması" ekranından çizip kaydedersen, ısı haritası buraya salon planının üzerinde gelir.',
+                textAlign: TextAlign.center, style: TextStyle(color: t.sub, fontSize: 12.5, height: 1.4)))));
+
+    final Widget baslikSatir = Row(children: [
+      const Text('🔥 ', style: TextStyle(fontSize: 16)),
+      Expanded(child: Text('Garsonun Isı Haritası', style: TextStyle(color: t.ink, fontSize: 15, fontWeight: FontWeight.w900))),
+    ]);
+    final Widget cipler = SizedBox(height: 34, child: ListView(scrollDirection: Axis.horizontal, children: [
+      _isiChip(t, null, 'Tüm salon'),
+      for (final g in garsonlar) _isiChip(t, g['id'] as int, g['ad']?.toString() ?? ''),
+    ]));
+    // Sag panel parcalari (yuruyus + lejant + gozlem + AI)
+    final List<Widget> paneller = [
+      _adimMesafeKart(t),
+      if (semaVar || veriVar) ...[const SizedBox(height: 14), _lejant(t)],
+      if (veriVar) ...[
+        const SizedBox(height: 14),
+        ..._gozlemler(t, bolgeler, bolgeTop, enBolge, bolgeAd, enMasa, noktaTipleri),
+        const SizedBox(height: 12),
+        ..._aiDegerlendirme(t, enBolge, bolgeAd, sakinAdlar, enMasa),
+      ],
+    ];
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(color: t.card, borderRadius: BorderRadius.circular(18), boxShadow: t.golge),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          const Text('🔥 ', style: TextStyle(fontSize: 16)),
-          Expanded(child: Text('Garsonun Isı Haritası', style: TextStyle(color: t.ink, fontSize: 15, fontWeight: FontWeight.w900))),
-        ]),
-        const SizedBox(height: 10),
-        SizedBox(height: 34, child: ListView(scrollDirection: Axis.horizontal, children: [
-          _isiChip(t, null, 'Tüm salon'),
-          for (final g in garsonlar) _isiChip(t, g['id'] as int, g['ad']?.toString() ?? ''),
-        ])),
-        const SizedBox(height: 12),
-        // ADIM + YÜRÜYÜŞ — kompakt, belirgin (en üstte)
-        _adimMesafeKart(t),
-        const SizedBox(height: 14),
-        // Harita: şema varsa HER ZAMAN kroki (aktivite yoksa masalar soğuk); şema yoksa ızgara ya da uyarı
-        if (semaVar)
-          _semaHarita(t, agir, adMap, maxA)
-        else if (veriVar)
-          ...[for (final b in bolgeler) ..._bolgeBlok(t, b, masalar, maxA, bolgeTop[_n(b['id']).toInt()] ?? 0)]
-        else
-          Padding(padding: const EdgeInsets.symmetric(vertical: 16), child: Center(child: Text(
-            'Salon şemasını "Salon Şeması" ekranından çizip kaydedersen, ısı haritası buraya salon planının üzerinde gelir.',
-            textAlign: TextAlign.center, style: TextStyle(color: t.sub, fontSize: 12.5, height: 1.4)))),
-        const SizedBox(height: 12),
-        if (semaVar || veriVar) _lejant(t),
-        if (veriVar) ...[
-          const SizedBox(height: 12),
-          ..._gozlemler(t, bolgeler, bolgeTop, enBolge, bolgeAd, enMasa, noktaTipleri),
-          const SizedBox(height: 12),
-          ..._aiDegerlendirme(t, enBolge, bolgeAd, sakinAdlar, enMasa),
-        ],
-      ]),
+      child: genisMi(context)
+          // MASAUSTU: harita solda buyuk, paneller sagda (mockup gibi)
+          ? Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Expanded(flex: 6, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                baslikSatir, const SizedBox(height: 10), cipler, const SizedBox(height: 12), harita,
+              ])),
+              const SizedBox(width: 16),
+              Expanded(flex: 4, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: paneller)),
+            ])
+          // TELEFON: tek kolon (mevcut sira)
+          : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              baslikSatir,
+              const SizedBox(height: 10),
+              cipler,
+              const SizedBox(height: 12),
+              _adimMesafeKart(t),
+              const SizedBox(height: 14),
+              harita,
+              const SizedBox(height: 12),
+              if (semaVar || veriVar) _lejant(t),
+              if (veriVar) ...[
+                const SizedBox(height: 12),
+                ..._gozlemler(t, bolgeler, bolgeTop, enBolge, bolgeAd, enMasa, noktaTipleri),
+                const SizedBox(height: 12),
+                ..._aiDegerlendirme(t, enBolge, bolgeAd, sakinAdlar, enMasa),
+              ],
+            ]),
     );
   }
 
