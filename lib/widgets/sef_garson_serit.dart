@@ -30,6 +30,7 @@ class _SefGarsonSeritState extends State<SefGarsonSerit> {
   List<Map<String, dynamic>> uyarilar = [];
   List<Map<String, dynamic>> yoneticiUyarilar = [];
   final Set<String> _gorulen = {};          // lokal: "Anladim" denen -> aninda yesil
+  final Map<String, DateTime> _ertelenen = {}; // "Sonra" denen -> gecici sustur (5 dk)
   final Set<int> _bilinenYonetici = {};
   bool _popupAcik = false, _patron = false;
   Timer? _timer;
@@ -75,8 +76,15 @@ class _SefGarsonSeritState extends State<SefGarsonSerit> {
       setState(() { uyarilar = liste; yoneticiUyarilar = yon; });
 
       // POPUP: sunucu "bildir=true" dediyse (yeni ya da tekrar hatirlatma) -> titre + popup
-      if (!_popupAcik) {
-        final tetik = liste.where((u) => u['bildir'] == true && !_goruldu(u)).toList();
+      // POPUP: sadece bu ekran (Masalar) ÖNDEyken çık — satış/ödeme ekranındayken
+      // (üstte başka route varsa) sipariş bölünmesin. "Sonra" denenler 5 dk ertelenir.
+      final ekranOnde = ModalRoute.of(context)?.isCurrent ?? false;
+      if (!_popupAcik && ekranOnde) {
+        final simdi = DateTime.now();
+        final tetik = liste.where((u) {
+          final ert = _ertelenen[_anahtar(u)];
+          return u['bildir'] == true && !_goruldu(u) && (ert == null || simdi.isAfter(ert));
+        }).toList();
         if (tetik.isNotEmpty) {
           HapticFeedback.vibrate();
           _popupGoster(tetik.first);
@@ -126,7 +134,7 @@ class _SefGarsonSeritState extends State<SefGarsonSerit> {
         content: Text(mesaj, style: TextStyle(color: t.ink, fontSize: 14.5, height: 1.4)),
         actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Sonra', style: TextStyle(color: t.sub, fontWeight: FontWeight.w600))),
+          TextButton(onPressed: () { _ertelenen[_anahtar(u)] = DateTime.now().add(const Duration(minutes: 5)); Navigator.pop(ctx); }, child: Text('Sonra', style: TextStyle(color: t.sub, fontWeight: FontWeight.w600))),
           FilledButton.icon(
             onPressed: () { Navigator.pop(ctx); _oneriGoster(u); },
             style: FilledButton.styleFrom(backgroundColor: _mor, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11)),
@@ -360,27 +368,71 @@ class _SefGarsonSeritState extends State<SefGarsonSerit> {
     );
   }
 
-  // Yönetici (kırmızı) kartı → tam metinli popup (küçük kartta okunmuyordu).
+  // Yönetici (kırmızı) kartı → tam metinli, GENİŞ popup (küçük kartta okunmuyordu).
   Future<void> _yoneticiDetay(Map<String, dynamic> y) async {
     final t = _t;
-    await showDialog(useRootNavigator: true, context: context, builder: (ctx) => AlertDialog(
-      backgroundColor: t.card, surfaceTintColor: t.card,
-      title: Row(children: [
-        Container(width: 34, height: 34,
-          decoration: BoxDecoration(color: _kirmizi.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(9)),
-          child: const Icon(Icons.report_gmailerrorred, color: _kirmizi, size: 20)),
-        const SizedBox(width: 10),
-        const Expanded(child: Text('Dikkat edilmiyor', style: TextStyle(color: _kirmizi, fontSize: 17, fontWeight: FontWeight.w900))),
-      ]),
-      content: Text(y['mesaj']?.toString() ?? 'Garson uyarıları dikkate almıyor.',
-          style: TextStyle(color: t.ink, fontSize: 15, height: 1.45)),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Kapat', style: TextStyle(color: t.sub, fontWeight: FontWeight.w600))),
-        FilledButton(
-          style: FilledButton.styleFrom(backgroundColor: _kirmizi),
-          onPressed: () { Navigator.pop(ctx); _yoneticiOku(y); },
-          child: const Text('Tamam', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-      ],
+    final masa = y['masa_adi']?.toString().trim() ?? '';
+    final garson = y['garson_adi']?.toString().trim() ?? '';
+    await showDialog(useRootNavigator: true, context: context, builder: (ctx) => Dialog(
+      backgroundColor: t.card,
+      insetPadding: const EdgeInsets.all(28),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      clipBehavior: Clip.antiAlias,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 440),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          // Kırmızı başlık şeridi
+          Container(
+            width: double.infinity, padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+            color: _kirmizi.withValues(alpha: t.koyu ? 0.20 : 0.10),
+            child: Row(children: [
+              Container(width: 40, height: 40,
+                decoration: BoxDecoration(color: _kirmizi.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(11)),
+                child: const Icon(Icons.report_gmailerrorred, color: _kirmizi, size: 22)),
+              const SizedBox(width: 12),
+              const Expanded(child: Text('Dikkat Edilmiyor', style: TextStyle(color: _kirmizi, fontSize: 18, fontWeight: FontWeight.w900))),
+            ]),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              if (masa.isNotEmpty || garson.isNotEmpty) ...[
+                Wrap(spacing: 8, runSpacing: 8, children: [
+                  if (masa.isNotEmpty) _detayCip(t, Icons.table_restaurant, masa),
+                  if (garson.isNotEmpty) _detayCip(t, Icons.person, garson),
+                ]),
+                const SizedBox(height: 12),
+              ],
+              Text(y['mesaj']?.toString() ?? 'Garson, satış uyarılarını dikkate almıyor.',
+                  style: TextStyle(color: t.ink, fontSize: 15.5, height: 1.5)),
+              const SizedBox(height: 18),
+              Row(children: [
+                Expanded(child: OutlinedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 13), side: BorderSide(color: t.line), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                  child: Text('Kapat', style: TextStyle(color: t.sub2, fontWeight: FontWeight.w600)),
+                )),
+                const SizedBox(width: 10),
+                Expanded(flex: 2, child: FilledButton.icon(
+                  onPressed: () { Navigator.pop(ctx); _yoneticiOku(y); },
+                  icon: const Icon(Icons.check, size: 18),
+                  label: const Text('Anladım, ilgileniyorum', style: TextStyle(fontWeight: FontWeight.bold)),
+                  style: FilledButton.styleFrom(backgroundColor: _kirmizi, padding: const EdgeInsets.symmetric(vertical: 13), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                )),
+              ]),
+            ]),
+          ),
+        ]),
+      ),
     ));
   }
+
+  Widget _detayCip(TemaProvider t, IconData ikon, String metin) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(color: t.card2, borderRadius: BorderRadius.circular(9), border: Border.all(color: t.line)),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(ikon, size: 14, color: t.sub2), const SizedBox(width: 5),
+          Text(metin, style: TextStyle(color: t.ink, fontSize: 12.5, fontWeight: FontWeight.w600)),
+        ]),
+      );
 }
