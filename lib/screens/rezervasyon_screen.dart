@@ -17,6 +17,8 @@ class RezervasyonScreen extends StatefulWidget {
 
 class _RezervasyonScreenState extends State<RezervasyonScreen> {
   Map<String, dynamic>? data;
+  Map<String, dynamic>? _panel; // analitik gosterge paneli verisi
+  String _gorunum = 'panel';    // 'panel' | 'liste'
   bool loading = true;
   String tarih = '';
 
@@ -40,10 +42,16 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
   Future<void> _yukle({String? t}) async {
     setState(() => loading = true);
     try {
-      final res = await Api.rezervasyonlar(_token, tarih: t ?? (tarih.isEmpty ? null : tarih));
+      final tt = t ?? (tarih.isEmpty ? null : tarih);
+      final res = await Api.rezervasyonlar(_token, tarih: tt);
+      Map<String, dynamic>? panel;
+      try {
+        panel = await Api.rezervasyonPanel(_token, tarih: tt);
+      } catch (_) {}
       if (!mounted) return;
       setState(() {
         data = res;
+        if (panel != null && panel['ok'] == 1) _panel = panel;
         tarih = res['tarih']?.toString() ?? tarih;
         loading = false;
       });
@@ -52,6 +60,28 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
     } catch (_) {
       if (mounted) setState(() => loading = false);
     }
+  }
+
+  // Tarihi gun bazinda kaydir (panel ok navigasyonu)
+  void _kaydir(int d) {
+    final base = DateTime.tryParse(tarih) ?? DateTime.now();
+    final n = base.add(Duration(days: d));
+    final iso = '${n.year}-${n.month.toString().padLeft(2, '0')}-${n.day.toString().padLeft(2, '0')}';
+    setState(() => tarih = iso);
+    _yukle(t: iso);
+  }
+
+  static const _ayAd = ['', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+  String _tarihUzun(String iso) {
+    final d = DateTime.tryParse(iso);
+    if (d == null) return iso;
+    return '${d.day} ${_ayAd[d.month]} ${d.year}, ${_gunAd[d.weekday - 1]}';
+  }
+
+  String _yzStr(dynamic v) {
+    final n = _n(v);
+    final s = n % 1 == 0 ? n.toInt().toString() : n.toStringAsFixed(1);
+    return s.replaceAll('.', ',');
   }
 
   Future<void> _durum(int id, String durum) async {
@@ -85,6 +115,7 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
   @override
   Widget build(BuildContext context) {
     if (genisMi(context)) return _masaustu(context);
+    final t = context.watch<TemaProvider>();
     final rezervasyonlar = (data?['rezervasyonlar'] as List?) ?? [];
     final ozet = (data?['ozet'] as Map?) ?? {};
     final gunler = (data?['gunler'] as List?) ?? [];
@@ -106,41 +137,54 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
       body: loading && data == null
           ? const Center(child: CircularProgressIndicator(color: _mor))
           : Column(children: [
-              // Gün seçici (7 gün)
-              SizedBox(
-                height: 74,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
-                  children: [for (final g in gunler) _gunPill(g as Map)],
-                ),
-              ),
-              // Özet
               Padding(
-                padding: const EdgeInsets.fromLTRB(12, 2, 12, 8),
-                child: Row(children: [
-                  _ozetChip('Bekleyen', _n(ozet['bekleyen']).toInt(), _amber),
-                  const SizedBox(width: 8),
-                  _ozetChip('Onaylı', _n(ozet['onayli']).toInt(), _mavi),
-                  const SizedBox(width: 8),
-                  _ozetChip('Geldi', _n(ozet['geldi']).toInt(), _yesil),
-                  const SizedBox(width: 8),
-                  _ozetChip('Kişi', _n(ozet['kisi']).toInt(), _mor),
-                ]),
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+                child: Align(alignment: Alignment.centerLeft, child: _segment(t)),
               ),
               Expanded(
-                child: rezervasyonlar.isEmpty
-                    ? _bos()
-                    : RefreshIndicator(
-                        onRefresh: () => _yukle(),
-                        color: _mor, backgroundColor: _card,
-                        child: ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(12, 4, 12, 90),
-                          itemCount: rezervasyonlar.length,
-                          separatorBuilder: (_, _) => const SizedBox(height: 10),
-                          itemBuilder: (_, i) => _kart(rezervasyonlar[i] as Map),
+                child: _gorunum == 'panel'
+                    ? RefreshIndicator(
+                        onRefresh: () => _yukle(), color: _mor, backgroundColor: _card,
+                        child: _panelGovde(t, genis: false),
+                      )
+                    : Column(children: [
+                        // Gün seçici (7 gün)
+                        SizedBox(
+                          height: 74,
+                          child: ListView(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+                            children: [for (final g in gunler) _gunPill(g as Map)],
+                          ),
                         ),
-                      ),
+                        // Özet
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 2, 12, 8),
+                          child: Row(children: [
+                            _ozetChip('Bekleyen', _n(ozet['bekleyen']).toInt(), _amber),
+                            const SizedBox(width: 8),
+                            _ozetChip('Onaylı', _n(ozet['onayli']).toInt(), _mavi),
+                            const SizedBox(width: 8),
+                            _ozetChip('Geldi', _n(ozet['geldi']).toInt(), _yesil),
+                            const SizedBox(width: 8),
+                            _ozetChip('Kişi', _n(ozet['kisi']).toInt(), _mor),
+                          ]),
+                        ),
+                        Expanded(
+                          child: rezervasyonlar.isEmpty
+                              ? _bos()
+                              : RefreshIndicator(
+                                  onRefresh: () => _yukle(),
+                                  color: _mor, backgroundColor: _card,
+                                  child: ListView.separated(
+                                    padding: const EdgeInsets.fromLTRB(12, 4, 12, 90),
+                                    itemCount: rezervasyonlar.length,
+                                    separatorBuilder: (_, _) => const SizedBox(height: 10),
+                                    itemBuilder: (_, i) => _kart(rezervasyonlar[i] as Map),
+                                  ),
+                                ),
+                        ),
+                      ]),
               ),
             ]),
     );
@@ -157,6 +201,8 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
       ikon: Icons.event_available_outlined,
       altBaslik: tarih.isEmpty ? null : tarih,
       araclar: [
+        _segment(t),
+        const SizedBox(width: 12),
         IconButton(
           onPressed: () => _yukle(),
           icon: Icon(Icons.refresh, color: t.sub2, size: 22),
@@ -167,21 +213,331 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
       ],
       govde: (loading && data == null)
           ? Center(child: CircularProgressIndicator(color: t.mor1))
-          : ListView(padding: const EdgeInsets.all(24), children: [
-              _mGunSecici(t, gunler),
-              const SizedBox(height: 18),
-              _mOzet(t, ozet),
-              const SizedBox(height: 22),
-              MBolumBaslik('Rezervasyonlar', renk: t.mor1, sayi: rezervasyonlar.length),
-              if (rezervasyonlar.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 40),
-                  child: Center(child: Text('Bu gün için rezervasyon yok.', style: TextStyle(color: t.sub))),
-                )
-              else
-                _mTablo(t, rezervasyonlar),
-            ]),
+          : (_gorunum == 'panel'
+              ? _panelGovde(t, genis: true)
+              : ListView(padding: const EdgeInsets.all(24), children: [
+                  _mGunSecici(t, gunler),
+                  const SizedBox(height: 18),
+                  _mOzet(t, ozet),
+                  const SizedBox(height: 22),
+                  MBolumBaslik('Rezervasyonlar', renk: t.mor1, sayi: rezervasyonlar.length),
+                  if (rezervasyonlar.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 40),
+                      child: Center(child: Text('Bu gün için rezervasyon yok.', style: TextStyle(color: t.sub))),
+                    )
+                  else
+                    _mTablo(t, rezervasyonlar),
+                ])),
     );
+  }
+
+  // ================= ANALİTİK PANEL (gösterge paneli) =================
+  Widget _segment(TemaProvider t) {
+    Widget seg(String key, String label, IconData ik) {
+      final aktif = _gorunum == key;
+      return GestureDetector(
+        onTap: () => setState(() => _gorunum = key),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(color: aktif ? t.mor1 : Colors.transparent, borderRadius: BorderRadius.circular(9)),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(ik, size: 15, color: aktif ? Colors.white : t.sub),
+            const SizedBox(width: 5),
+            Text(label, style: TextStyle(color: aktif ? Colors.white : t.sub, fontSize: 12.5, fontWeight: FontWeight.w600)),
+          ]),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(color: t.card, borderRadius: BorderRadius.circular(12), border: Border.all(color: t.line)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        seg('panel', 'Panel', Icons.donut_large),
+        seg('liste', 'Liste', Icons.list_alt),
+      ]),
+    );
+  }
+
+  Widget _panelGovde(TemaProvider t, {required bool genis}) {
+    final pg = (_panel?['gun'] as Map?) ?? {};
+    final durum = (_panel?['durum_dagilim'] as List?) ?? [];
+    final saat = (_panel?['saat_dagilim'] as List?) ?? [];
+    final kaynak = (_panel?['kaynak_dagilim'] as List?) ?? [];
+    final aylik = (_panel?['aylik'] as Map?) ?? {};
+    final perf = (_panel?['performans'] as Map?) ?? {};
+    final ayAdi = _panel?['ay_adi']?.toString() ?? '';
+    final toplamGun = _n(pg['toplam']).toInt();
+
+    final statlar = [
+      _pStat(t, Icons.event_note, 'Bugünün Rezervasyonları', toplamGun, t.mor1),
+      _pStat(t, Icons.hourglass_bottom, 'Bekleyen', _n(pg['bekleyen']).toInt(), t.amber),
+      _pStat(t, Icons.check_circle_outline, 'Onaylanan', _n(pg['onaylanan']).toInt(), t.yesil),
+      _pStat(t, Icons.groups, 'Toplam Misafir', _n(pg['toplam_misafir']).toInt(), t.mavi),
+    ];
+
+    return ListView(padding: EdgeInsets.all(genis ? 24 : 12), children: [
+      // Tarih navigasyonu
+      Row(children: [
+        _okBtn(t, Icons.chevron_left, () => _kaydir(-1)),
+        const SizedBox(width: 4),
+        Text(_tarihUzun(tarih), style: TextStyle(color: t.ink, fontSize: genis ? 15 : 13.5, fontWeight: FontWeight.bold)),
+        const SizedBox(width: 4),
+        _okBtn(t, Icons.chevron_right, () => _kaydir(1)),
+      ]),
+      SizedBox(height: genis ? 16 : 12),
+      // 4 stat kart
+      if (genis)
+        IntrinsicHeight(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          for (int i = 0; i < statlar.length; i++) ...[if (i > 0) const SizedBox(width: 14), Expanded(child: statlar[i])],
+        ]))
+      else
+        GridView.count(
+          crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+          childAspectRatio: 1.55, mainAxisSpacing: 10, crossAxisSpacing: 10, children: statlar,
+        ),
+      SizedBox(height: genis ? 16 : 12),
+      // Durum / Saat / Kaynak
+      if (genis)
+        IntrinsicHeight(child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(child: _pDurumKart(t, durum, toplamGun)),
+          const SizedBox(width: 14),
+          Expanded(child: _pSaatKart(t, saat)),
+          const SizedBox(width: 14),
+          Expanded(child: _pKaynakKart(t, kaynak)),
+        ]))
+      else ...[
+        _pDurumKart(t, durum, toplamGun),
+        const SizedBox(height: 12),
+        _pSaatKart(t, saat),
+        const SizedBox(height: 12),
+        _pKaynakKart(t, kaynak),
+      ],
+      SizedBox(height: genis ? 16 : 12),
+      // Aylık özet + Performans
+      if (genis)
+        IntrinsicHeight(child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(flex: 3, child: _pAylikKart(t, aylik, ayAdi)),
+          const SizedBox(width: 14),
+          Expanded(flex: 2, child: _pPerformansKart(t, perf)),
+        ]))
+      else ...[
+        _pAylikKart(t, aylik, ayAdi),
+        const SizedBox(height: 12),
+        _pPerformansKart(t, perf),
+      ],
+      const SizedBox(height: 24),
+    ]);
+  }
+
+  Widget _okBtn(TemaProvider t, IconData ik, VoidCallback onTap) => GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(color: t.card, borderRadius: BorderRadius.circular(9), border: Border.all(color: t.line)),
+          child: Icon(ik, size: 18, color: t.sub2),
+        ),
+      );
+
+  Widget _pKartKutu(TemaProvider t, IconData ik, String baslik, Color renk, Widget govde, {Widget? sag}) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: t.card, borderRadius: BorderRadius.circular(16), boxShadow: t.golge),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(width: 28, height: 28, decoration: BoxDecoration(color: renk.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(8)), child: Icon(ik, size: 16, color: renk)),
+          const SizedBox(width: 8),
+          Expanded(child: Text(baslik, style: TextStyle(color: t.ink, fontSize: 14, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis)),
+          ?sag,
+        ]),
+        const SizedBox(height: 14),
+        govde,
+      ]),
+    );
+  }
+
+  Widget _pStat(TemaProvider t, IconData ik, String etiket, int deger, Color renk) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: t.card, borderRadius: BorderRadius.circular(16), boxShadow: t.golge),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Row(children: [
+          Container(width: 30, height: 30, decoration: BoxDecoration(color: renk.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(9)), child: Icon(ik, size: 17, color: renk)),
+          const SizedBox(width: 8),
+          Expanded(child: Text(etiket, style: TextStyle(color: t.sub, fontSize: 12.5, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
+        ]),
+        const SizedBox(height: 10),
+        Text('$deger', style: TextStyle(color: renk, fontSize: 30, fontWeight: FontWeight.bold)),
+      ]),
+    );
+  }
+
+  Color _durumRenk(TemaProvider t, String d) => {
+        'bekliyor': t.amber, 'onaylandi': t.mavi, 'geldi': t.yesil, 'gelmedi': t.kirmizi, 'iptal': const Color(0xFF64748B),
+      }[d] ?? t.mor1;
+
+  Widget _pDurumKart(TemaProvider t, List durum, int toplam) {
+    return _pKartKutu(t, Icons.donut_large, 'Durum Dağılımı', t.mor1, Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      ClipRRect(
+        borderRadius: BorderRadius.circular(6),
+        child: SizedBox(height: 10, child: Row(children: [
+          if (toplam == 0)
+            Expanded(child: Container(color: t.card2))
+          else
+            for (final d in durum)
+              if (_n((d as Map)['adet']).toInt() > 0)
+                Expanded(flex: _n(d['adet']).toInt(), child: Container(color: _durumRenk(t, d['durum'].toString()))),
+        ])),
+      ),
+      const SizedBox(height: 14),
+      for (final d in durum) _pDurumSatir(t, d as Map),
+      Divider(color: t.line, height: 22),
+      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Text('Toplam', style: TextStyle(color: t.sub2, fontSize: 13, fontWeight: FontWeight.w600)),
+        Text('$toplam', style: TextStyle(color: t.ink, fontSize: 16, fontWeight: FontWeight.bold)),
+      ]),
+    ]));
+  }
+
+  Widget _pDurumSatir(TemaProvider t, Map d) {
+    final renk = _durumRenk(t, d['durum'].toString());
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(children: [
+        Container(width: 8, height: 8, decoration: BoxDecoration(color: renk, shape: BoxShape.circle)),
+        const SizedBox(width: 8),
+        Expanded(child: Text(d['ad'].toString(), style: TextStyle(color: t.sub2, fontSize: 12.5))),
+        Text('%${_yzStr(d['yuzde'])}', style: TextStyle(color: renk, fontSize: 12.5, fontWeight: FontWeight.bold)),
+        const SizedBox(width: 12),
+        SizedBox(width: 22, child: Text('${_n(d['adet']).toInt()}', textAlign: TextAlign.right, style: TextStyle(color: t.ink, fontSize: 12.5, fontWeight: FontWeight.bold))),
+      ]),
+    );
+  }
+
+  Widget _pSaatKart(TemaProvider t, List saat) {
+    final maks = saat.fold<int>(1, (a, e) => _n((e as Map)['adet']).toInt() > a ? _n(e['adet']).toInt() : a);
+    return _pKartKutu(t, Icons.schedule, 'Saat Dağılımı', const Color(0xFFFB7185), Column(children: [
+      SizedBox(
+        height: 120,
+        child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          for (final s in saat)
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 1.5),
+                child: Column(mainAxisAlignment: MainAxisAlignment.end, children: [
+                  Container(
+                    height: ((_n((s as Map)['adet']).toInt() / maks) * 104).clamp(3.0, 104.0),
+                    decoration: BoxDecoration(
+                      color: _n(s['adet']).toInt() > 0 ? const Color(0xFFFB7185) : t.card2,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ]),
+              ),
+            ),
+        ]),
+      ),
+      const SizedBox(height: 6),
+      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Text('${saat.isNotEmpty ? (saat.first as Map)['saat'] : '10'}:00', style: TextStyle(color: t.sub, fontSize: 10)),
+        Text('${saat.isNotEmpty ? (saat.last as Map)['saat'] : '23'}:00', style: TextStyle(color: t.sub, fontSize: 10)),
+      ]),
+    ]));
+  }
+
+  Widget _pKaynakKart(TemaProvider t, List kaynak) {
+    final renkler = [t.mavi, t.yesil, t.amber, t.kirmizi, t.mor1];
+    final maks = kaynak.fold<int>(1, (a, e) => _n((e as Map)['adet']).toInt() > a ? _n(e['adet']).toInt() : a);
+    return _pKartKutu(t, Icons.layers_outlined, 'Kaynak Dağılımı', t.mavi, Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      if (kaynak.isEmpty)
+        Padding(padding: const EdgeInsets.symmetric(vertical: 6), child: Text('Kayıt yok', style: TextStyle(color: t.sub, fontSize: 12)))
+      else
+        for (int i = 0; i < kaynak.length; i++) _pKaynakSatir(t, kaynak[i] as Map, renkler[i % renkler.length], maks),
+    ]));
+  }
+
+  Widget _pKaynakSatir(TemaProvider t, Map k, Color renk, int maks) {
+    final adet = _n(k['adet']).toInt();
+    final oran = maks > 0 ? (adet / maks).clamp(0.0, 1.0).toDouble() : 0.0;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Expanded(child: Text(k['ad'].toString(), style: TextStyle(color: t.sub2, fontSize: 12.5, fontWeight: FontWeight.w600))),
+          Text('$adet  (%${_n(k['yuzde']).toInt()})', style: TextStyle(color: t.sub, fontSize: 12)),
+        ]),
+        const SizedBox(height: 5),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(5),
+          child: LinearProgressIndicator(value: oran, minHeight: 7, backgroundColor: t.card2, valueColor: AlwaysStoppedAnimation(renk)),
+        ),
+      ]),
+    );
+  }
+
+  Widget _pAylikKart(TemaProvider t, Map aylik, String ayAdi) {
+    final gunler = (aylik['gunler'] as List?) ?? [];
+    final ilkGun = _n(aylik['ilk_gun_hafta']).toInt().clamp(1, 7);
+    final maks = gunler.fold<int>(1, (a, e) => _n((e as Map)['adet']).toInt() > a ? _n(e['adet']).toInt() : a);
+    const haftaAd = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
+    final hucreler = <Widget>[for (final h in haftaAd) Center(child: Text(h, style: TextStyle(color: t.sub, fontSize: 10, fontWeight: FontWeight.w600)))];
+    for (int i = 1; i < ilkGun; i++) {
+      hucreler.add(const SizedBox());
+    }
+    for (final g in gunler) {
+      hucreler.add(_pAyGun(t, g as Map, maks));
+    }
+    return _pKartKutu(t, Icons.calendar_month, 'Aylık Özet', t.mor1,
+      GridView.count(
+        crossAxisCount: 7, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+        mainAxisSpacing: 5, crossAxisSpacing: 5, childAspectRatio: 1.1, children: hucreler,
+      ),
+      sag: Text(ayAdi, style: TextStyle(color: t.sub, fontSize: 12, fontWeight: FontWeight.w600)));
+  }
+
+  Widget _pAyGun(TemaProvider t, Map g, int maks) {
+    final adet = _n(g['adet']).toInt();
+    final gt = g['tarih'].toString();
+    final secili = gt == tarih;
+    final yog = maks > 0 ? adet / maks : 0.0;
+    final bg = adet == 0 ? t.card2 : Color.lerp(t.mor1.withValues(alpha: 0.22), t.mor1, yog)!;
+    return GestureDetector(
+      onTap: () { setState(() => tarih = gt); _yukle(t: gt); },
+      child: Container(
+        decoration: BoxDecoration(
+          color: bg, borderRadius: BorderRadius.circular(8),
+          border: secili ? Border.all(color: t.gold, width: 2) : null,
+        ),
+        child: Center(child: Text('${_n(g['gun']).toInt()}',
+            style: TextStyle(color: adet > 0 ? Colors.white : t.sub, fontSize: 11, fontWeight: FontWeight.w600))),
+      ),
+    );
+  }
+
+  Widget _pPerformansKart(TemaProvider t, Map perf) {
+    return _pKartKutu(t, Icons.speed, 'Performans Oranları', const Color(0xFFFB7185), Column(children: [
+      _pPerfSatir(t, Icons.check_circle, 'Tamamlanma Oranı', _n(perf['tamamlanma']).toInt(), t.yesil),
+      const SizedBox(height: 16),
+      _pPerfSatir(t, Icons.cancel_outlined, 'İptal Oranı', _n(perf['iptal']).toInt(), t.kirmizi),
+    ]));
+  }
+
+  Widget _pPerfSatir(TemaProvider t, IconData ik, String etiket, int yuzde, Color renk) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        Icon(ik, size: 16, color: renk),
+        const SizedBox(width: 8),
+        Expanded(child: Text(etiket, style: TextStyle(color: t.sub2, fontSize: 13))),
+        Text('%$yuzde', style: TextStyle(color: renk, fontSize: 15, fontWeight: FontWeight.bold)),
+      ]),
+      const SizedBox(height: 8),
+      ClipRRect(
+        borderRadius: BorderRadius.circular(5),
+        child: LinearProgressIndicator(value: (yuzde / 100).clamp(0.0, 1.0), minHeight: 8, backgroundColor: t.card2, valueColor: AlwaysStoppedAnimation(renk)),
+      ),
+    ]);
   }
 
   Widget _mGunSecici(TemaProvider t, List gunler) {

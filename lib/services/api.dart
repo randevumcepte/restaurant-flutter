@@ -203,6 +203,12 @@ class Api {
   // Rezervasyon
   static Future<Map<String, dynamic>> rezervasyonlar(String token, {String? tarih}) =>
       _get('/api/patron/rezervasyonlar${tarih != null ? '?tarih=$tarih' : ''}', token);
+  static Future<Map<String, dynamic>> rezervasyonPanel(String token, {String? tarih, String? ay}) {
+    final q = <String>[];
+    if (tarih != null) q.add('tarih=$tarih');
+    if (ay != null) q.add('ay=$ay');
+    return _get('/api/patron/rezervasyon-panel${q.isEmpty ? '' : '?${q.join('&')}'}', token);
+  }
   static Future<Map<String, dynamic>> rezervasyonEkle(String token,
       {required String ad, String? telefon, required int kisi, required String tarih, required String saat, int? masaId, String? not}) {
     final body = <String, String>{'ad': ad, 'kisi': '$kisi', 'tarih': tarih, 'saat': saat};
