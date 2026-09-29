@@ -362,14 +362,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _donemSecici(),
         const SizedBox(height: 12),
 
-        // MODERN OZET: selam + 3 ciro karti + POS + masa durumu
+        // MODERN OZET: selam + 3 ciro + hizli bilgi + masa + POS (mockup'tan farkli sira)
         _selamKart(auth),
         const SizedBox(height: 12),
         IntrinsicHeight(child: _uclCiro(d)),
         const SizedBox(height: 12),
-        _posKart(d),
+        _hizliBilgi(d, genis: false),
         const SizedBox(height: 12),
         _masaKart(d),
+        const SizedBox(height: 12),
+        _posKart(d),
         const SizedBox(height: 12),
 
         // Maliyet (food-cost halkasi) — modern ustun altinda detay
@@ -456,11 +458,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
         // 3 ciro karti (bugun / hafta / ay)
         IntrinsicHeight(child: _uclCiro(d)),
         const SizedBox(height: 16),
-        // POS (sol genis) + Masa Durumu (sag) — mockup iki kolon
+        // Hizli bilgi kartlari (mockup'ta yok)
+        _hizliBilgi(d, genis: true),
+        const SizedBox(height: 16),
+        // Masa Durumu (sol) + POS (sag genis) — mockup'un TERSI yerlesim
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Expanded(flex: 6, child: _posKart(d)),
-          const SizedBox(width: 16),
           Expanded(flex: 4, child: _masaKart(d)),
+          const SizedBox(width: 16),
+          Expanded(flex: 6, child: _posKart(d)),
         ]),
         const SizedBox(height: 16),
         // Maliyet (food-cost halkasi)
@@ -620,35 +625,90 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Container(
       decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(16), boxShadow: _t.golge),
       clipBehavior: Clip.antiAlias,
+      child: IntrinsicHeight(
+        child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          // sol renk cubugu (mockup'taki ust seridin yerine)
+          Container(width: 5, color: renk),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(13, 12, 13, 13),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  Container(
+                    width: 30, height: 30,
+                    decoration: BoxDecoration(color: renk.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(9)),
+                    child: Icon(ik, size: 17, color: renk),
+                  ),
+                  const SizedBox(width: 8),
+                  Flexible(child: Text(baslik, style: TextStyle(color: _sub, fontSize: 12.5, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
+                ]),
+                const SizedBox(height: 10),
+                FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft,
+                    child: _sayiAnim(ciro, TextStyle(color: _ink, fontSize: 24, fontWeight: FontWeight.bold))),
+                const SizedBox(height: 8),
+                if (yuzde != null)
+                  Row(children: [
+                    Icon(up ? Icons.trending_up : Icons.trending_down, size: 14, color: up ? _yesil : _kirmizi),
+                    const SizedBox(width: 4),
+                    Flexible(child: Text('%${yuzde.abs().toStringAsFixed(1).replaceAll('.', ',')} $kiyas',
+                        style: TextStyle(color: up ? _yesil : _kirmizi, fontSize: 11, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
+                  ])
+                else
+                  Text('kıyas verisi yok', style: TextStyle(color: _sub, fontSize: 11)),
+              ]),
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  // Yeni: hizli bilgi kartlari (mevcut ozet verisinden) — mockup'ta yok, ekrani ozgunlestirir
+  Widget _hizliBilgi(Map d, {required bool genis}) {
+    final ciro = _n(d['ciro']);
+    final maliyet = _n(d['maliyet']);
+    final maliyetY = _n(d['maliyetYuzde']).toInt();
+    final urunler = (d['urunler'] as List?) ?? [];
+    final enCok = urunler.isNotEmpty ? (urunler.first as Map) : null;
+    final fcRenk = maliyetY >= 40 ? _kirmizi : (maliyetY >= 30 ? const Color(0xFFF59E0B) : _yesil);
+    final kartlar = [
+      _bilgiKart(Icons.savings_outlined, 'Brüt Kâr', _k(ciro - maliyet), 'food-cost sonrası', _yesil),
+      _bilgiKart(Icons.receipt_long_outlined, 'Ort. Adisyon', _tam(_n(d['adisyonOrt'])), 'adisyon başı', _mavi),
+      _bilgiKart(Icons.local_fire_department_outlined, 'Food-Cost', '%$maliyetY', _k(maliyet), fcRenk),
+      _bilgiKart(Icons.star_outline, 'En Çok Satan',
+          enCok?['ad']?.toString() ?? '—', enCok != null ? '${_n(enCok['adet']).toInt()}× · ${_k(_n(enCok['satis']))}' : 'satış yok', _mor1, tekSatir: true),
+    ];
+    if (genis) {
+      return IntrinsicHeight(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        for (int i = 0; i < kartlar.length; i++) ...[if (i > 0) const SizedBox(width: 10), Expanded(child: kartlar[i])],
+      ]));
+    }
+    return Column(children: [
+      IntrinsicHeight(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Expanded(child: kartlar[0]), const SizedBox(width: 10), Expanded(child: kartlar[1]),
+      ])),
+      const SizedBox(height: 10),
+      IntrinsicHeight(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Expanded(child: kartlar[2]), const SizedBox(width: 10), Expanded(child: kartlar[3]),
+      ])),
+    ]);
+  }
+
+  Widget _bilgiKart(IconData ik, String baslik, String deger, String alt, Color renk, {bool tekSatir = false}) {
+    return Container(
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(15), boxShadow: _t.golge),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Container(height: 4, color: renk),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(13, 12, 13, 13),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Container(
-                width: 30, height: 30,
-                decoration: BoxDecoration(color: renk.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(9)),
-                child: Icon(ik, size: 17, color: renk),
-              ),
-              const SizedBox(width: 8),
-              Flexible(child: Text(baslik, style: TextStyle(color: _sub, fontSize: 12.5, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
-            ]),
-            const SizedBox(height: 10),
-            FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft,
-                child: _sayiAnim(ciro, TextStyle(color: _ink, fontSize: 24, fontWeight: FontWeight.bold))),
-            const SizedBox(height: 8),
-            if (yuzde != null)
-              Row(children: [
-                Icon(up ? Icons.trending_up : Icons.trending_down, size: 14, color: up ? _yesil : _kirmizi),
-                const SizedBox(width: 4),
-                Flexible(child: Text('%${yuzde.abs().toStringAsFixed(1).replaceAll('.', ',')} $kiyas',
-                    style: TextStyle(color: up ? _yesil : _kirmizi, fontSize: 11, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
-              ])
-            else
-              Text('kıyas verisi yok', style: TextStyle(color: _sub, fontSize: 11)),
-          ]),
-        ),
+        Row(children: [
+          Container(width: 26, height: 26, decoration: BoxDecoration(color: renk.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(8)), child: Icon(ik, size: 15, color: renk)),
+          const SizedBox(width: 7),
+          Expanded(child: Text(baslik, style: TextStyle(color: _sub, fontSize: 11.5, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
+        ]),
+        const SizedBox(height: 9),
+        FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft,
+            child: Text(deger, maxLines: 1, style: TextStyle(color: _ink, fontSize: tekSatir ? 15 : 18, fontWeight: FontWeight.bold))),
+        const SizedBox(height: 2),
+        Text(alt, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: _sub, fontSize: 10.5)),
       ]),
     );
   }

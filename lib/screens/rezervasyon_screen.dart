@@ -270,12 +270,26 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
     final perf = (_panel?['performans'] as Map?) ?? {};
     final ayAdi = _panel?['ay_adi']?.toString() ?? '';
     final toplamGun = _n(pg['toplam']).toInt();
+    final misafir = _n(pg['toplam_misafir']).toInt();
+    // Ekstra bilgiler (mockup'ta yok): ortalama kisi + en yogun saat
+    final ortKisi = toplamGun > 0 ? (misafir / toplamGun) : 0.0;
+    String enYogunSaat = '—';
+    int enYogunAdet = 0;
+    for (final s in saat) {
+      final a = _n((s as Map)['adet']).toInt();
+      if (a > enYogunAdet) {
+        enYogunAdet = a;
+        enYogunSaat = '${s['saat']}:00';
+      }
+    }
 
     final statlar = [
-      _pStat(t, Icons.event_note, 'Bugünün Rezervasyonları', toplamGun, t.mor1),
-      _pStat(t, Icons.hourglass_bottom, 'Bekleyen', _n(pg['bekleyen']).toInt(), t.amber),
-      _pStat(t, Icons.check_circle_outline, 'Onaylanan', _n(pg['onaylanan']).toInt(), t.yesil),
-      _pStat(t, Icons.groups, 'Toplam Misafir', _n(pg['toplam_misafir']).toInt(), t.mavi),
+      _pStat(t, Icons.event_note, 'Bugünün Rezervasyonları', '$toplamGun', t.mor1),
+      _pStat(t, Icons.hourglass_bottom, 'Bekleyen', '${_n(pg['bekleyen']).toInt()}', t.amber),
+      _pStat(t, Icons.check_circle_outline, 'Onaylanan', '${_n(pg['onaylanan']).toInt()}', t.yesil),
+      _pStat(t, Icons.groups, 'Toplam Misafir', '$misafir', t.mavi),
+      _pStat(t, Icons.person_outline, 'Ort. Kişi / Rez.', ortKisi == 0 ? '0' : ortKisi.toStringAsFixed(1).replaceAll('.', ','), const Color(0xFFEC4899)),
+      _pStat(t, Icons.local_fire_department_outlined, 'En Yoğun Saat', enYogunSaat, const Color(0xFFFB7185)),
     ];
 
     return ListView(padding: EdgeInsets.all(genis ? 24 : 12), children: [
@@ -288,45 +302,52 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
         _okBtn(t, Icons.chevron_right, () => _kaydir(1)),
       ]),
       SizedBox(height: genis ? 16 : 12),
-      // 4 stat kart
-      if (genis)
+      // 6 stat kart (mockup'ta 4; ekstra 2 kart + masaustunde 3+3 duzen)
+      if (genis) ...[
         IntrinsicHeight(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          for (int i = 0; i < statlar.length; i++) ...[if (i > 0) const SizedBox(width: 14), Expanded(child: statlar[i])],
-        ]))
-      else
+          Expanded(child: statlar[0]), const SizedBox(width: 14),
+          Expanded(child: statlar[1]), const SizedBox(width: 14),
+          Expanded(child: statlar[2]),
+        ])),
+        const SizedBox(height: 14),
+        IntrinsicHeight(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Expanded(child: statlar[3]), const SizedBox(width: 14),
+          Expanded(child: statlar[4]), const SizedBox(width: 14),
+          Expanded(child: statlar[5]),
+        ])),
+      ] else
         GridView.count(
           crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
           childAspectRatio: 1.55, mainAxisSpacing: 10, crossAxisSpacing: 10, children: statlar,
         ),
       SizedBox(height: genis ? 16 : 12),
-      // Durum / Saat / Kaynak
+      // Saat Dagilimi — tam genislik (mockup'ta orta kolondaydi)
+      _pSaatKart(t, saat),
+      SizedBox(height: genis ? 16 : 12),
+      // Durum + Kaynak (mockup'ta 3'lu satirdaydi -> 2'li)
       if (genis)
         IntrinsicHeight(child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Expanded(child: _pDurumKart(t, durum, toplamGun)),
-          const SizedBox(width: 14),
-          Expanded(child: _pSaatKart(t, saat)),
           const SizedBox(width: 14),
           Expanded(child: _pKaynakKart(t, kaynak)),
         ]))
       else ...[
         _pDurumKart(t, durum, toplamGun),
         const SizedBox(height: 12),
-        _pSaatKart(t, saat),
-        const SizedBox(height: 12),
         _pKaynakKart(t, kaynak),
       ],
       SizedBox(height: genis ? 16 : 12),
-      // Aylık özet + Performans
+      // Performans + Aylık özet (mockup'un TERSI: Performans solda)
       if (genis)
         IntrinsicHeight(child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Expanded(flex: 3, child: _pAylikKart(t, aylik, ayAdi)),
-          const SizedBox(width: 14),
           Expanded(flex: 2, child: _pPerformansKart(t, perf)),
+          const SizedBox(width: 14),
+          Expanded(flex: 3, child: _pAylikKart(t, aylik, ayAdi)),
         ]))
       else ...[
-        _pAylikKart(t, aylik, ayAdi),
-        const SizedBox(height: 12),
         _pPerformansKart(t, perf),
+        const SizedBox(height: 12),
+        _pAylikKart(t, aylik, ayAdi),
       ],
       const SizedBox(height: 24),
     ]);
@@ -358,7 +379,7 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
     );
   }
 
-  Widget _pStat(TemaProvider t, IconData ik, String etiket, int deger, Color renk) {
+  Widget _pStat(TemaProvider t, IconData ik, String etiket, String deger, Color renk) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(color: t.card, borderRadius: BorderRadius.circular(16), boxShadow: t.golge),
@@ -369,7 +390,8 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
           Expanded(child: Text(etiket, style: TextStyle(color: t.sub, fontSize: 12.5, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
         ]),
         const SizedBox(height: 10),
-        Text('$deger', style: TextStyle(color: renk, fontSize: 30, fontWeight: FontWeight.bold)),
+        FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft,
+            child: Text(deger, style: TextStyle(color: renk, fontSize: 30, fontWeight: FontWeight.bold))),
       ]),
     );
   }
