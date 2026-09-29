@@ -554,16 +554,19 @@ class _SatisEkraniState extends State<SatisEkrani> {
   Future<void> _onayBekle(int istekId, String yoneticiAd, Future<void> Function() onOnaylandi) async {
     final auth = context.read<AuthProvider>();
     Timer? tmr;
+    int gecen = 0;
     final sonuc = await showDialog<String>(
       context: context, barrierDismissible: false,
       builder: (ctx) {
         final t = ctx.read<TemaProvider>();
         tmr ??= Timer.periodic(const Duration(seconds: 2), (_) async {
+          gecen += 2;
           try {
             final res = await Api.onayDurum(auth.token!, istekId);
             final d = res['durum']?.toString();
-            if ((d == 'onaylandi' || d == 'reddedildi') && ctx.mounted) { tmr?.cancel(); Navigator.pop(ctx, d); }
+            if ((d == 'onaylandi' || d == 'reddedildi') && ctx.mounted) { tmr?.cancel(); Navigator.pop(ctx, d); return; }
           } catch (_) {}
+          if (gecen >= 90 && ctx.mounted) { tmr?.cancel(); Navigator.pop(ctx, 'zamanasimi'); } // 90 sn onay gelmezse
         });
         return PopScope(canPop: false, child: Dialog(
           backgroundColor: t.card, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -586,6 +589,7 @@ class _SatisEkraniState extends State<SatisEkrani> {
     if (!mounted) return;
     if (sonuc == 'onaylandi') { _snack('✓ Yönetici onayladı', _yesil); await onOnaylandi(); }
     else if (sonuc == 'reddedildi') { _snack('Yönetici reddetti', _kirmizi); }
+    else if (sonuc == 'zamanasimi') { _snack('Onay gelmedi — yönetici uygun değil. Tekrar dene ya da PIN kullan.', _turuncu); }
   }
 
   Future<void> _iptal() async {
