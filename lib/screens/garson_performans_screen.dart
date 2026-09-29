@@ -204,14 +204,17 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
       _isiChip(t, null, 'Tüm salon'),
       for (final g in garsonlar) _isiChip(t, g['id'] as int, g['ad']?.toString() ?? ''),
     ]));
-    // Sag panel parcalari (yuruyus + lejant + gozlem + AI)
+    // Sag panel (infografik sirasi): Isı Haritası Renkleri -> Gözlemler -> Toplam Yürüyüş Mesafesi -> AI
     final List<Widget> paneller = [
-      _adimMesafeKart(t),
-      if (semaVar || veriVar) ...[const SizedBox(height: 14), _lejant(t)],
+      if (semaVar || veriVar) _lejantDikey(t),
       if (veriVar) ...[
         const SizedBox(height: 14),
         ..._gozlemler(t, bolgeler, bolgeTop, enBolge, bolgeAd, enMasa, noktaTipleri),
-        const SizedBox(height: 12),
+      ],
+      const SizedBox(height: 14),
+      _yuruyusPanel(t),
+      if (veriVar) ...[
+        const SizedBox(height: 14),
         ..._aiDegerlendirme(t, enBolge, bolgeAd, sakinAdlar, enMasa),
       ],
     ];
@@ -491,6 +494,64 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
           Expanded(child: Text('Sık', style: TextStyle(color: t.sub2, fontSize: 11), textAlign: TextAlign.center)),
           Expanded(child: Text('En az yürüdüğü', style: TextStyle(color: t.sub2, fontSize: 11), textAlign: TextAlign.end)),
         ]),
+      ]),
+    );
+  }
+
+  // Masaustu (infografik): DIKEY gradient lejant + 3 etiket
+  Widget _lejantDikey(TemaProvider t) {
+    Widget satir(Color c, String s) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(children: [
+            Container(width: 10, height: 10, decoration: BoxDecoration(color: c, shape: BoxShape.circle)),
+            const SizedBox(width: 8),
+            Expanded(child: Text(s, style: TextStyle(color: t.sub2, fontSize: 12))),
+          ]),
+        );
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: t.card2, borderRadius: BorderRadius.circular(14)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('Isı Haritası Renkleri', style: TextStyle(color: t.ink, fontSize: 13.5, fontWeight: FontWeight.w900)),
+        const SizedBox(height: 14),
+        Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          SizedBox(height: 150, child: Container(width: 16, decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
+              colors: [Color(0xFFEF4444), Color(0xFFF97316), Color(0xFFEAB308), Color(0xFF22C55E), Color(0xFF06B6D4), Color(0xFF1D4ED8)])))),
+          const SizedBox(width: 14),
+          Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.spaceBetween, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            satir(const Color(0xFFEF4444), 'En çok yürüdüğü alanlar'),
+            satir(const Color(0xFF22C55E), 'Sık yürüdüğü alanlar'),
+            satir(const Color(0xFF1D4ED8), 'En az yürüdüğü alanlar'),
+          ])),
+        ]),
+      ]),
+    );
+  }
+
+  // Masaustu (infografik): Toplam Yürüyüş Mesafesi büyük kart
+  Widget _yuruyusPanel(TemaProvider t) {
+    final adim = _adimToplam();
+    final km = adim * 0.75 / 1000;
+    final kmStr = km >= 1 ? km.toStringAsFixed(1) : km.toStringAsFixed(2);
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: t.card2, borderRadius: BorderRadius.circular(14)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('Toplam Yürüyüş Mesafesi', style: TextStyle(color: t.ink, fontSize: 13.5, fontWeight: FontWeight.w900)),
+        const SizedBox(height: 12),
+        Row(children: [
+          Container(width: 46, height: 46, decoration: BoxDecoration(color: const Color(0xFF16A34A).withValues(alpha: 0.14), borderRadius: BorderRadius.circular(13)),
+              child: const Icon(Icons.route, color: Color(0xFF16A34A), size: 25)),
+          const SizedBox(width: 14),
+          Expanded(child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: RichText(text: TextSpan(children: [
+            TextSpan(text: kmStr, style: TextStyle(color: t.ink, fontSize: 30, fontWeight: FontWeight.w900)),
+            TextSpan(text: ' km', style: TextStyle(color: t.sub, fontSize: 15, fontWeight: FontWeight.bold)),
+          ])))),
+        ]),
+        const SizedBox(height: 8),
+        Text('${_f.format(adim)} adım · örnek veri', style: TextStyle(color: t.sub, fontSize: 11.5)),
       ]),
     );
   }

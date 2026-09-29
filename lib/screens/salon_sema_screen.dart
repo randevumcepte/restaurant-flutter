@@ -223,8 +223,13 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
 
   Widget _kanvas(TemaProvider t) {
     return LayoutBuilder(builder: (ctx, c) {
-      final w = c.maxWidth - 24;
-      final h = (c.maxHeight - 24).clamp(240.0, 100000.0); // mevcut yüksekliği DOLDUR (alt boşluk kalmasın)
+      final availW = c.maxWidth - 24;
+      final availH = (c.maxHeight - 24).clamp(240.0, 100000.0);
+      // Salon plani SABIT oran (1:1.35 — isi haritasiyla ayni). Boylece telefon+masaustu AYNI ve
+      // hicbir ekranda yatay/dikey ezilme olmaz; mevcut alana sigdirilir + ortalanir.
+      const oran = 1.35;
+      double w = availW, h = w * oran;
+      if (h > availH) { h = availH; w = h / oran; }
       double sx(num v) => v / 1000 * w;
       double sy(num v) => v / 1000 * h;
       return Padding(
@@ -236,7 +241,8 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
             scaleEnabled: true,         // iki parmak = yakınlaştır + kaydır (parsel detay)
             minScale: 0.9, maxScale: 5,
             boundaryMargin: const EdgeInsets.all(120),
-            child: SizedBox(
+            child: Center(
+              child: SizedBox(
               width: w, height: h,
               child: Stack(clipBehavior: Clip.none, children: [
               // Zemin (dokununca seçim bırak)
@@ -258,7 +264,7 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
                 if (_n(e.value['kat']).toInt() == aktifKat) _masaWidget(t, e.key, sx, sy, w, h),
               for (int i = 0; i < (parsel[aktifKat]?.length ?? 0); i++) _koseTutamak(t, i, sx, sy, w, h),
               ]),
-            ),
+            )),
           ),
         ),
       );
