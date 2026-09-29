@@ -266,7 +266,9 @@ class _SefGarsonSeritState extends State<SefGarsonSerit> {
         ? vurgu.withValues(alpha: 0.45)
         : (goruldu ? const Color(0xFFA7F3D0) : (eskale ? const Color(0xFFFECACA) : const Color(0xFFFDBA74)));
     final ikon = u['ikon']?.toString() ?? '💡';
-    return Container(
+    return GestureDetector(
+      onTap: () => _popupGoster(u),
+      child: Container(
       width: 196,
       padding: const EdgeInsets.all(9),
       decoration: BoxDecoration(
@@ -315,12 +317,15 @@ class _SefGarsonSeritState extends State<SefGarsonSerit> {
             ),
           ),
       ]),
+      ),
     );
   }
 
   Widget _yoneticiKart(Map<String, dynamic> y) {
     final t = _t;
-    return Container(
+    return GestureDetector(
+      onTap: () => _yoneticiDetay(y),
+      child: Container(
       width: 200,
       padding: const EdgeInsets.all(9),
       decoration: BoxDecoration(
@@ -351,6 +356,31 @@ class _SefGarsonSeritState extends State<SefGarsonSerit> {
           ),
         ),
       ]),
+      ),
     );
+  }
+
+  // Yönetici (kırmızı) kartı → tam metinli popup (küçük kartta okunmuyordu).
+  Future<void> _yoneticiDetay(Map<String, dynamic> y) async {
+    final t = _t;
+    await showDialog(useRootNavigator: true, context: context, builder: (ctx) => AlertDialog(
+      backgroundColor: t.card, surfaceTintColor: t.card,
+      title: Row(children: [
+        Container(width: 34, height: 34,
+          decoration: BoxDecoration(color: _kirmizi.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(9)),
+          child: const Icon(Icons.report_gmailerrorred, color: _kirmizi, size: 20)),
+        const SizedBox(width: 10),
+        const Expanded(child: Text('Dikkat edilmiyor', style: TextStyle(color: _kirmizi, fontSize: 17, fontWeight: FontWeight.w900))),
+      ]),
+      content: Text(y['mesaj']?.toString() ?? 'Garson uyarıları dikkate almıyor.',
+          style: TextStyle(color: t.ink, fontSize: 15, height: 1.45)),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Kapat', style: TextStyle(color: t.sub, fontWeight: FontWeight.w600))),
+        FilledButton(
+          style: FilledButton.styleFrom(backgroundColor: _kirmizi),
+          onPressed: () { Navigator.pop(ctx); _yoneticiOku(y); },
+          child: const Text('Tamam', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+      ],
+    ));
   }
 }
