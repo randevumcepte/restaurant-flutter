@@ -264,6 +264,115 @@ class _SatisEkraniState extends State<SatisEkrani> {
     );
   }
 
+  // ---- ALINAN ÖDEMELER + GERİ AL (Müdür/Sahip onaylı düzeltme) ----
+  static const Map<String, List<dynamic>> _odemeTipBilgi = {
+    'nakit': ['Nakit', Color(0xFF10B981), Icons.payments_outlined],
+    'kredi': ['Kredi Kartı', Color(0xFF3B82F6), Icons.credit_card],
+    'yemek_karti': ['Yemek Kartı', Color(0xFFF59E0B), Icons.restaurant],
+    'acik_hesap': ['Açık Hesap', Color(0xFF7C3AED), Icons.account_balance_wallet_outlined],
+  };
+
+  Future<bool> _odemeGeriAl(int odemeId, {String? pin}) async {
+    final auth = context.read<AuthProvider>();
+    try {
+      final res = await Api.odemeGeriAl(auth.token!, odemeId, onayPin: pin);
+      if (!mounted) return false;
+      if (res['ok'] == 1) { _snack(res['mesaj']?.toString() ?? 'Ödeme geri alındı', _yesil); await _yukle(); return true; }
+      if (res['onay_gerek'] == true) {
+        final p = await _pinSor(res['hata']?.toString() ?? 'Ödeme geri alma için Müdür/Sahip PIN gerekli');
+        if (p != null && p.trim().isNotEmpty) return _odemeGeriAl(odemeId, pin: p.trim());
+        return false;
+      }
+      _snack(res['hata']?.toString() ?? 'Geri alınamadı', _kirmizi);
+      return false;
+    } catch (_) {
+      if (mounted) _snack('Bağlantı hatası', _kirmizi);
+      return false;
+    }
+  }
+
+  Future<void> _odemelerSheet() async {
+    final auth = context.read<AuthProvider>();
+    List ilk = [];
+    try { final r = await Api.adisyonOdemeler(auth.token!, widget.adisyonId); ilk = (r['odemeler'] as List?) ?? []; } catch (_) {}
+    if (!mounted) return;
+    await showModalBottomSheet(
+      context: context, backgroundColor: Colors.transparent, isScrollControlled: true,
+      builder: (ctx) {
+        final t = ctx.read<TemaProvider>();
+        List ods = List.from(ilk);
+        return StatefulBuilder(builder: (ctx, setSt) {
+          Future<void> geriAl(Map o) async {
+            final onay = await showDialog<bool>(
+              context: ctx,
+              builder: (c) => AlertDialog(
+                backgroundColor: t.card, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                title: Text('Ödemeyi Geri Al', style: TextStyle(color: t.ink, fontSize: 16)),
+                content: Text('${_tl(_n(o['tutar']))} ${(_odemeTipBilgi[o['tip']]?[0] ?? o['tip'])} ödeme geri alınsın mı? (Müdür/Sahip onayı gerekir)', style: TextStyle(color: t.sub, fontSize: 14)),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(c, false), child: Text('Vazgeç', style: TextStyle(color: t.sub))),
+                  FilledButton(onPressed: () => Navigator.pop(c, true), style: FilledButton.styleFrom(backgroundColor: _kirmizi), child: const Text('Geri Al')),
+                ],
+              ),
+            );
+            if (onay != true) return;
+            final ok = await _odemeGeriAl(_n(o['id']).toInt());
+            if (ok) {
+              try { final r = await Api.adisyonOdemeler(auth.token!, widget.adisyonId); ods = (r['odemeler'] as List?) ?? []; } catch (_) {}
+              if (ctx.mounted) setSt(() {});
+            }
+          }
+          return Container(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+            decoration: BoxDecoration(color: t.card, borderRadius: const BorderRadius.vertical(top: Radius.circular(22))),
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Center(child: Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 14), decoration: BoxDecoration(color: t.line, borderRadius: BorderRadius.circular(2)))),
+              Row(children: [
+                Icon(Icons.price_check, color: t.mor1, size: 20), const SizedBox(width: 8),
+                Text('Alınan Ödemeler', style: TextStyle(color: t.ink, fontSize: 16, fontWeight: FontWeight.bold)),
+              ]),
+              const SizedBox(height: 4),
+              Text('Yanlış ödemeyi seç → Geri Al (Müdür/Sahip PIN)', style: TextStyle(color: t.sub, fontSize: 12)),
+              const SizedBox(height: 14),
+              if (ods.isEmpty)
+                Padding(padding: const EdgeInsets.symmetric(vertical: 24), child: Center(child: Text('Henüz ödeme alınmadı.', style: TextStyle(color: t.sub, fontSize: 14))))
+              else
+                for (final o in ods) _odemeSatir(t, o as Map, () => geriAl(o)),
+            ]),
+          );
+        });
+      },
+    );
+  }
+
+  Widget _odemeSatir(TemaProvider t, Map o, VoidCallback onGeriAl) {
+    final b = _odemeTipBilgi[o['tip']] ?? ['Ödeme', const Color(0xFF94A3B8), Icons.payments_outlined];
+    final renk = b[1] as Color;
+    final marka = o['marka']?.toString() ?? '';
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(color: t.card2, borderRadius: BorderRadius.circular(12), border: Border.all(color: t.line)),
+      child: Row(children: [
+        Container(width: 38, height: 38, alignment: Alignment.center, decoration: BoxDecoration(color: renk.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(10)), child: Icon(b[2] as IconData, color: renk, size: 20)),
+        const SizedBox(width: 11),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('${b[0]}${marka.isNotEmpty ? ' · $marka' : ''}', style: TextStyle(color: t.ink, fontSize: 14, fontWeight: FontWeight.w600)),
+          Text('${o['saat']}', style: TextStyle(color: t.sub, fontSize: 11.5)),
+        ])),
+        Text(_tl(_n(o['tutar'])), style: TextStyle(color: t.ink, fontSize: 15, fontWeight: FontWeight.bold)),
+        const SizedBox(width: 10),
+        GestureDetector(
+          onTap: onGeriAl,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(color: _kirmizi.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(9), border: Border.all(color: _kirmizi.withValues(alpha: 0.4))),
+            child: const Row(children: [Icon(Icons.undo, size: 15, color: _kirmizi), SizedBox(width: 4), Text('Geri Al', style: TextStyle(color: _kirmizi, fontSize: 12.5, fontWeight: FontWeight.bold))]),
+          ),
+        ),
+      ]),
+    );
+  }
+
   // Yemek kartı markası seç (Multinet/Sodexo/Ticket…) — rapor için kayda geçer.
   Future<String?> _yemekKartiSec() {
     const markalar = ['Multinet', 'Sodexo/Pluxee', 'Ticket (Edenred)', 'Setcard', 'Metropol', 'Paye', 'Diğer'];
@@ -532,7 +641,10 @@ class _SatisEkraniState extends State<SatisEkrani> {
       appBar: AppBar(
         backgroundColor: t.bg, elevation: 0, iconTheme: IconThemeData(color: t.ink),
         title: Text(widget.masaAd, style: TextStyle(color: t.ink, fontSize: 17, fontWeight: FontWeight.bold)),
-        actions: [IconButton(tooltip: 'Barkod okut', onPressed: _barkodOkut, icon: Icon(Icons.qr_code_scanner, color: t.mor1))],
+        actions: [
+          IconButton(tooltip: 'Alınan Ödemeler', onPressed: _odemelerSheet, icon: Icon(Icons.price_check, color: t.mor1)),
+          IconButton(tooltip: 'Barkod okut', onPressed: _barkodOkut, icon: Icon(Icons.qr_code_scanner, color: t.mor1)),
+        ],
       ),
       body: loading
           ? Center(child: CircularProgressIndicator(color: t.mor1))
