@@ -644,7 +644,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ]),
                 const SizedBox(height: 10),
                 FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft,
-                    child: _sayiAnim(ciro, TextStyle(color: _ink, fontSize: 24, fontWeight: FontWeight.bold))),
+                    child: _sayiAnim(ciro, TextStyle(color: _ink, fontSize: 27, fontWeight: FontWeight.bold))),
                 const SizedBox(height: 8),
                 if (yuzde != null)
                   Row(children: [
@@ -706,9 +706,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ]),
         const SizedBox(height: 9),
         FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft,
-            child: Text(deger, maxLines: 1, style: TextStyle(color: _ink, fontSize: tekSatir ? 15 : 18, fontWeight: FontWeight.bold))),
-        const SizedBox(height: 2),
-        Text(alt, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: _sub, fontSize: 10.5)),
+            child: Text(deger, maxLines: 1, style: TextStyle(color: _ink, fontSize: tekSatir ? 17 : 22, fontWeight: FontWeight.bold))),
+        const SizedBox(height: 3),
+        Text(alt, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: _sub, fontSize: 11)),
       ]),
     );
   }
@@ -809,10 +809,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Text(baslik, style: TextStyle(color: _sub2, fontSize: 11, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
         const SizedBox(height: 6),
         Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          Text(buyuk, style: TextStyle(color: renk, fontSize: 20, fontWeight: FontWeight.bold)),
+          Text(buyuk, style: TextStyle(color: renk, fontSize: 25, fontWeight: FontWeight.bold)),
           const SizedBox(width: 6),
           Expanded(child: Text(alt, textAlign: TextAlign.right,
-              style: TextStyle(color: _sub, fontSize: 11, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
+              style: TextStyle(color: _sub, fontSize: 11.5, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
         ]),
       ]),
     );
@@ -930,7 +930,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Flexible(child: Text(etiket, style: TextStyle(color: renk, fontSize: 11, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
         ]),
         const SizedBox(height: 6),
-        Text('$deger', style: TextStyle(color: renk, fontSize: 22, fontWeight: FontWeight.bold)),
+        Text('$deger', style: TextStyle(color: renk, fontSize: 26, fontWeight: FontWeight.bold)),
       ]),
     );
   }
@@ -1051,33 +1051,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final yuzde = _n(m['yuzde']);
     final adet = m['adet'];
     final vurgu = yuzde >= 5 || (baslik == 'İskonto' && yuzde >= 3);
+    // Her kayip turune kendi rengi (kritik olanlar koyu/vurgulu, digerleri yumusak ton)
+    final renk = <String, Color>{
+      'İskonto': const Color(0xFFF59E0B),
+      'İkram': const Color(0xFF8B5CF6),
+      'Silinen Ürün': const Color(0xFFEF4444),
+      'İptal Adisyon': const Color(0xFFEC4899),
+      'Fire / Zayi': const Color(0xFFF97316),
+      'Tahsil Edilemeyen': const Color(0xFFF43F5E),
+    }[baslik] ?? _mor1;
+    final yuzdeStr = '%${yuzde % 1 == 0 ? yuzde.toInt() : yuzde.toStringAsFixed(1).replaceAll('.', ',')}';
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: vurgu ? [const Color(0xFF7F1D1D), const Color(0xFF9F1239)] : [_card, _card],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        gradient: vurgu
+            ? LinearGradient(colors: [renk.withValues(alpha: 0.92), Color.lerp(renk, Colors.black, 0.42)!], begin: Alignment.topLeft, end: Alignment.bottomRight)
+            : null,
+        color: vurgu ? null : renk.withValues(alpha: _t.koyu ? 0.15 : 0.10),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: vurgu ? _kirmizi.withValues(alpha: 0.5) : _t.card2),
+        border: Border.all(color: vurgu ? renk.withValues(alpha: 0.6) : renk.withValues(alpha: 0.28)),
         boxShadow: _t.golge,
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Icon(ikon, size: 16, color: vurgu ? const Color(0xFFFCA5A5) : _sub),
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, crossAxisAlignment: CrossAxisAlignment.start, children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-                color: (vurgu ? _kirmizi : const Color(0xFF334155)).withValues(alpha: 0.3), borderRadius: BorderRadius.circular(8)),
-            child: Text('%${yuzde % 1 == 0 ? yuzde.toInt() : yuzde}',
-                style: TextStyle(color: vurgu ? const Color(0xFFFCA5A5) : _sub, fontSize: 10, fontWeight: FontWeight.bold)),
+            width: 36, height: 36,
+            decoration: BoxDecoration(color: vurgu ? Colors.white24 : renk.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(11)),
+            child: Icon(ikon, size: 20, color: vurgu ? Colors.white : renk),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(color: vurgu ? Colors.white24 : renk.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(9)),
+            child: Text(yuzdeStr, style: TextStyle(color: vurgu ? Colors.white : renk, fontSize: 11.5, fontWeight: FontWeight.bold)),
           ),
         ]),
+        const SizedBox(height: 10),
         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(_tam(tutar), style: TextStyle(color: vurgu ? Colors.white : _ink, fontSize: 16, fontWeight: FontWeight.bold)),
+          FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft,
+              child: Text(_tam(tutar), style: TextStyle(color: vurgu ? Colors.white : _ink, fontSize: 26, fontWeight: FontWeight.bold))),
+          const SizedBox(height: 3),
           Text(adet != null ? '$baslik · ${_n(adet).toInt()} adet' : baslik,
-              style: TextStyle(color: vurgu ? const Color(0xFFFCA5A5) : _sub, fontSize: 11)),
+              style: TextStyle(color: vurgu ? Colors.white70 : _sub, fontSize: 12.5, fontWeight: FontWeight.w500)),
         ]),
       ]),
     );
