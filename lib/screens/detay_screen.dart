@@ -221,11 +221,7 @@ class _DetayScreenState extends State<DetayScreen> {
 
     return [
       // Ozet chip grid
-      GridView.count(
-        crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
-        childAspectRatio: 2.4, mainAxisSpacing: 10, crossAxisSpacing: 10,
-        children: ozet.entries.map((e) => _statKart(e.key, e.value.toString())).toList(),
-      ),
+      _statGrid(ozet.entries.toList()),
       const SizedBox(height: 14),
       // Recete maliyet
       _kutu('🧾 Reçete & Maliyet', [
@@ -890,11 +886,7 @@ class _DetayScreenState extends State<DetayScreen> {
       _ozetSerit(_tam(_n(d!['toplam'])), '${d!['kanal']} · ${d!['acilis']}${d!['kapanis'] != null ? ' → ${d!['kapanis']}' : ' (açık)'}', _mavi),
       if (masaVar) _masaBanner(masa),
       const SizedBox(height: 12),
-      GridView.count(
-        crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
-        childAspectRatio: 2.4, mainAxisSpacing: 10, crossAxisSpacing: 10,
-        children: ozetGirdiler.map((e) => _statKart(e.key, e.value.toString())).toList(),
-      ),
+      _statGrid(ozetGirdiler),
       // Acik adisyon -> once URUN EKLE, sonra islem butonlari (yetki kontrolu backend'de)
       if (d!['durum'] == 'acik') ...[
         const SizedBox(height: 12),
@@ -1207,11 +1199,7 @@ class _DetayScreenState extends State<DetayScreen> {
       ],
       const SizedBox(height: 12),
       // Ozet chips
-      GridView.count(
-        crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
-        childAspectRatio: 2.4, mainAxisSpacing: 10, crossAxisSpacing: 10,
-        children: ozet.entries.map((e) => _statKart(e.key, e.value.toString())).toList(),
-      ),
+      _statGrid(ozet.entries.toList()),
       const SizedBox(height: 14),
       // Favori urunler
       if (favori.isNotEmpty) ...[
@@ -1510,15 +1498,49 @@ class _DetayScreenState extends State<DetayScreen> {
         ),
       );
 
-  Widget _statKart(String baslik, String deger) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(14), boxShadow: _t.golge),
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-          Text(baslik, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: _sub, fontSize: 11)),
-          const SizedBox(height: 2),
-          FittedBox(fit: BoxFit.scaleDown, child: Text(deger, maxLines: 1, style: TextStyle(color: _ink, fontSize: 16, fontWeight: FontWeight.bold))),
-        ]),
+  // Kompakt responsive stat grid: dar 2, genis 3-4 sutun; kartlar kucuk/renkli (dev/bos kalmasin)
+  Widget _statGrid(List<MapEntry> entries) {
+    return LayoutBuilder(builder: (ctx, c) {
+      final cols = (c.maxWidth / 240).floor().clamp(2, 4);
+      return GridView.count(
+        crossAxisCount: cols, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+        childAspectRatio: 1.85, mainAxisSpacing: 12, crossAxisSpacing: 12,
+        children: entries.map((e) => _statKart(e.key.toString(), e.value.toString())).toList(),
       );
+    });
+  }
+
+  // Baslik'tan renk + ikon tahmini (Satilan/Ciro/Bugun/Fiyat/Masa/Garson/Kisi/Sure...)
+  (Color, IconData) _statStil(String b) {
+    final s = b.toLowerCase();
+    if (s.contains('ciro') || s.contains('satış') || s.contains('tutar') || s.contains('kâr') || s.contains('kar')) return (_yesil, Icons.payments_outlined);
+    if (s.contains('fiyat')) return (const Color(0xFFF59E0B), Icons.sell_outlined);
+    if (s.contains('bugün') || s.contains('bugun')) return (_mor1, Icons.today_outlined);
+    if (s.contains('satılan') || s.contains('satilan') || s.contains('adet')) return (_mavi, Icons.shopping_bag_outlined);
+    if (s.contains('masa')) return (_mavi, Icons.table_restaurant_outlined);
+    if (s.contains('garson') || s.contains('personel')) return (const Color(0xFF14B8A6), Icons.badge_outlined);
+    if (s.contains('kişi') || s.contains('kisi') || s.contains('misafir')) return (_mor1, Icons.groups_outlined);
+    if (s.contains('süre') || s.contains('sure') || s.contains('saat')) return (const Color(0xFFF59E0B), Icons.schedule_outlined);
+    if (s.contains('maliyet') || s.contains('food')) return (_kirmizi, Icons.local_fire_department_outlined);
+    return (_mor1, Icons.insights_outlined);
+  }
+
+  Widget _statKart(String baslik, String deger) {
+    final (renk, ikon) = _statStil(baslik);
+    return Container(
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(14), boxShadow: _t.golge, border: Border.all(color: _card2)),
+      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
+        Row(children: [
+          Container(width: 30, height: 30, decoration: BoxDecoration(color: renk.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(9)), child: Icon(ikon, size: 17, color: renk)),
+          const SizedBox(width: 8),
+          Expanded(child: Text(baslik, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: _sub, fontSize: 11.5, fontWeight: FontWeight.w600))),
+        ]),
+        const SizedBox(height: 10),
+        FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(deger, maxLines: 1, style: TextStyle(color: renk, fontSize: 21, fontWeight: FontWeight.bold))),
+      ]),
+    );
+  }
 
   Widget _ozetSerit(String buyuk, String alt, Color renk) => Container(
         width: double.infinity,
