@@ -298,6 +298,19 @@ class _HareketlerScreenState extends State<HareketlerScreen> {
         child: Text(tarih, style: TextStyle(color: t.sub, fontSize: 12, fontWeight: FontWeight.bold)),
       );
 
+  // Tarih+saat: backend alanları boşsa ham 'zaman' damgasından türet (garanti).
+  (String, String) _tarihSaat(Map h) {
+    String iki(int n) => n.toString().padLeft(2, '0');
+    final zt = DateTime.tryParse(h['zaman']?.toString() ?? '')?.toLocal();
+    final tarih = (h['tarih']?.toString().trim().isNotEmpty ?? false)
+        ? h['tarih'].toString()
+        : (zt != null ? '${iki(zt.day)}.${iki(zt.month)}.${zt.year}' : '');
+    final saat = (h['saat']?.toString().trim().isNotEmpty ?? false)
+        ? h['saat'].toString()
+        : (zt != null ? '${iki(zt.hour)}:${iki(zt.minute)}' : '');
+    return (tarih, saat);
+  }
+
   Color _rolRenk(String? rol) {
     switch (rol) {
       case 'Sahip': return const Color(0xFF7C3AED);
@@ -335,7 +348,7 @@ class _HareketlerScreenState extends State<HareketlerScreen> {
     final ip = h['ip']?.toString();
     final rr = _rolRenk(rol);
     final bas = (personel != null && personel.trim().isNotEmpty) ? personel.trim()[0].toUpperCase() : 'S';
-    final saat = (h['saat']?.toString().isNotEmpty ?? false) ? h['saat'].toString() : (h['zaman_tam']?.toString().split(' ').last ?? '');
+    final (tarih, saat) = _tarihSaat(h);
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
       decoration: BoxDecoration(color: t.card, borderRadius: BorderRadius.circular(11), border: Border.all(color: t.line)),
@@ -347,7 +360,7 @@ class _HareketlerScreenState extends State<HareketlerScreen> {
           child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
             // ZAMAN
             Expanded(flex: 20, child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-              Text(h['tarih']?.toString() ?? '', style: TextStyle(color: t.ink, fontSize: 12.5, fontWeight: FontWeight.w700)),
+              Text(tarih, style: TextStyle(color: t.ink, fontSize: 12.5, fontWeight: FontWeight.w700)),
               Text(saat, style: TextStyle(color: t.sub, fontSize: 11.5)),
             ])),
             // KULLANICI
