@@ -1031,13 +1031,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final servis = (d['servis'] as List?) ?? [];
     final servisMax = servis.fold<num>(1, (a, e) => _n((e as Map)['tutar']) > a ? _n(e['tutar']) : a);
     return Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(22), boxShadow: _t.golge),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        // UST: mavi gradient Toplam Ciro
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(20), boxShadow: _t.golge),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        // POS baslik (en ustte)
+        Row(children: [
+          Container(width: 26, height: 26, decoration: BoxDecoration(color: _kirmizi.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(8)),
+              child: Icon(Icons.point_of_sale, size: 15, color: _kirmizi)),
+          const SizedBox(width: 8),
+          Text('POS', style: TextStyle(color: _ink, fontSize: 14, fontWeight: FontWeight.bold)),
+        ]),
+        const SizedBox(height: 12),
+        // Mavi Toplam Ciro karti — POS'un ICINDE (ic kart)
         Container(
-          padding: const EdgeInsets.all(18),
-          decoration: const BoxDecoration(gradient: LinearGradient(colors: [_mor1, _mavi], begin: Alignment.topLeft, end: Alignment.bottomRight)),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [_mor1, _mavi], begin: Alignment.topLeft, end: Alignment.bottomRight),
+            borderRadius: BorderRadius.circular(16),
+          ),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, crossAxisAlignment: CrossAxisAlignment.start, children: [
               const Padding(padding: EdgeInsets.only(top: 6), child: Text('Toplam Ciro', style: TextStyle(color: Colors.white70, fontSize: 14))),
@@ -1082,17 +1093,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ]),
         ),
-        // ALT: POS (ayni kartin icinde, acik zemin)
-        Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Container(width: 26, height: 26, decoration: BoxDecoration(color: _kirmizi.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(8)),
-                  child: Icon(Icons.point_of_sale, size: 15, color: _kirmizi)),
-              const SizedBox(width: 8),
-              Text('POS', style: TextStyle(color: _ink, fontSize: 14, fontWeight: FontWeight.bold)),
-            ]),
-            const SizedBox(height: 12),
+        const SizedBox(height: 14),
+        // POS mini kartlar + servis
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
               Expanded(child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: () => _detayAc(tip: 'acik', baslik: 'Açık Adisyonlar'),
                   child: _posMini('Açık Adisyon', '${_n(d['acikAdet']).toInt()}', _k(_n(d['acikTutar'])), const Color(0xFFF59E0B)))),
@@ -1116,7 +1119,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             else
               for (final s in servis) _servisBar((s as Map)['ad']?.toString() ?? '', _n(s['tutar']), servisMax),
           ]),
-        ),
       ]),
     );
   }
