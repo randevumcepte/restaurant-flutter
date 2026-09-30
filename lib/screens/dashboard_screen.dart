@@ -50,6 +50,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool loading = true;
   String? hata;
   String period = 'haftalik';
+  bool _masaAcik = false; // telefon: Masa Durumu akordiyon acik mi
   final _f = NumberFormat.decimalPattern('tr');
 
   // read (watch DEGIL): _t getter'i tiklama/callback'lerde de kullaniliyor (ör. _detayAc -> barrierColor: _bg).
@@ -361,18 +362,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _donemSecici(),
         const SizedBox(height: 12),
 
-        // Mavi Toplam Ciro karti (SADECE telefon Ozet'inde — masaustune eklenmedi)
-        _ciroHero(ciro, ciroYuzde, info, comp),
+        // Mavi Toplam Ciro + POS TEK KART (SADECE telefon)
+        _ciroPosKart(d, ciro, ciroYuzde, info, comp),
         const SizedBox(height: 12),
 
-        // 3 ciro + hizli bilgi + masa + POS (selam karti telefondan kaldirildi)
+        // 3 ciro + hizli bilgi + masa (POS artik mavi kartin icinde; selam karti kaldirildi)
         IntrinsicHeight(child: _uclCiro(d, kompakt: true)),
         const SizedBox(height: 12),
         _hizliBilgi(d, genis: false),
         const SizedBox(height: 12),
-        _masaKart(d),
-        const SizedBox(height: 12),
-        _posKart(d, toplamTahsilat: false), // telefonda yesil Toplam Tahsilat gizli
+        _masaKart(d, akordiyon: true),
         const SizedBox(height: 12),
 
         // Maliyet (food-cost halkasi) — modern ustun altinda detay
@@ -853,7 +852,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   // Masa Durumu karti: Toplam/Musait/Dolu + doluluk % + bekleyen masalar
-  Widget _masaKart(Map d) {
+  Widget _masaKart(Map d, {bool akordiyon = false}) {
     final m = (d['masa'] as Map?) ?? {};
     final toplam = _n(m['toplam']).toInt();
     final musait = _n(m['musait']).toInt();
@@ -862,17 +861,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final yogunluk = m['yogunluk']?.toString() ?? '';
     final bekleyen = (m['bekleyen'] as List?) ?? [];
     final yogunRenk = doluluk >= 70 ? _kirmizi : (doluluk >= 35 ? const Color(0xFFF59E0B) : _yesil);
+    final detayGoster = !akordiyon || _masaAcik; // masaustu hep acik; telefon tikladikca
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(18), boxShadow: _t.golge),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Container(width: 30, height: 30, decoration: BoxDecoration(color: _mor1.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(9)),
-              child: Icon(Icons.table_restaurant, size: 17, color: _mor1)),
-          const SizedBox(width: 8),
-          Text('Masa Durumu', style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.bold)),
-        ]),
+        // Baslik — akordiyonda SOL OK + tiklanabilir
+        GestureDetector(
+          onTap: akordiyon ? () => setState(() => _masaAcik = !_masaAcik) : null,
+          behavior: HitTestBehavior.opaque,
+          child: Row(children: [
+            if (akordiyon) ...[
+              AnimatedRotation(
+                turns: _masaAcik ? 0.25 : 0.0,
+                duration: const Duration(milliseconds: 180),
+                child: Icon(Icons.chevron_right, size: 22, color: _sub2),
+              ),
+              const SizedBox(width: 4),
+            ],
+            Container(width: 30, height: 30, decoration: BoxDecoration(color: _mor1.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(9)),
+                child: Icon(Icons.table_restaurant, size: 17, color: _mor1)),
+            const SizedBox(width: 8),
+            Text('Masa Durumu', style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.bold)),
+            if (akordiyon) ...[
+              const Spacer(),
+              Text(_masaAcik ? 'gizle' : 'detay', style: TextStyle(color: _sub, fontSize: 11.5, fontWeight: FontWeight.w600)),
+            ],
+          ]),
+        ),
         const SizedBox(height: 14),
+        // Sayaclar HER ZAMAN sabit (kullanicinin istegi)
         Row(children: [
           Expanded(child: _masaSayac('Toplam', toplam, Icons.grid_view_rounded, const Color(0xFFF97316))),
           const SizedBox(width: 10),
@@ -880,43 +898,46 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(width: 10),
           Expanded(child: _masaSayac('Dolu', dolu, Icons.circle, _kirmizi)),
         ]),
-        const SizedBox(height: 16),
-        Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          Text('%$doluluk', style: TextStyle(color: _ink, fontSize: 30, fontWeight: FontWeight.bold, height: 1)),
-          const SizedBox(width: 8),
-          if (yogunluk.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 5),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(color: yogunRenk.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(Icons.trending_up, size: 13, color: yogunRenk),
-                  const SizedBox(width: 3),
-                  Text(yogunluk, style: TextStyle(color: yogunRenk, fontWeight: FontWeight.bold, fontSize: 11)),
-                ]),
+        // Detaylar — akordiyon acikken (ya da masaustu)
+        if (detayGoster) ...[
+          const SizedBox(height: 16),
+          Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            Text('%$doluluk', style: TextStyle(color: _ink, fontSize: 30, fontWeight: FontWeight.bold, height: 1)),
+            const SizedBox(width: 8),
+            if (yogunluk.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 5),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(color: yogunRenk.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(Icons.trending_up, size: 13, color: yogunRenk),
+                    const SizedBox(width: 3),
+                    Text(yogunluk, style: TextStyle(color: yogunRenk, fontWeight: FontWeight.bold, fontSize: 11)),
+                  ]),
+                ),
               ),
+            const Spacer(),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text("$toplam masanın $dolu'i dolu", style: TextStyle(color: _sub, fontSize: 11), textAlign: TextAlign.right),
             ),
-          const Spacer(),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 4),
-            child: Text("$toplam masanın $dolu'i dolu", style: TextStyle(color: _sub, fontSize: 11), textAlign: TextAlign.right),
+          ]),
+          const SizedBox(height: 3),
+          Text('Doluluk', style: TextStyle(color: _sub, fontSize: 11)),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(value: (doluluk / 100).clamp(0.0, 1.0), minHeight: 8, backgroundColor: _t.card2, valueColor: AlwaysStoppedAnimation(yogunRenk)),
           ),
-        ]),
-        const SizedBox(height: 3),
-        Text('Doluluk', style: TextStyle(color: _sub, fontSize: 11)),
-        const SizedBox(height: 10),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(6),
-          child: LinearProgressIndicator(value: (doluluk / 100).clamp(0.0, 1.0), minHeight: 8, backgroundColor: _t.card2, valueColor: AlwaysStoppedAnimation(yogunRenk)),
-        ),
-        const SizedBox(height: 16),
-        Text('Bekleyen Masalar', style: TextStyle(color: _ink, fontSize: 13, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        if (bekleyen.isEmpty)
-          Padding(padding: const EdgeInsets.symmetric(vertical: 6), child: Text('Bekleyen masa yok', style: TextStyle(color: _sub, fontSize: 12)))
-        else
-          for (final b in bekleyen) _bekleyenSatir((b as Map)['ad']?.toString() ?? 'Masa', _n(b['dk']).toInt()),
+          const SizedBox(height: 16),
+          Text('Bekleyen Masalar', style: TextStyle(color: _ink, fontSize: 13, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          if (bekleyen.isEmpty)
+            Padding(padding: const EdgeInsets.symmetric(vertical: 6), child: Text('Bekleyen masa yok', style: TextStyle(color: _sub, fontSize: 12)))
+          else
+            for (final b in bekleyen) _bekleyenSatir((b as Map)['ad']?.toString() ?? 'Masa', _n(b['dk']).toInt()),
+        ],
       ]),
     );
   }
@@ -1002,58 +1023,97 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ]);
   }
 
-  // ---- Mavi Toplam Ciro hero karti (SADECE telefon Ozet'i cagirir; _genisPano cagirmaz) ----
-  Widget _ciroHero(num ciro, double? yuzde, Map info, Map comp) {
+  // ---- Telefon: mavi Toplam Ciro + POS TEK KART (ust mavi gradient, alt POS acik zemin) ----
+  Widget _ciroPosKart(Map d, num ciro, double? yuzde, Map info, Map comp) {
     final up = (yuzde ?? 0) >= 0;
     final oncekiVar = _n(data?['compCiro']) > 0 || _n(comp['folyo']) > 0 || _n(comp['misafir']) > 0;
+    final servis = (d['servis'] as List?) ?? [];
+    final servisMax = servis.fold<num>(1, (a, e) => _n((e as Map)['tutar']) > a ? _n(e['tutar']) : a);
     return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [_mor1, _mavi], begin: Alignment.topLeft, end: Alignment.bottomRight),
-        borderRadius: BorderRadius.circular(22),
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Padding(padding: EdgeInsets.only(top: 6), child: Text('Toplam Ciro', style: TextStyle(color: Colors.white70, fontSize: 14))),
-          Row(mainAxisSize: MainAxisSize.min, children: [
-            if (yuzde != null) ...[
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(20)),
-                child: Text('${up ? "▲" : "▼"} %${yuzde.abs().toStringAsFixed(1)}',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-              ),
-              const SizedBox(width: 8),
-            ],
-            // Rezervasyon butonu (sag ust kose)
-            GestureDetector(
-              onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RezervasyonScreen())),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
-                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.22), borderRadius: BorderRadius.circular(12)),
-                child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(Icons.event_available, size: 15, color: Colors.white),
-                  SizedBox(width: 5),
-                  Text('Rezervasyon', style: TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w600)),
-                ]),
-              ),
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(22), boxShadow: _t.golge),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        // UST: mavi gradient Toplam Ciro
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: const BoxDecoration(gradient: LinearGradient(colors: [_mor1, _mavi], begin: Alignment.topLeft, end: Alignment.bottomRight)),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Padding(padding: EdgeInsets.only(top: 6), child: Text('Toplam Ciro', style: TextStyle(color: Colors.white70, fontSize: 14))),
+              Row(mainAxisSize: MainAxisSize.min, children: [
+                if (yuzde != null) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(20)),
+                    child: Text('${up ? "▲" : "▼"} %${yuzde.abs().toStringAsFixed(1)}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                GestureDetector(
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RezervasyonScreen())),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.22), borderRadius: BorderRadius.circular(12)),
+                    child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(Icons.event_available, size: 15, color: Colors.white),
+                      SizedBox(width: 5),
+                      Text('Rezervasyon', style: TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w600)),
+                    ]),
+                  ),
+                ),
+              ]),
+            ]),
+            const SizedBox(height: 4),
+            _sayiAnim(ciro, const TextStyle(color: Colors.white, fontSize: 34, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            Text(oncekiVar ? 'önceki dönem: ${_tam(_n(data!['compCiro']))}' : 'karşılaştırılacak önceki dönem verisi yok',
+                style: const TextStyle(color: Colors.white54, fontSize: 12)),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(14)),
+              child: Row(children: [
+                _kib('Folyo', '${_n(info['folyo']).toInt()}', '${_n(comp['folyo']).toInt()}', oncekiVar: oncekiVar),
+                _kib('Ort. Adisyon', _tam(_n(info['folyo_ort'])), _tam(_n(comp['folyo_ort'])), oncekiVar: oncekiVar),
+                _kib('Misafir', '${_n(info['misafir']).toInt()}', '${_n(comp['misafir']).toInt()}', oncekiVar: oncekiVar),
+                _kib('Kişi Başı', _tam(_n(info['kisi_basi'])), _tam(_n(comp['kisi_basi'])), son: true, oncekiVar: oncekiVar),
+              ]),
             ),
           ]),
-        ]),
-        const SizedBox(height: 4),
-        _sayiAnim(ciro, const TextStyle(color: Colors.white, fontSize: 34, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 4),
-        Text(oncekiVar ? 'önceki dönem: ${_tam(_n(data!['compCiro']))}' : 'karşılaştırılacak önceki dönem verisi yok',
-            style: const TextStyle(color: Colors.white54, fontSize: 12)),
-        const SizedBox(height: 14),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(14)),
-          child: Row(children: [
-            _kib('Folyo', '${_n(info['folyo']).toInt()}', '${_n(comp['folyo']).toInt()}', oncekiVar: oncekiVar),
-            _kib('Ort. Adisyon', _tam(_n(info['folyo_ort'])), _tam(_n(comp['folyo_ort'])), oncekiVar: oncekiVar),
-            _kib('Misafir', '${_n(info['misafir']).toInt()}', '${_n(comp['misafir']).toInt()}', oncekiVar: oncekiVar),
-            _kib('Kişi Başı', _tam(_n(info['kisi_basi'])), _tam(_n(comp['kisi_basi'])), son: true, oncekiVar: oncekiVar),
+        ),
+        // ALT: POS (ayni kartin icinde, acik zemin)
+        Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Container(width: 26, height: 26, decoration: BoxDecoration(color: _kirmizi.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(8)),
+                  child: Icon(Icons.point_of_sale, size: 15, color: _kirmizi)),
+              const SizedBox(width: 8),
+              Text('POS', style: TextStyle(color: _ink, fontSize: 14, fontWeight: FontWeight.bold)),
+            ]),
+            const SizedBox(height: 12),
+            Row(children: [
+              Expanded(child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: () => _detayAc(tip: 'acik', baslik: 'Açık Adisyonlar'),
+                  child: _posMini('Açık Adisyon', '${_n(d['acikAdet']).toInt()}', _k(_n(d['acikTutar'])), const Color(0xFFF59E0B)))),
+              const SizedBox(width: 10),
+              Expanded(child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: () => _detayAc(tip: 'kapali', baslik: 'Kapanan Adisyonlar'),
+                  child: _posMini('Kapalı Adisyon', '${_n(d['kapaliAdet']).toInt()}', _k(_n(d['kapaliTutar'])), _yesil))),
+            ]),
+            const SizedBox(height: 10),
+            Row(children: [
+              Expanded(child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => MusteriDetayScreen(period: period))),
+                  child: _posMini('Kişi Sayısı', _f.format(_n(info['misafir']).toInt()), _tam(_n(info['kisi_basi'])), _mavi))),
+              const SizedBox(width: 10),
+              Expanded(child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: () => _detayAc(tip: 'kapali', baslik: 'Adisyonlar'),
+                  child: _posMini('Toplam Adisyon', '${_n(d['toplamAdisyon']).toInt()}', _tam(_n(d['adisyonOrt'])), const Color(0xFFEC4899)))),
+            ]),
+            const SizedBox(height: 16),
+            Text('Servis Türüne Göre Ciro', style: TextStyle(color: _ink, fontSize: 13, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            if (servis.isEmpty)
+              Text('Bu dönemde satış yok.', style: TextStyle(color: _sub, fontSize: 12))
+            else
+              for (final s in servis) _servisBar((s as Map)['ad']?.toString() ?? '', _n(s['tutar']), servisMax),
           ]),
         ),
       ]),
