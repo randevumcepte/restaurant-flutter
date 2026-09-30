@@ -385,19 +385,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _baslik('🎯 Kayıp Radarı', 'Ciroya oranla — sızıntı takibi'),
         const SizedBox(height: 8),
         GridView.count(
-          crossAxisCount: 2,
+          crossAxisCount: 3, // telefon: 3'lu iki sira (kucuk)
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          childAspectRatio: 1.7,
-          mainAxisSpacing: 10,
-          crossAxisSpacing: 10,
+          childAspectRatio: 1.12,
+          mainAxisSpacing: 8,
+          crossAxisSpacing: 8,
           children: [
-            _kayipTap('iskonto', _kayipKart('İskonto', kayip['iskonto'], Icons.local_offer_outlined)),
-            _kayipTap('ikram', _kayipKart('İkram', kayip['ikram'], Icons.card_giftcard)),
-            _kayipTap('silinen', _kayipKart('Silinen Ürün', kayip['silinen'], Icons.remove_circle_outline)),
-            _kayipTap('iptal', _kayipKart('İptal Adisyon', kayip['iptal'], Icons.delete_outline)),
-            _kayipTap('fire', _kayipKart('Fire / Zayi', kayip['fire'], Icons.delete_sweep_outlined)),
-            _kayipTap('odenmez', _kayipKart('Tahsil Edilemeyen', kayip['odenmez'], Icons.money_off)),
+            _kayipTap('iskonto', _kayipKart('İskonto', kayip['iskonto'], Icons.local_offer_outlined, kompakt: true)),
+            _kayipTap('ikram', _kayipKart('İkram', kayip['ikram'], Icons.card_giftcard, kompakt: true)),
+            _kayipTap('silinen', _kayipKart('Silinen Ürün', kayip['silinen'], Icons.remove_circle_outline, kompakt: true)),
+            _kayipTap('iptal', _kayipKart('İptal Adisyon', kayip['iptal'], Icons.delete_outline, kompakt: true)),
+            _kayipTap('fire', _kayipKart('Fire / Zayi', kayip['fire'], Icons.delete_sweep_outlined, kompakt: true)),
+            _kayipTap('odenmez', _kayipKart('Tahsil Edilemeyen', kayip['odenmez'], Icons.money_off, kompakt: true)),
           ],
         ),
         const SizedBox(height: 14),
@@ -614,11 +614,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     Map g(String key) => (k[key] as Map?) ?? {};
     double? yz(Map m) => m['yuzde'] == null ? null : _n(m['yuzde']).toDouble();
     return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Expanded(child: _ciroMini('Bugünkü Ciro', _n(g('bugun')['ciro']), yz(g('bugun')), 'düne göre', _kirmizi, Icons.today, kompakt)),
+      Expanded(child: _ciroMini(kompakt ? 'Bugün' : 'Bugünkü Ciro', _n(g('bugun')['ciro']), yz(g('bugun')), 'düne göre', _kirmizi, Icons.today, kompakt)),
       SizedBox(width: kompakt ? 8 : 10),
-      Expanded(child: _ciroMini('Haftalık Ciro', _n(g('hafta')['ciro']), yz(g('hafta')), 'geçen haftaya', _mavi, Icons.date_range, kompakt)),
+      Expanded(child: _ciroMini(kompakt ? 'Hafta' : 'Haftalık Ciro', _n(g('hafta')['ciro']), yz(g('hafta')), 'geçen haftaya', _mavi, Icons.date_range, kompakt)),
       SizedBox(width: kompakt ? 8 : 10),
-      Expanded(child: _ciroMini('Bu Ay Cirosu', _n(g('ay')['ciro']), yz(g('ay')), 'geçen aya', _mor1, Icons.calendar_month, kompakt)),
+      Expanded(child: _ciroMini(kompakt ? 'Bu Ay' : 'Bu Ay Cirosu', _n(g('ay')['ciro']), yz(g('ay')), 'geçen aya', _mor1, Icons.calendar_month, kompakt)),
     ]);
   }
 
@@ -635,16 +635,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Padding(
               padding: kompakt ? const EdgeInsets.fromLTRB(10, 9, 9, 9) : const EdgeInsets.fromLTRB(13, 12, 13, 13),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [
-                  Container(
-                    width: kompakt ? 24 : 30, height: kompakt ? 24 : 30,
-                    decoration: BoxDecoration(color: renk.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(kompakt ? 7 : 9)),
-                    child: Icon(ik, size: kompakt ? 14 : 17, color: renk),
-                  ),
-                  SizedBox(width: kompakt ? 6 : 8),
-                  Flexible(child: Text(baslik, style: TextStyle(color: _sub, fontSize: kompakt ? 10.5 : 12.5, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
-                ]),
-                SizedBox(height: kompakt ? 7 : 10),
+                if (kompakt)
+                  // telefon: ikon YOK, baslik okunur (kisa)
+                  Text(baslik, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: _sub2, fontSize: 12, fontWeight: FontWeight.w700))
+                else
+                  Row(children: [
+                    Container(
+                      width: 30, height: 30,
+                      decoration: BoxDecoration(color: renk.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(9)),
+                      child: Icon(ik, size: 17, color: renk),
+                    ),
+                    const SizedBox(width: 8),
+                    Flexible(child: Text(baslik, style: TextStyle(color: _sub, fontSize: 12.5, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
+                  ]),
+                SizedBox(height: kompakt ? 6 : 10),
                 FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft,
                     child: _sayiAnim(ciro, TextStyle(color: _ink, fontSize: kompakt ? 17 : 27, fontWeight: FontWeight.bold))),
                 SizedBox(height: kompakt ? 4 : 8),
@@ -673,44 +677,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final urunler = (d['urunler'] as List?) ?? [];
     final enCok = urunler.isNotEmpty ? (urunler.first as Map) : null;
     final fcRenk = maliyetY >= 40 ? _kirmizi : (maliyetY >= 30 ? const Color(0xFFF59E0B) : _yesil);
+    final mini = !genis; // telefon: 4 kart yan yana, kucuk
     final kartlar = [
-      _bilgiKart(Icons.savings_outlined, 'Brüt Kâr', _k(ciro - maliyet), 'food-cost sonrası', _yesil),
-      _bilgiKart(Icons.receipt_long_outlined, 'Ort. Adisyon', _tam(_n(d['adisyonOrt'])), 'adisyon başı', _mavi),
-      _bilgiKart(Icons.local_fire_department_outlined, 'Food-Cost', '%$maliyetY', _k(maliyet), fcRenk),
+      _bilgiKart(Icons.savings_outlined, 'Brüt Kâr', _k(ciro - maliyet), 'food-cost sonrası', _yesil, mini: mini),
+      _bilgiKart(Icons.receipt_long_outlined, 'Ort. Adisyon', _tam(_n(d['adisyonOrt'])), 'adisyon başı', _mavi, mini: mini),
+      _bilgiKart(Icons.local_fire_department_outlined, 'Food-Cost', '%$maliyetY', _k(maliyet), fcRenk, mini: mini),
       _bilgiKart(Icons.star_outline, 'En Çok Satan',
-          enCok?['ad']?.toString() ?? '—', enCok != null ? '${_n(enCok['adet']).toInt()}× · ${_k(_n(enCok['satis']))}' : 'satış yok', _mor1, tekSatir: true),
+          enCok?['ad']?.toString() ?? '—', enCok != null ? '${_n(enCok['adet']).toInt()}× · ${_k(_n(enCok['satis']))}' : 'satış yok', _mor1, tekSatir: true, mini: mini),
     ];
-    if (genis) {
-      return IntrinsicHeight(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        for (int i = 0; i < kartlar.length; i++) ...[if (i > 0) const SizedBox(width: 10), Expanded(child: kartlar[i])],
-      ]));
-    }
-    return Column(children: [
-      IntrinsicHeight(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Expanded(child: kartlar[0]), const SizedBox(width: 10), Expanded(child: kartlar[1]),
-      ])),
-      const SizedBox(height: 10),
-      IntrinsicHeight(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Expanded(child: kartlar[2]), const SizedBox(width: 10), Expanded(child: kartlar[3]),
-      ])),
-    ]);
+    // Hem telefon hem masaustu: tek satirda 4 kart yan yana
+    return IntrinsicHeight(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      for (int i = 0; i < kartlar.length; i++) ...[if (i > 0) SizedBox(width: genis ? 10 : 6), Expanded(child: kartlar[i])],
+    ]));
   }
 
-  Widget _bilgiKart(IconData ik, String baslik, String deger, String alt, Color renk, {bool tekSatir = false}) {
+  Widget _bilgiKart(IconData ik, String baslik, String deger, String alt, Color renk, {bool tekSatir = false, bool mini = false}) {
     return Container(
-      padding: const EdgeInsets.all(13),
-      decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(15), boxShadow: _t.golge),
+      padding: EdgeInsets.all(mini ? 9 : 13),
+      decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(mini ? 12 : 15), boxShadow: _t.golge),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Container(width: 26, height: 26, decoration: BoxDecoration(color: renk.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(8)), child: Icon(ik, size: 15, color: renk)),
-          const SizedBox(width: 7),
-          Expanded(child: Text(baslik, style: TextStyle(color: _sub, fontSize: 11.5, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
-        ]),
-        const SizedBox(height: 9),
+        if (mini)
+          // ikon yok; baslik okunur (2 satira kadar), renk kodu -> deger rengi
+          Text(baslik, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: _sub2, fontSize: 10, fontWeight: FontWeight.w600, height: 1.1))
+        else
+          Row(children: [
+            Container(width: 26, height: 26, decoration: BoxDecoration(color: renk.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(8)), child: Icon(ik, size: 15, color: renk)),
+            const SizedBox(width: 7),
+            Expanded(child: Text(baslik, style: TextStyle(color: _sub, fontSize: 11.5, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
+          ]),
+        SizedBox(height: mini ? 6 : 9),
         FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft,
-            child: Text(deger, maxLines: 1, style: TextStyle(color: _ink, fontSize: tekSatir ? 17 : 22, fontWeight: FontWeight.bold))),
-        const SizedBox(height: 3),
-        Text(alt, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: _sub, fontSize: 11)),
+            child: Text(deger, maxLines: 1, style: TextStyle(color: mini ? renk : _ink, fontSize: mini ? (tekSatir ? 12 : 15) : (tekSatir ? 17 : 22), fontWeight: FontWeight.bold))),
+        if (!mini) ...[
+          const SizedBox(height: 3),
+          Text(alt, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: _sub, fontSize: 11)),
+        ],
       ]),
     );
   }
@@ -1184,7 +1185,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ]),
       );
 
-  Widget _kayipKart(String baslik, dynamic k, IconData ikon) {
+  Widget _kayipKart(String baslik, dynamic k, IconData ikon, {bool kompakt = false}) {
     final m = (k as Map?) ?? {};
     final tutar = _n(m['tutar']);
     final yuzde = _n(m['yuzde']);
@@ -1215,30 +1216,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       child: IntrinsicHeight(
         child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Container(width: 5, color: vurgu ? beyaz.withValues(alpha: 0.35) : renk),
+          Container(width: kompakt ? 4 : 5, color: vurgu ? beyaz.withValues(alpha: 0.35) : renk),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.all(13),
+              padding: EdgeInsets.all(kompakt ? 9 : 13),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                 Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Container(
-                    width: 34, height: 34,
-                    decoration: BoxDecoration(color: vurgu ? beyaz.withValues(alpha: 0.22) : renk.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
-                    child: Icon(ikon, size: 19, color: vurgu ? beyaz : renk),
+                    width: kompakt ? 26 : 34, height: kompakt ? 26 : 34,
+                    decoration: BoxDecoration(color: vurgu ? beyaz.withValues(alpha: 0.22) : renk.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(kompakt ? 8 : 10)),
+                    child: Icon(ikon, size: kompakt ? 15 : 19, color: vurgu ? beyaz : renk),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: EdgeInsets.symmetric(horizontal: kompakt ? 6 : 8, vertical: kompakt ? 2 : 3),
                     decoration: BoxDecoration(color: vurgu ? beyaz.withValues(alpha: 0.22) : renk.withValues(alpha: 0.13), borderRadius: BorderRadius.circular(9)),
-                    child: Text(yuzdeStr, style: TextStyle(color: vurgu ? beyaz : renk, fontSize: 11.5, fontWeight: FontWeight.bold)),
+                    child: Text(yuzdeStr, style: TextStyle(color: vurgu ? beyaz : renk, fontSize: kompakt ? 10 : 11.5, fontWeight: FontWeight.bold)),
                   ),
                 ]),
-                const SizedBox(height: 10),
+                SizedBox(height: kompakt ? 7 : 10),
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft,
-                      child: Text(_tam(tutar), style: TextStyle(color: vurgu ? beyaz : _ink, fontSize: 26, fontWeight: FontWeight.bold))),
-                  const SizedBox(height: 3),
-                  Text(adet != null ? '$baslik · ${_n(adet).toInt()} adet' : baslik,
-                      style: TextStyle(color: vurgu ? beyaz.withValues(alpha: 0.85) : _sub, fontSize: 12.5, fontWeight: FontWeight.w500)),
+                      child: Text(_tam(tutar), style: TextStyle(color: vurgu ? beyaz : _ink, fontSize: kompakt ? 16 : 26, fontWeight: FontWeight.bold))),
+                  const SizedBox(height: 2),
+                  Text(adet != null && !kompakt ? '$baslik · ${_n(adet).toInt()} adet' : baslik,
+                      maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: vurgu ? beyaz.withValues(alpha: 0.85) : _sub, fontSize: kompakt ? 10.5 : 12.5, fontWeight: FontWeight.w500)),
                 ]),
               ]),
             ),
