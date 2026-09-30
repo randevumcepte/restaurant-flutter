@@ -331,7 +331,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _icerik() {
     final d = data!;
-    final auth = context.read<AuthProvider>();
     final ciro = _n(d['ciro']);
     final ciroYuzde = d['ciroYuzde'] == null ? null : _n(d['ciroYuzde']).toDouble();
     final info = (d['info'] as Map?) ?? {};
@@ -366,9 +365,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _ciroHero(ciro, ciroYuzde, info, comp),
         const SizedBox(height: 12),
 
-        // MODERN OZET: selam + 3 ciro + hizli bilgi + masa + POS (mockup'tan farkli sira)
-        _selamKart(auth),
-        const SizedBox(height: 12),
+        // 3 ciro + hizli bilgi + masa + POS (selam karti telefondan kaldirildi)
         IntrinsicHeight(child: _uclCiro(d)),
         const SizedBox(height: 12),
         _hizliBilgi(d, genis: false),
@@ -1013,15 +1010,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
         borderRadius: BorderRadius.circular(22),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          const Text('Toplam Ciro', style: TextStyle(color: Colors.white70, fontSize: 14)),
-          if (yuzde != null)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(20)),
-              child: Text('${up ? "▲" : "▼"} %${yuzde.abs().toStringAsFixed(1)}',
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Padding(padding: EdgeInsets.only(top: 6), child: Text('Toplam Ciro', style: TextStyle(color: Colors.white70, fontSize: 14))),
+          Row(mainAxisSize: MainAxisSize.min, children: [
+            if (yuzde != null) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(20)),
+                child: Text('${up ? "▲" : "▼"} %${yuzde.abs().toStringAsFixed(1)}',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+              ),
+              const SizedBox(width: 8),
+            ],
+            // Rezervasyon butonu (sag ust kose)
+            GestureDetector(
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RezervasyonScreen())),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.22), borderRadius: BorderRadius.circular(12)),
+                child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(Icons.event_available, size: 15, color: Colors.white),
+                  SizedBox(width: 5),
+                  Text('Rezervasyon', style: TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w600)),
+                ]),
+              ),
             ),
+          ]),
         ]),
         const SizedBox(height: 4),
         _sayiAnim(ciro, const TextStyle(color: Colors.white, fontSize: 34, fontWeight: FontWeight.bold)),
