@@ -372,7 +372,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         const SizedBox(height: 12),
         _masaKart(d),
         const SizedBox(height: 12),
-        _posKart(d),
+        _posKart(d, toplamTahsilat: false), // telefonda yesil Toplam Tahsilat gizli
         const SizedBox(height: 12),
 
         // Maliyet (food-cost halkasi) — modern ustun altinda detay
@@ -717,7 +717,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   // POS karti: Toplam Tahsilat + 4 mini kart + servis turune gore ciro
-  Widget _posKart(Map d) {
+  // toplamTahsilat=false -> yesil Toplam Tahsilat karti gizlenir (telefonda kaldirildi)
+  Widget _posKart(Map d, {bool toplamTahsilat = true}) {
     final ciro = _n(d['ciro']);
     final cy = d['ciroYuzde'] == null ? null : _n(d['ciroYuzde']).toDouble();
     final info = (d['info'] as Map?) ?? {};
@@ -735,7 +736,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Text('POS', style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.bold)),
         ]),
         const SizedBox(height: 14),
-        // Toplam Tahsilat (buyuk yesil)
+        // Toplam Tahsilat (buyuk yesil) — SADECE masaustu; telefonda gizli
+        if (toplamTahsilat) ...[
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -762,6 +764,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ]),
         ),
         const SizedBox(height: 12),
+        ],
         Row(children: [
           Expanded(child: GestureDetector(
             behavior: HitTestBehavior.opaque,
