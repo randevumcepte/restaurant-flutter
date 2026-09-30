@@ -366,19 +366,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _ciroPosKart(d, ciro, ciroYuzde, info, comp),
         const SizedBox(height: 12),
 
-        // 3 ciro + hizli bilgi + masa (POS artik mavi kartin icinde; selam karti kaldirildi)
+        // Toplam Maliyet (Food-Cost) — POS'un hemen altinda
+        GestureDetector(
+          onTap: () => _detayAc(tip: 'maliyet', baslik: 'Food-Cost'),
+          child: _maliyetKart(maliyet, maliyetYuzde, ciro),
+        ),
+        const SizedBox(height: 12),
+
+        // 3 ciro + hizli bilgi + masa
         IntrinsicHeight(child: _uclCiro(d, kompakt: true)),
         const SizedBox(height: 12),
         _hizliBilgi(d, genis: false),
         const SizedBox(height: 12),
         _masaKart(d, akordiyon: true),
-        const SizedBox(height: 12),
-
-        // Maliyet (food-cost halkasi) — modern ustun altinda detay
-        GestureDetector(
-          onTap: () => _detayAc(tip: 'maliyet', baslik: 'Food-Cost'),
-          child: _maliyetKart(maliyet, maliyetYuzde, ciro),
-        ),
         const SizedBox(height: 14),
 
         // KAYIP RADARI
