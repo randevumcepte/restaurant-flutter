@@ -362,6 +362,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _donemSecici(),
         const SizedBox(height: 12),
 
+        // Mavi Toplam Ciro karti (SADECE telefon Ozet'inde — masaustune eklenmedi)
+        _ciroHero(ciro, ciroYuzde, info, comp),
+        const SizedBox(height: 12),
+
         // MODERN OZET: selam + 3 ciro + hizli bilgi + masa + POS (mockup'tan farkli sira)
         _selamKart(auth),
         const SizedBox(height: 12),
@@ -996,6 +1000,62 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
     ]);
+  }
+
+  // ---- Mavi Toplam Ciro hero karti (SADECE telefon Ozet'i cagirir; _genisPano cagirmaz) ----
+  Widget _ciroHero(num ciro, double? yuzde, Map info, Map comp) {
+    final up = (yuzde ?? 0) >= 0;
+    final oncekiVar = _n(data?['compCiro']) > 0 || _n(comp['folyo']) > 0 || _n(comp['misafir']) > 0;
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(colors: [_mor1, _mavi], begin: Alignment.topLeft, end: Alignment.bottomRight),
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          const Text('Toplam Ciro', style: TextStyle(color: Colors.white70, fontSize: 14)),
+          if (yuzde != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(20)),
+              child: Text('${up ? "▲" : "▼"} %${yuzde.abs().toStringAsFixed(1)}',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+            ),
+        ]),
+        const SizedBox(height: 4),
+        _sayiAnim(ciro, const TextStyle(color: Colors.white, fontSize: 34, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 4),
+        Text(oncekiVar ? 'önceki dönem: ${_tam(_n(data!['compCiro']))}' : 'karşılaştırılacak önceki dönem verisi yok',
+            style: const TextStyle(color: Colors.white54, fontSize: 12)),
+        const SizedBox(height: 14),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(14)),
+          child: Row(children: [
+            _kib('Folyo', '${_n(info['folyo']).toInt()}', '${_n(comp['folyo']).toInt()}', oncekiVar: oncekiVar),
+            _kib('Ort. Adisyon', _tam(_n(info['folyo_ort'])), _tam(_n(comp['folyo_ort'])), oncekiVar: oncekiVar),
+            _kib('Misafir', '${_n(info['misafir']).toInt()}', '${_n(comp['misafir']).toInt()}', oncekiVar: oncekiVar),
+            _kib('Kişi Başı', _tam(_n(info['kisi_basi'])), _tam(_n(comp['kisi_basi'])), son: true, oncekiVar: oncekiVar),
+          ]),
+        ),
+      ]),
+    );
+  }
+
+  Widget _kib(String etiket, String simdi, String onceki, {bool son = false, bool oncekiVar = true}) {
+    return Expanded(
+      child: Container(
+        decoration: son ? null : const BoxDecoration(border: Border(right: BorderSide(color: Colors.white24))),
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: Column(children: [
+          Text(etiket, style: const TextStyle(color: Colors.white60, fontSize: 9)),
+          const SizedBox(height: 3),
+          FittedBox(child: Text(simdi, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
+          FittedBox(child: Text(oncekiVar ? onceki : '—', style: const TextStyle(color: Colors.white38, fontSize: 10))),
+        ]),
+      ),
+    );
   }
 
   Widget _maliyetKart(num maliyet, int yuzde, num ciro) {
