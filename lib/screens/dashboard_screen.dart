@@ -416,8 +416,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
         // Sales & Costs (urun bazinda satis + maliyet)
         _salesCostsKart(urunler),
-        const SizedBox(height: 8),
-        Center(child: Text('Tek bakışta, anlık ve doğru. · AI çok yakında', style: TextStyle(color: _sub, fontSize: 11))),
       ],
         ),
       ),
