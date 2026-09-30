@@ -366,7 +366,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         const SizedBox(height: 12),
 
         // 3 ciro + hizli bilgi + masa + POS (selam karti telefondan kaldirildi)
-        IntrinsicHeight(child: _uclCiro(d)),
+        IntrinsicHeight(child: _uclCiro(d, kompakt: true)),
         const SizedBox(height: 12),
         _hizliBilgi(d, genis: false),
         const SizedBox(height: 12),
@@ -610,54 +610,54 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   // 3 ciro karti: Bugun / Hafta / Ay (sabit; secili donemden bagimsiz)
-  Widget _uclCiro(Map d) {
+  Widget _uclCiro(Map d, {bool kompakt = false}) {
     final k = (d['kartlar'] as Map?) ?? {};
     Map g(String key) => (k[key] as Map?) ?? {};
     double? yz(Map m) => m['yuzde'] == null ? null : _n(m['yuzde']).toDouble();
     return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Expanded(child: _ciroMini('Bugünkü Ciro', _n(g('bugun')['ciro']), yz(g('bugun')), 'düne göre', _kirmizi, Icons.today)),
-      const SizedBox(width: 10),
-      Expanded(child: _ciroMini('Haftalık Ciro', _n(g('hafta')['ciro']), yz(g('hafta')), 'geçen haftaya', _mavi, Icons.date_range)),
-      const SizedBox(width: 10),
-      Expanded(child: _ciroMini('Bu Ay Cirosu', _n(g('ay')['ciro']), yz(g('ay')), 'geçen aya', _mor1, Icons.calendar_month)),
+      Expanded(child: _ciroMini('Bugünkü Ciro', _n(g('bugun')['ciro']), yz(g('bugun')), 'düne göre', _kirmizi, Icons.today, kompakt)),
+      SizedBox(width: kompakt ? 8 : 10),
+      Expanded(child: _ciroMini('Haftalık Ciro', _n(g('hafta')['ciro']), yz(g('hafta')), 'geçen haftaya', _mavi, Icons.date_range, kompakt)),
+      SizedBox(width: kompakt ? 8 : 10),
+      Expanded(child: _ciroMini('Bu Ay Cirosu', _n(g('ay')['ciro']), yz(g('ay')), 'geçen aya', _mor1, Icons.calendar_month, kompakt)),
     ]);
   }
 
-  Widget _ciroMini(String baslik, num ciro, double? yuzde, String kiyas, Color renk, IconData ik) {
+  Widget _ciroMini(String baslik, num ciro, double? yuzde, String kiyas, Color renk, IconData ik, [bool kompakt = false]) {
     final up = (yuzde ?? 0) >= 0;
     return Container(
-      decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(16), boxShadow: _t.golge),
+      decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(kompakt ? 13 : 16), boxShadow: _t.golge),
       clipBehavior: Clip.antiAlias,
       child: IntrinsicHeight(
         child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           // sol renk cubugu (mockup'taki ust seridin yerine)
-          Container(width: 5, color: renk),
+          Container(width: kompakt ? 4 : 5, color: renk),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(13, 12, 13, 13),
+              padding: kompakt ? const EdgeInsets.fromLTRB(10, 9, 9, 9) : const EdgeInsets.fromLTRB(13, 12, 13, 13),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
                   Container(
-                    width: 30, height: 30,
-                    decoration: BoxDecoration(color: renk.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(9)),
-                    child: Icon(ik, size: 17, color: renk),
+                    width: kompakt ? 24 : 30, height: kompakt ? 24 : 30,
+                    decoration: BoxDecoration(color: renk.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(kompakt ? 7 : 9)),
+                    child: Icon(ik, size: kompakt ? 14 : 17, color: renk),
                   ),
-                  const SizedBox(width: 8),
-                  Flexible(child: Text(baslik, style: TextStyle(color: _sub, fontSize: 12.5, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
+                  SizedBox(width: kompakt ? 6 : 8),
+                  Flexible(child: Text(baslik, style: TextStyle(color: _sub, fontSize: kompakt ? 10.5 : 12.5, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
                 ]),
-                const SizedBox(height: 10),
+                SizedBox(height: kompakt ? 7 : 10),
                 FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft,
-                    child: _sayiAnim(ciro, TextStyle(color: _ink, fontSize: 27, fontWeight: FontWeight.bold))),
-                const SizedBox(height: 8),
+                    child: _sayiAnim(ciro, TextStyle(color: _ink, fontSize: kompakt ? 17 : 27, fontWeight: FontWeight.bold))),
+                SizedBox(height: kompakt ? 4 : 8),
                 if (yuzde != null)
                   Row(children: [
-                    Icon(up ? Icons.trending_up : Icons.trending_down, size: 14, color: up ? _yesil : _kirmizi),
-                    const SizedBox(width: 4),
-                    Flexible(child: Text('%${yuzde.abs().toStringAsFixed(1).replaceAll('.', ',')} $kiyas',
-                        style: TextStyle(color: up ? _yesil : _kirmizi, fontSize: 11, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
+                    Icon(up ? Icons.trending_up : Icons.trending_down, size: kompakt ? 12 : 14, color: up ? _yesil : _kirmizi),
+                    const SizedBox(width: 3),
+                    Flexible(child: Text('%${yuzde.abs().toStringAsFixed(1).replaceAll('.', ',')}${kompakt ? '' : ' $kiyas'}',
+                        style: TextStyle(color: up ? _yesil : _kirmizi, fontSize: kompakt ? 10 : 11, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
                   ])
                 else
-                  Text('kıyas verisi yok', style: TextStyle(color: _sub, fontSize: 11)),
+                  Text('kıyas yok', style: TextStyle(color: _sub, fontSize: kompakt ? 10 : 11)),
               ]),
             ),
           ),
