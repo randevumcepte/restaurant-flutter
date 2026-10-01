@@ -583,7 +583,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         const SizedBox(width: 8),
         Wrap(spacing: 7, runSpacing: 6, alignment: WrapAlignment.end, children: [
           _selamCip(Icons.access_time, _saat(), _yesil, null),
-          _selamCip(Icons.qr_code_2, 'QR Menü', _kirmizi, () => _webAc('/qr-menu')),
+          _selamCip(Icons.qr_code_2, 'QR Menü', _kirmizi, () => _webAc('/menu-onizle')),
           _selamCip(Icons.event_available, 'Rezervasyon', const Color(0xFFEC4899),
               () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RezervasyonScreen()))),
         ]),
