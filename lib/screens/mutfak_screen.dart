@@ -511,9 +511,11 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
     final oran = hedef > 0 ? ((gecen / hedef).clamp(0.0, 1.0)).toDouble() : 0.0;
     final adId = _n(s['adisyon_id']).toInt();
     final gecikmeVar = kalan < 0 || (s['renk']?.toString() == 'kirmizi');
-    final cokGecikti = gecen >= hedef * 2; // hedefin 2 kati -> KRITIK: TAM KIRMIZI, Basla'ya basilsa da yanip soner
-    // Yeni + gecikmis (henuz baslanmadi) YA DA cok gecikmis -> yanip sonsun. (Basla sadece 1. kademeyi susturur.)
-    final blinkVar = cokGecikti || (gecikmeVar && !basladi);
+    // KRITIK = aslama basladiktan SONRA hazirlik suresini de asti (backend hesaplar). TAM KIRMIZI yanip soner.
+    final kritik = s['hazirlik_asti'] == true;
+    // 1) Yeni + gecikmis (henuz baslanmadi) -> normal yanip soner. 2) Kritik -> kirmizi yanip soner.
+    // Basla'ya basinca 1. kademe susar (saat sifirlanir); hazirlik suresi de asilirsa 2. kademe devreye girer.
+    final blinkVar = kritik || (gecikmeVar && !basladi);
     final icerik = Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -604,9 +606,9 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
     // SABIT kenarlik (boyut oynamaz). cokGecikti -> TAM KIRMIZI zemin + guclu flash; degilse normal zemin + flash.
     return Container(
       decoration: BoxDecoration(
-        color: cokGecikti ? _kirmizi.withValues(alpha: 0.18) : _card,
+        color: kritik ? _kirmizi.withValues(alpha: 0.18) : _card,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _kirmizi, width: cokGecikti ? 2.2 : 1.8),
+        border: Border.all(color: _kirmizi, width: kritik ? 2.2 : 1.8),
       ),
       child: Stack(children: [
         icerik,
@@ -615,7 +617,7 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
           builder: (ctx, _) => Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
-              color: _blink.value < 0.5 ? _kirmizi.withValues(alpha: cokGecikti ? 0.34 : 0.20) : Colors.transparent,
+              color: _blink.value < 0.5 ? _kirmizi.withValues(alpha: kritik ? 0.34 : 0.20) : Colors.transparent,
             ),
           ),
         ))),
