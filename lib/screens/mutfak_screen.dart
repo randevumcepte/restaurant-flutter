@@ -353,7 +353,9 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
                     color: _mor, backgroundColor: _card,
                     child: LayoutBuilder(builder: (ctx, c) {
                       final genis = c.maxWidth >= 640;
-                      final kartW = genis ? (c.maxWidth - 36) / 2 : c.maxWidth - 24;
+                      // Mockup gibi DAR + cok sutunlu: hedef ~300px -> ekrana kac kart sigarsa
+                      final cols = genis ? (c.maxWidth / 300).floor().clamp(2, 8) : 1;
+                      final kartW = (c.maxWidth - 24 - 12 * (cols - 1)) / cols;
                       return SingleChildScrollView(
                         physics: const AlwaysScrollableScrollPhysics(),
                         padding: const EdgeInsets.all(12),
@@ -632,7 +634,8 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
       color: _mor, backgroundColor: _card,
       child: LayoutBuilder(builder: (ctx, c) {
         final genis = c.maxWidth >= 640;
-        final kartW = genis ? (c.maxWidth - 36) / 2 : c.maxWidth - 24;
+        final cols = genis ? (c.maxWidth / 300).floor().clamp(2, 8) : 1;
+        final kartW = (c.maxWidth - 24 - 12 * (cols - 1)) / cols;
         return SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(12),
