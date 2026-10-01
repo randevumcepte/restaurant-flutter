@@ -520,14 +520,13 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
               Expanded(
                 child: SizedBox(
                   height: 40,
-                  child: OutlinedButton.icon(
+                  child: OutlinedButton(
                     onPressed: () => _basla(adId),
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: _amber, width: 1.4), padding: EdgeInsets.zero,
+                      side: BorderSide(color: _amber, width: 1.4), padding: const EdgeInsets.symmetric(horizontal: 6),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
-                    icon: Icon(Icons.play_arrow_rounded, size: 19, color: _amber),
-                    label: Text('Başla', style: TextStyle(color: _amber, fontWeight: FontWeight.bold, fontSize: 14)),
+                    child: FittedBox(fit: BoxFit.scaleDown, child: Text('▶ Başla', style: TextStyle(color: _amber, fontWeight: FontWeight.bold, fontSize: 14))),
                   ),
                 ),
               ),
@@ -536,14 +535,13 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
             Expanded(
               child: SizedBox(
                 height: 40,
-                child: FilledButton.icon(
+                child: FilledButton(
                   onPressed: () => _hazir(adId),
                   style: FilledButton.styleFrom(
-                    backgroundColor: _yesil, padding: EdgeInsets.zero,
+                    backgroundColor: _yesil, padding: const EdgeInsets.symmetric(horizontal: 6),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
-                  icon: const Icon(Icons.check, size: 17, color: Colors.white),
-                  label: const Text('Hazır', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                  child: const FittedBox(fit: BoxFit.scaleDown, child: Text('✓ Hazır', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14))),
                 ),
               ),
             ),
