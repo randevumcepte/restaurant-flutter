@@ -182,7 +182,7 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
   // Backend'in verdigi renk kodu (kalan sureye gore): yesil/amber/kirmizi
   Color _renkKod(String? r) => r == 'kirmizi' ? _kirmizi : (r == 'amber' ? _amber : _yesil);
   // Kalan sure yazisi: pozitif -> "~X dk kaldı", negatif -> "X dk gecikme"
-  String _kalanYazi(int kalan) => kalan > 0 ? '~$kalan dk kaldı' : (kalan == 0 ? 'süresi doldu' : '${-kalan} dk gecikme');
+  String _kalanYazi(int kalan) => kalan > 0 ? '~${_sure(kalan)} kaldı' : (kalan == 0 ? 'süresi doldu' : '${_sure(-kalan)} gecikme');
 
   Future<void> _servisEt(int adisyonId) async {
     try {
