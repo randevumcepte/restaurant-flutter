@@ -521,6 +521,17 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
     final hazirlikKalan = hedef - hazirlikGecen;
     final prepRenk = hazirlikKalan < 0 ? _kirmizi : (hazirlikKalan <= hedef ~/ 3 ? _amber : _yesil);
     final prepOran = hedef > 0 ? (hazirlikGecen / hedef).clamp(0.0, 1.0).toDouble() : 0.0;
+    // TUR (coursing): kalemleri tur'a gore ayracla diz; karttaki en dusuk tur >1 ise bu bir "ek tur" fisi
+    final minTur = _n(s['min_tur']).toInt();
+    final kalemWid = <Widget>[];
+    int? oncekiTur;
+    for (final kk in kalemler) {
+      final k = kk as Map;
+      final t = _n(k['tur']).toInt();
+      if (oncekiTur != null && t != oncekiTur) kalemWid.add(_turAyrac(t));
+      oncekiTur = t;
+      kalemWid.add(_kalemSatir(k));
+    }
     final icerik = Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -532,6 +543,15 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
               decoration: BoxDecoration(color: (basladi ? _amber : _yesil).withValues(alpha: 0.9), borderRadius: BorderRadius.circular(20)),
               child: Text(basladi ? '👨‍🍳 Hazırlanıyor' : '🆕 Yeni', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
             ),
+            // EK TUR rozeti: bu fisin ilk turu >1 ise (onceki turlar servis olmus) -> "N. Tur"
+            if (minTur > 1) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(color: _mor.withValues(alpha: 0.95), borderRadius: BorderRadius.circular(20)),
+                child: Text('$minTur. Tur', style: const TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.bold)),
+              ),
+            ],
             const SizedBox(width: 8),
             Expanded(
               child: Row(children: [
@@ -587,7 +607,7 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 6, 12, 4),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            for (final k in kalemler) _kalemSatir(k as Map),
+            ...kalemWid,
           ]),
         ),
         // BUTONLAR: Yeni -> [Başla][Hazır], Hazırlanıyor -> [Hazır]
@@ -654,6 +674,18 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
       ]),
     );
   }
+
+  // Tur ayraci: "— N. Tur (ek sipariş) —" (sonraki gonderim turunun basladigini gosterir)
+  Widget _turAyrac(int t) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(children: [
+          Expanded(child: Divider(color: _mor.withValues(alpha: 0.35), thickness: 1)),
+          const SizedBox(width: 8),
+          Text('$t. Tur', style: TextStyle(color: _mor, fontSize: 11, fontWeight: FontWeight.w900)),
+          const SizedBox(width: 8),
+          Expanded(child: Divider(color: _mor.withValues(alpha: 0.35), thickness: 1)),
+        ]),
+      );
 
   Widget _kalemSatir(Map k) {
     final not = (k['not']?.toString() ?? '');
