@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart' show PointerDeviceKind; // masaustu: fare ile yatay surukle
 import '../ana_sekme.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
@@ -21,6 +22,8 @@ class MutfakScreen extends StatefulWidget {
 class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMixin {
   late final TabController _tab;
   late final AnimationController _blink; // geciken adisyonlar yanip sonsun
+  final ScrollController _hSip = ScrollController();  // masaustu yatay fis rayi (siparis)
+  final ScrollController _hServ = ScrollController(); // masaustu yatay fis rayi (servis)
   Timer? _timer;
 
   // --- Sekme 1: aktif siparişler ---
@@ -81,6 +84,8 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
   void dispose() {
     _timer?.cancel();
     _blink.dispose();
+    _hSip.dispose();
+    _hServ.dispose();
     _tab.dispose();
     super.dispose();
   }
@@ -351,19 +356,7 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
                 : RefreshIndicator(
                     onRefresh: _siparisYukle,
                     color: _mor, backgroundColor: _card,
-                    child: LayoutBuilder(builder: (ctx, c) {
-                      final genis = c.maxWidth >= 640;
-                      // Mockup gibi DAR + cok sutunlu: hedef ~300px -> ekrana kac kart sigarsa
-                      final cols = genis ? (c.maxWidth / 330).floor().clamp(2, 5) : 1;
-                      final kartW = (c.maxWidth - 24 - 12 * (cols - 1)) / cols;
-                      return SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.all(12),
-                        child: Wrap(spacing: 12, runSpacing: 12, children: [
-                          for (final s in siparisler) SizedBox(width: kartW, child: _kart(s as Map)),
-                        ]),
-                      );
-                    }),
+                    child: _rayGovde(siparisler, _hSip, (m) => _kart(m)),
                   ),
       ),
     ]);
@@ -635,19 +628,47 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
     return RefreshIndicator(
       onRefresh: _serviseYukle,
       color: _mor, backgroundColor: _card,
-      child: LayoutBuilder(builder: (ctx, c) {
-        final genis = c.maxWidth >= 640;
-        final cols = genis ? (c.maxWidth / 330).floor().clamp(2, 5) : 1;
-        final kartW = (c.maxWidth - 24 - 12 * (cols - 1)) / cols;
-        return SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(12),
-          child: Wrap(spacing: 12, runSpacing: 12, children: [
-            for (final s in servise) SizedBox(width: kartW, child: _serviseKart(s as Map)),
-          ]),
-        );
-      }),
+      child: _rayGovde(servise, _hServ, (m) => _serviseKart(m)),
     );
+  }
+
+  // Masaustu: tek sira YATAY fis rayi (elle sag-sol kaydir, en az 7 fis gorunur). Telefon: dikey tek sutun.
+  Widget _rayGovde(List liste, ScrollController hc, Widget Function(Map) kartYap) {
+    return LayoutBuilder(builder: (ctx, c) {
+      final genis = c.maxWidth >= 640;
+      if (genis) {
+        final gorunur = (c.maxWidth / 260).floor().clamp(7, 20); // EN AZ 7 fis; genis ekranda daha fazla
+        final kartW = (c.maxWidth - 24 - 12 * (gorunur - 1)) / gorunur;
+        final h = (c.maxHeight - 28).clamp(240.0, 100000.0);
+        return ScrollConfiguration(
+          behavior: ScrollConfiguration.of(ctx).copyWith(dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse, PointerDeviceKind.trackpad}),
+          child: Scrollbar(
+            controller: hc, thumbVisibility: true,
+            child: SingleChildScrollView(
+              controller: hc,
+              scrollDirection: Axis.horizontal,
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                for (int i = 0; i < liste.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 12),
+                  SizedBox(width: kartW, height: h, child: SingleChildScrollView(child: kartYap(liste[i] as Map))),
+                ],
+              ]),
+            ),
+          ),
+        );
+      }
+      // Telefon: dikey tek sutun
+      final kartW = c.maxWidth - 24;
+      return SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(12),
+        child: Wrap(spacing: 12, runSpacing: 12, children: [
+          for (final s in liste) SizedBox(width: kartW, child: kartYap(s as Map)),
+        ]),
+      );
+    });
   }
 
   Widget _serviseKart(Map s) {
