@@ -466,7 +466,8 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
     // hazırlık ilerleme oranı (0-1)
     final oran = hedef > 0 ? ((gecen / hedef).clamp(0.0, 1.0)).toDouble() : 0.0;
     final adId = _n(s['adisyon_id']).toInt();
-    final geciken = kalan < 0 || (s['renk']?.toString() == 'kirmizi'); // gecikti -> yanip sonsun
+    // gecikti VE henuz BASLANMADI -> yanip sonsun. "Basla"ya basinca (basladi=true) alarm susar.
+    final geciken = (kalan < 0 || (s['renk']?.toString() == 'kirmizi')) && !basladi;
     final icerik = Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
