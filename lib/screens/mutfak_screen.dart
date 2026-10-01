@@ -510,6 +510,21 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
     // hazırlık ilerleme oranı (0-1)
     final oran = hedef > 0 ? ((gecen / hedef).clamp(0.0, 1.0)).toDouble() : 0.0;
     final adId = _n(s['adisyon_id']).toInt();
+    // KANAL ikonu: gercek masa -> masa ikonu; paket/kurye -> motor; gel-al -> torba; online -> telefon
+    final masali = s['masali'] == true;
+    final kanal = (s['kanal']?.toString() ?? '').toLowerCase();
+    IconData kanalIkon;
+    if (masali) {
+      kanalIkon = Icons.table_restaurant_rounded;
+    } else if (kanal.contains('paket') || kanal.contains('kurye') || kanal.contains('yemeksepeti') || kanal.contains('getir') || kanal.contains('trendyol')) {
+      kanalIkon = Icons.two_wheeler_rounded;            // motor/kurye
+    } else if (kanal.contains('gel') || kanal.contains('al')) {
+      kanalIkon = Icons.shopping_bag_rounded;           // gel-al / paketleme
+    } else if (kanal.contains('online') || kanal.contains('web') || kanal.contains('app')) {
+      kanalIkon = Icons.smartphone_rounded;             // online siparis
+    } else {
+      kanalIkon = Icons.receipt_long_rounded;           // bilinmeyen -> genel fis
+    }
     final gecikmeVar = kalan < 0 || (s['renk']?.toString() == 'kirmizi');
     // KRITIK = aslama basladiktan SONRA hazirlik suresini de asti (backend hesaplar). TAM KIRMIZI yanip soner.
     final kritik = s['hazirlik_asti'] == true;
@@ -565,7 +580,7 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
             const SizedBox(height: 7),
             // 2. SATIR: MASA adi (belirgin, ikonlu) + urun adedi
             Row(children: [
-              Icon(Icons.table_restaurant_rounded, size: 17, color: _ink),
+              Icon(kanalIkon, size: 17, color: masali ? _ink : _amber),
               const SizedBox(width: 5),
               Flexible(child: Text(s['masa'].toString(), overflow: TextOverflow.ellipsis, maxLines: 1, style: TextStyle(color: _ink, fontSize: 16, fontWeight: FontWeight.w800, height: 1.1))),
               const SizedBox(width: 6),
