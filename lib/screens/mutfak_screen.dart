@@ -536,33 +536,41 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(color: renk.withValues(alpha: 0.12), borderRadius: const BorderRadius.vertical(top: Radius.circular(13))),
-          child: Row(children: [
-            // AŞAMA rozeti
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(color: (basladi ? _amber : _yesil).withValues(alpha: 0.9), borderRadius: BorderRadius.circular(20)),
-              child: Text(basladi ? '👨‍🍳 Hazırlanıyor' : '🆕 Yeni', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-            ),
-            // EK TUR rozeti: bu fisin ilk turu >1 ise (onceki turlar servis olmus) -> "N. Tur"
-            if (minTur > 1) ...[
-              const SizedBox(width: 6),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            // 1. SATIR: durum rozeti + ek tur rozeti + #numara (saga yasli)
+            Row(children: [
+              // AŞAMA rozeti
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(color: (basladi ? _amber : _yesil).withValues(alpha: 0.9), borderRadius: BorderRadius.circular(20)),
+                child: Text(basladi ? '👨‍🍳 Hazırlanıyor' : '🆕 Yeni', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+              ),
+              // EK TUR rozeti: bu fisin ilk turu >1 ise (onceki turlar servis olmus) -> "N. Tur"
+              if (minTur > 1) ...[
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(color: _mor.withValues(alpha: 0.95), borderRadius: BorderRadius.circular(20)),
+                  child: Text('$minTur. Tur', style: const TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.bold)),
+                ),
+              ],
+              const Spacer(),
+              // Adisyon (siparis) numarasi — kendi rozetinde, ustte sagda
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                decoration: BoxDecoration(color: _mor.withValues(alpha: 0.95), borderRadius: BorderRadius.circular(20)),
-                child: Text('$minTur. Tur', style: const TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.bold)),
+                decoration: BoxDecoration(color: _mor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(7)),
+                child: Text('#$adId', style: TextStyle(color: _mor, fontSize: 12.5, fontWeight: FontWeight.w900)),
               ),
-            ],
-            const SizedBox(width: 8),
-            Expanded(
-              child: Row(children: [
-                Flexible(child: Text(s['masa'].toString(), overflow: TextOverflow.ellipsis, style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.bold))),
-                const SizedBox(width: 6),
-                Text('· ${_adet(toplamAdet)} ürün', style: TextStyle(color: _sub, fontSize: 12)),
-              ]),
-            ),
-            const SizedBox(width: 6),
-            // Adisyon (siparis) numarasi — referanstaki gibi
-            Text('#$adId', style: TextStyle(color: _mor, fontSize: 12.5, fontWeight: FontWeight.w900)),
+            ]),
+            const SizedBox(height: 7),
+            // 2. SATIR: MASA adi (belirgin, ikonlu) + urun adedi
+            Row(children: [
+              Icon(Icons.table_restaurant_rounded, size: 17, color: _ink),
+              const SizedBox(width: 5),
+              Flexible(child: Text(s['masa'].toString(), overflow: TextOverflow.ellipsis, maxLines: 1, style: TextStyle(color: _ink, fontSize: 16, fontWeight: FontWeight.w800, height: 1.1))),
+              const SizedBox(width: 6),
+              Text('· ${_adet(toplamAdet)} ürün', style: TextStyle(color: _sub, fontSize: 11.5, fontWeight: FontWeight.w600)),
+            ]),
           ]),
         ),
         // SÜRE: baslamadan -> "geldi" sayaci; basladiktan -> HAZIRLIK sayaci (sifirdan) + kucuk toplam
@@ -572,8 +580,8 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
             child: Row(children: [
               Icon(Icons.schedule, size: 13, color: renk),
               const SizedBox(width: 4),
-              Text('${_sure(gecen)} geçti', style: TextStyle(color: _sub, fontSize: 12, fontWeight: FontWeight.w600)),
-              const Spacer(),
+              Flexible(child: Text('${_sure(gecen)} geçti', overflow: TextOverflow.ellipsis, maxLines: 1, style: TextStyle(color: _sub, fontSize: 12, fontWeight: FontWeight.w600))),
+              const SizedBox(width: 6),
               Text(_kalanYazi(kalan), style: TextStyle(color: renk, fontSize: 12.5, fontWeight: FontWeight.bold)),
             ]),
           ),
@@ -589,8 +597,8 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
             child: Row(children: [
               Icon(Icons.outdoor_grill, size: 14, color: prepRenk),
               const SizedBox(width: 4),
-              Text('hazırlık ${_sure(hazirlikGecen)}', style: TextStyle(color: _sub, fontSize: 12, fontWeight: FontWeight.w600)),
-              const Spacer(),
+              Flexible(child: Text('hazırlık ${_sure(hazirlikGecen)}', overflow: TextOverflow.ellipsis, maxLines: 1, style: TextStyle(color: _sub, fontSize: 12, fontWeight: FontWeight.w600))),
+              const SizedBox(width: 6),
               Text(_kalanYazi(hazirlikKalan), style: TextStyle(color: prepRenk, fontSize: 12.5, fontWeight: FontWeight.bold)),
             ]),
           ),
