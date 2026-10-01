@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show SystemSound, SystemSoundType; // yeni siparis uyari sesi
 import 'package:flutter/gestures.dart' show PointerDeviceKind; // masaustu: fare ile yatay surukle
 import '../ana_sekme.dart';
 import 'package:provider/provider.dart';
@@ -29,6 +30,8 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
   // --- Sekme 1: aktif siparişler ---
   List siparisler = [];
   List<int> _mutfakSira = []; // elle surukle-birak ile belirlenen adisyon sirasi (one alma)
+  Set<int> _bilinenSiparis = {}; // yeni siparis tespiti (ses uyarisi)
+  bool _ilkYukleme = true;
   List istasyonlar = [];
   List toplu = [];
   int toplamBekleyen = 0;
@@ -118,18 +121,33 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
     });
   }
 
+  // Yeni siparis geldiginde dikkat cekici ses (sistem uyari sesi 3 kez)
+  Future<void> _yeniSiparisSesi() async {
+    for (int i = 0; i < 3; i++) {
+      SystemSound.play(SystemSoundType.alert);
+      await Future.delayed(const Duration(milliseconds: 280));
+    }
+  }
+
   Future<void> _siparisYukle({bool sessiz = false}) async {
     if (!sessiz) setState(() => loading1 = true);
     try {
       final res = await Api.mutfak(_token, istasyon: seciliIst);
       if (!mounted) return;
+      final gelen = (res['siparisler'] as List?) ?? [];
+      // Yeni siparis tespiti (daha once gormedigimiz adisyon id) -> ses uyarisi
+      final yeniIdler = {for (final s in gelen) _n((s as Map)['adisyon_id']).toInt()};
+      final yeniGeldi = !_ilkYukleme && yeniIdler.any((id) => !_bilinenSiparis.contains(id));
+      _bilinenSiparis = yeniIdler;
+      _ilkYukleme = false;
       setState(() {
-        siparisler = _siraUygula((res['siparisler'] as List?) ?? []); // elle one alinan sira korunur
+        siparisler = _siraUygula(gelen); // elle one alinan sira korunur
         istasyonlar = (res['istasyonlar'] as List?) ?? [];
         toplu = (res['toplu'] as List?) ?? [];
         toplamBekleyen = _n(res['toplam_bekleyen']).toInt();
         loading1 = false;
       });
+      if (yeniGeldi) _yeniSiparisSesi();
     } on ApiYetkiHatasi {
       if (mounted) context.read<AuthProvider>().cikis();
     } catch (_) {
@@ -492,8 +510,10 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
     // hazırlık ilerleme oranı (0-1)
     final oran = hedef > 0 ? ((gecen / hedef).clamp(0.0, 1.0)).toDouble() : 0.0;
     final adId = _n(s['adisyon_id']).toInt();
-    // gecikti VE henuz BASLANMADI -> yanip sonsun. "Basla"ya basinca (basladi=true) alarm susar.
-    final geciken = (kalan < 0 || (s['renk']?.toString() == 'kirmizi')) && !basladi;
+    final gecikmeVar = kalan < 0 || (s['renk']?.toString() == 'kirmizi');
+    final cokGecikti = gecen >= hedef * 2; // hedefin 2 kati -> KRITIK: TAM KIRMIZI, Basla'ya basilsa da yanip soner
+    // Yeni + gecikmis (henuz baslanmadi) YA DA cok gecikmis -> yanip sonsun. (Basla sadece 1. kademeyi susturur.)
+    final blinkVar = cokGecikti || (gecikmeVar && !basladi);
     final icerik = Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -575,18 +595,18 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
           ]),
         ),
     ]);
-    if (!geciken) {
+    if (!blinkVar) {
       return Container(
         decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(14), border: Border.all(color: renk.withValues(alpha: 0.6), width: 1.4)),
         child: icerik,
       );
     }
-    // GECIKEN adisyon -> SABIT kenarlik (boyut oynamaz) + ustte kirmizi katman 0.5sn AC / 0.5sn KAPA
+    // SABIT kenarlik (boyut oynamaz). cokGecikti -> TAM KIRMIZI zemin + guclu flash; degilse normal zemin + flash.
     return Container(
       decoration: BoxDecoration(
-        color: _card,
+        color: cokGecikti ? _kirmizi.withValues(alpha: 0.18) : _card,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _kirmizi, width: 1.8),
+        border: Border.all(color: _kirmizi, width: cokGecikti ? 2.2 : 1.8),
       ),
       child: Stack(children: [
         icerik,
@@ -595,7 +615,7 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
           builder: (ctx, _) => Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
-              color: _blink.value < 0.5 ? _kirmizi.withValues(alpha: 0.20) : Colors.transparent,
+              color: _blink.value < 0.5 ? _kirmizi.withValues(alpha: cokGecikti ? 0.34 : 0.20) : Colors.transparent,
             ),
           ),
         ))),
