@@ -552,7 +552,7 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(color: renk.withValues(alpha: 0.12), borderRadius: const BorderRadius.vertical(top: Radius.circular(13))),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            // 1. SATIR: durum rozeti + ek tur rozeti + #numara (saga yasli)
+            // 1. SATIR: durum rozeti + ek tur rozeti + urun adedi (NUMARA burada DEGIL -> cakisma yok)
             Row(children: [
               // AŞAMA rozeti
               Container(
@@ -569,22 +569,19 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
                   child: Text('$minTur. Tur', style: const TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.bold)),
                 ),
               ],
-              const Spacer(),
-              // Adisyon (siparis) numarasi — kendi rozetinde, ustte sagda
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                decoration: BoxDecoration(color: _mor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(7)),
-                child: Text('#$adId', style: TextStyle(color: _mor, fontSize: 12.5, fontWeight: FontWeight.w900)),
-              ),
+              const SizedBox(width: 8),
+              Expanded(child: Text('· ${_adet(toplamAdet)} ürün', overflow: TextOverflow.ellipsis, maxLines: 1, style: TextStyle(color: _sub, fontSize: 11.5, fontWeight: FontWeight.w600))),
             ]),
             const SizedBox(height: 7),
-            // 2. SATIR: MASA adi (belirgin, ikonlu) + urun adedi
+            // 2. SATIR: MASA adi (belirgin, ikonlu) solda + NUMARA sagda (sadece masa ile yarisir -> hep sigar)
             Row(children: [
               Icon(kanalIkon, size: 17, color: masali ? _ink : _amber),
               const SizedBox(width: 5),
               Flexible(child: Text(s['masa'].toString(), overflow: TextOverflow.ellipsis, maxLines: 1, style: TextStyle(color: _ink, fontSize: 16, fontWeight: FontWeight.w800, height: 1.1))),
-              const SizedBox(width: 6),
-              Text('· ${_adet(toplamAdet)} ürün', style: TextStyle(color: _sub, fontSize: 11.5, fontWeight: FontWeight.w600)),
+              const SizedBox(width: 8),
+              // NUMARA: "No #1198" — masa satirinin sagi, belirgin (ikinci tasarimdaki gibi)
+              Text('No ', style: TextStyle(color: _sub, fontSize: 10.5, fontWeight: FontWeight.w600)),
+              Text('#$adId', style: TextStyle(color: _mor, fontSize: 13.5, fontWeight: FontWeight.w900)),
             ]),
           ]),
         ),
@@ -741,11 +738,15 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
             ]),
             if (not.isNotEmpty)
               Container(
-                margin: const EdgeInsets.only(top: 2),
-                padding: alerji ? const EdgeInsets.symmetric(horizontal: 6, vertical: 1) : EdgeInsets.zero,
-                decoration: alerji ? BoxDecoration(color: _kirmizi.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(5)) : null,
+                margin: const EdgeInsets.only(top: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                decoration: BoxDecoration(
+                  color: (alerji ? _kirmizi : _amber).withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: (alerji ? _kirmizi : _amber).withValues(alpha: 0.45), width: 1),
+                ),
                 child: Text('${alerji ? '⚠️ ' : '📝 '}$not',
-                    style: TextStyle(color: alerji ? _kirmizi : _amber, fontSize: 11, fontWeight: alerji ? FontWeight.bold : FontWeight.normal)),
+                    style: TextStyle(color: alerji ? _kirmizi : _amber, fontSize: 11.5, fontWeight: alerji ? FontWeight.bold : FontWeight.w600, height: 1.15)),
               ),
           ]),
         ),
