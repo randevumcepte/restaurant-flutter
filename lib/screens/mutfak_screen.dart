@@ -66,7 +66,7 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
     super.initState();
     _tab = TabController(length: 4, vsync: this);
     _tab.addListener(() => setState(() {}));
-    _blink = AnimationController(vsync: this, duration: const Duration(milliseconds: 700))..repeat(reverse: true);
+    _blink = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000))..repeat(); // 0.5sn ac / 0.5sn kapa
     _siparisYukle();
     _serviseYukle();
     _urunYukle(); // 86 rozeti (tükendi sayısı) baştan görünsün
@@ -354,7 +354,7 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
                     child: LayoutBuilder(builder: (ctx, c) {
                       final genis = c.maxWidth >= 640;
                       // Mockup gibi DAR + cok sutunlu: hedef ~300px -> ekrana kac kart sigarsa
-                      final cols = genis ? (c.maxWidth / 300).floor().clamp(2, 8) : 1;
+                      final cols = genis ? (c.maxWidth / 330).floor().clamp(2, 5) : 1;
                       final kartW = (c.maxWidth - 24 - 12 * (cols - 1)) / cols;
                       return SingleChildScrollView(
                         physics: const AlwaysScrollableScrollPhysics(),
@@ -563,22 +563,25 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
         child: icerik,
       );
     }
-    // GECIKEN adisyon -> yanip sonen kirmizi kenarlik + parilti (aciliyet alarmi)
-    return AnimatedBuilder(
-      animation: _blink,
-      builder: (ctx, child) {
-        final tt = _blink.value;
-        return Container(
-          decoration: BoxDecoration(
-            color: _card,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Color.lerp(_kirmizi.withValues(alpha: 0.45), _kirmizi, tt)!, width: 1.4 + 1.8 * tt),
-            boxShadow: [BoxShadow(color: _kirmizi.withValues(alpha: 0.12 + 0.33 * tt), blurRadius: 6 + 12 * tt, spreadRadius: tt)],
+    // GECIKEN adisyon -> SABIT kenarlik (boyut oynamaz) + ustte kirmizi katman 0.5sn AC / 0.5sn KAPA
+    return Container(
+      decoration: BoxDecoration(
+        color: _card,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _kirmizi, width: 1.8),
+      ),
+      child: Stack(children: [
+        icerik,
+        Positioned.fill(child: IgnorePointer(child: AnimatedBuilder(
+          animation: _blink,
+          builder: (ctx, _) => Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              color: _blink.value < 0.5 ? _kirmizi.withValues(alpha: 0.20) : Colors.transparent,
+            ),
           ),
-          child: child,
-        );
-      },
-      child: icerik,
+        ))),
+      ]),
     );
   }
 
@@ -634,7 +637,7 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
       color: _mor, backgroundColor: _card,
       child: LayoutBuilder(builder: (ctx, c) {
         final genis = c.maxWidth >= 640;
-        final cols = genis ? (c.maxWidth / 300).floor().clamp(2, 8) : 1;
+        final cols = genis ? (c.maxWidth / 330).floor().clamp(2, 5) : 1;
         final kartW = (c.maxWidth - 24 - 12 * (cols - 1)) / cols;
         return SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
