@@ -533,13 +533,16 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
               child: Text(basladi ? '👨‍🍳 Hazırlanıyor' : '🆕 Yeni', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
             ),
             const SizedBox(width: 8),
-            Flexible(
-              child: Text(s['masa'].toString(),
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.bold)),
+            Expanded(
+              child: Row(children: [
+                Flexible(child: Text(s['masa'].toString(), overflow: TextOverflow.ellipsis, style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.bold))),
+                const SizedBox(width: 6),
+                Text('· ${_adet(toplamAdet)} ürün', style: TextStyle(color: _sub, fontSize: 12)),
+              ]),
             ),
             const SizedBox(width: 6),
-            Text('· ${_adet(toplamAdet)} ürün', style: TextStyle(color: _sub, fontSize: 12)),
+            // Adisyon (siparis) numarasi — referanstaki gibi
+            Text('#$adId', style: TextStyle(color: _mor, fontSize: 12.5, fontWeight: FontWeight.w900)),
           ]),
         ),
         // SÜRE: baslamadan -> "geldi" sayaci; basladiktan -> HAZIRLIK sayaci (sifirdan) + kucuk toplam
