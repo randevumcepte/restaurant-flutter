@@ -246,8 +246,8 @@ class _MasalarScreenState extends State<MasalarScreen> {
       body: loading
           ? const Center(child: CircularProgressIndicator())
           : Column(children: [
-              // SEF GARSON AI: satis firsati/uyari seridi (firsat yoksa yer kaplamaz)
-              const SefGarsonSerit(),
+              // SEF GARSON AI: satis firsati/uyari seridi — SADECE telefonda (garson). Masaustu = KASA, garson degil.
+              if (!genisMi(context)) const SefGarsonSerit(),
               // Bolge sekmeleri (buton gibi) — tiklayinca aninda o bolge (client-side, kasmaz)
               Container(
                 color: t.card,
