@@ -813,21 +813,38 @@ class _SatisEkraniState extends State<SatisEkrani> {
       // Kategori sekmeleri
       if (aranan.isEmpty)
         SizedBox(
-          height: 42,
+          height: 54,
           child: ListView.separated(
-            scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+            scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             itemCount: kategoriler.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 8),
+            separatorBuilder: (_, _) => const SizedBox(width: 9),
             itemBuilder: (ctx, i) {
               final k = kategoriler[i] as Map;
               final id = _n(k['id']).toInt();
               final secili = id == _kat;
+              // Dikey padding YOK: cip liste yuksekligini doldurup yaziyi ortalar -> ç/ğ inen harfleri kirpilmaz
               return GestureDetector(
                 onTap: () => setState(() => _kat = id),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), alignment: Alignment.center,
-                  decoration: BoxDecoration(gradient: secili ? const LinearGradient(colors: [_mor, _mavi]) : null, color: secili ? null : t.card, borderRadius: BorderRadius.circular(20), border: Border.all(color: secili ? Colors.transparent : t.line)),
-                  child: Text(k['ad'].toString(), style: TextStyle(color: secili ? Colors.white : t.sub2, fontSize: 13, fontWeight: FontWeight.bold)),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 160), curve: Curves.easeOut,
+                  padding: const EdgeInsets.symmetric(horizontal: 18), alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    gradient: secili ? const LinearGradient(colors: [_mor, _mavi]) : null,
+                    color: secili ? null : t.card,
+                    borderRadius: BorderRadius.circular(23),
+                    border: Border.all(color: secili ? Colors.transparent : t.line, width: 1.3),
+                    boxShadow: secili
+                        ? [BoxShadow(color: _mor.withValues(alpha: 0.40), blurRadius: 14, offset: const Offset(0, 5))]
+                        : [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 6, offset: const Offset(0, 2))],
+                  ),
+                  child: Text(
+                    k['ad'].toString(), maxLines: 1,
+                    style: TextStyle(
+                      color: secili ? Colors.white : t.ink,
+                      fontSize: 13.5, fontWeight: secili ? FontWeight.w800 : FontWeight.w700,
+                      letterSpacing: 0.2, height: 1.1,
+                    ),
+                  ),
                 ),
               );
             },
