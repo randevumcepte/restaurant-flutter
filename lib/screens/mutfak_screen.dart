@@ -18,8 +18,9 @@ class MutfakScreen extends StatefulWidget {
   State<MutfakScreen> createState() => _MutfakScreenState();
 }
 
-class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderStateMixin {
+class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMixin {
   late final TabController _tab;
+  late final AnimationController _blink; // geciken adisyonlar yanip sonsun
   Timer? _timer;
 
   // --- Sekme 1: aktif siparişler ---
@@ -65,6 +66,7 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
     super.initState();
     _tab = TabController(length: 4, vsync: this);
     _tab.addListener(() => setState(() {}));
+    _blink = AnimationController(vsync: this, duration: const Duration(milliseconds: 700))..repeat(reverse: true);
     _siparisYukle();
     _serviseYukle();
     _urunYukle(); // 86 rozeti (tükendi sayısı) baştan görünsün
@@ -78,6 +80,7 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
   @override
   void dispose() {
     _timer?.cancel();
+    _blink.dispose();
     _tab.dispose();
     super.dispose();
   }
@@ -468,13 +471,8 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
     // hazırlık ilerleme oranı (0-1)
     final oran = hedef > 0 ? ((gecen / hedef).clamp(0.0, 1.0)).toDouble() : 0.0;
     final adId = _n(s['adisyon_id']).toInt();
-    return Container(
-      decoration: BoxDecoration(
-        color: _card,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: renk.withValues(alpha: 0.6), width: 1.4),
-      ),
-      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+    final geciken = kalan < 0 || (s['renk']?.toString() == 'kirmizi'); // gecikti -> yanip sonsun
+    final icerik = Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(color: renk.withValues(alpha: 0.12), borderRadius: const BorderRadius.vertical(top: Radius.circular(13))),
@@ -556,7 +554,29 @@ class _MutfakScreenState extends State<MutfakScreen> with SingleTickerProviderSt
             ),
           ]),
         ),
-      ]),
+    ]);
+    if (!geciken) {
+      return Container(
+        decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(14), border: Border.all(color: renk.withValues(alpha: 0.6), width: 1.4)),
+        child: icerik,
+      );
+    }
+    // GECIKEN adisyon -> yanip sonen kirmizi kenarlik + parilti (aciliyet alarmi)
+    return AnimatedBuilder(
+      animation: _blink,
+      builder: (ctx, child) {
+        final tt = _blink.value;
+        return Container(
+          decoration: BoxDecoration(
+            color: _card,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Color.lerp(_kirmizi.withValues(alpha: 0.45), _kirmizi, tt)!, width: 1.4 + 1.8 * tt),
+            boxShadow: [BoxShadow(color: _kirmizi.withValues(alpha: 0.12 + 0.33 * tt), blurRadius: 6 + 12 * tt, spreadRadius: tt)],
+          ),
+          child: child,
+        );
+      },
+      child: icerik,
     );
   }
 
