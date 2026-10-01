@@ -502,7 +502,10 @@ class _DetayScreenState extends State<DetayScreen> {
     return [
       _maliyetHero(toplamMaliyet, yuzde, renk),
       const SizedBox(height: 12),
-      Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      // NOT: dikey ListView icinde Row'a CrossAxisAlignment.stretch VERME -> sonsuz yukseklik
+      // layout hatasi -> bu satirdan sonrasi cizilmez (hero cikar, altı bos kalirdi). Kartlar
+      // zaten ayni yapida -> esit yukseklik kendiliginden.
+      Row(children: [
         Expanded(child: _statKart('Satış', _tam(toplamSatis))),
         const SizedBox(width: 10),
         Expanded(child: _statKart('Food-Cost', '${_tam(toplamMaliyet)} · %$yuzde')),
