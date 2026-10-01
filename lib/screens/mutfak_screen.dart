@@ -629,12 +629,13 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
         child: icerik,
       );
     }
-    // SABIT kenarlik (boyut oynamaz). cokGecikti -> TAM KIRMIZI zemin + guclu flash; degilse normal zemin + flash.
+    // 1. kademe (yeni+bekleme astti, baslanmadi) = TURUNCU; 2. kademe (kritik: basladi+hazirlik astti) = KIRMIZI.
+    final blinkRenk = kritik ? _kirmizi : _amber;
     return Container(
       decoration: BoxDecoration(
         color: kritik ? _kirmizi.withValues(alpha: 0.18) : _card,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _kirmizi, width: kritik ? 2.2 : 1.8),
+        border: Border.all(color: blinkRenk, width: kritik ? 2.2 : 1.8),
       ),
       child: Stack(children: [
         icerik,
@@ -643,7 +644,7 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
           builder: (ctx, _) => Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
-              color: _blink.value < 0.5 ? _kirmizi.withValues(alpha: kritik ? 0.34 : 0.20) : Colors.transparent,
+              color: _blink.value < 0.5 ? blinkRenk.withValues(alpha: kritik ? 0.34 : 0.22) : Colors.transparent,
             ),
           ),
         ))),
@@ -928,7 +929,10 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
     final istYuk = (analiz!['istasyon_yuku'] as List?) ?? [];
     final enYavas = (analiz!['en_yavas'] as List?) ?? [];
     final saatlik = (analiz!['saatlik'] as List?) ?? [];
-    final ortDk = ozet['ort_dk'];
+    final ortDk = ozet['ort_dk'];          // gonderim -> hazir (TOPLAM)
+    final ortBek = ozet['ort_bekleme'];    // gonderim -> basla (BEKLEME)
+    final ortHaz = ozet['ort_hazirlik'];   // basla -> hazir (HAZIRLIK)
+    final ortGec = ozet['ort_gecikme'];    // hedef uzeri (GECIKME)
     return RefreshIndicator(
       onRefresh: _analizYukle,
       color: _mor, backgroundColor: _card,
@@ -936,17 +940,33 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(12),
         children: [
-          // Özet kutucuklar
+          Text('⏱️ Mutfak Süreleri (bugün ort.)', style: TextStyle(color: _ink, fontSize: 13, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 8),
+          // 1. satir: Toplam + Gecikme
           Row(children: [
-            _ozetKutu('Ort. Hazırlık', ortDk != null ? '$ortDk dk' : '—', Icons.timer_outlined, ortDk != null && _n(ortDk) > 18 ? _kirmizi : _yesil),
+            _ozetKutu('Ort. Toplam', ortDk != null ? '$ortDk dk' : '—', Icons.timer_outlined, ortDk != null && _n(ortDk) > 18 ? _kirmizi : _yesil),
             const SizedBox(width: 8),
+            _ozetKutu('Ort. Gecikme', ortGec != null ? '$ortGec dk' : '—', Icons.running_with_errors, ortGec != null && _n(ortGec) > 0 ? _kirmizi : _yesil),
+          ]),
+          const SizedBox(height: 8),
+          // 2. satir: Bekleme (geldi->basla) + Hazirlik (basla->hazir)
+          Row(children: [
+            _ozetKutu('Ort. Bekleme', ortBek != null ? '$ortBek dk' : '—', Icons.hourglass_empty, ortBek != null && _n(ortBek) > 5 ? _amber : _yesil),
+            const SizedBox(width: 8),
+            _ozetKutu('Ort. Hazırlık', ortHaz != null ? '$ortHaz dk' : '—', Icons.outdoor_grill, ortHaz != null && _n(ortHaz) > 15 ? _kirmizi : _yesil),
+          ]),
+          const SizedBox(height: 8),
+          // 3. satir: anlik durum
+          Row(children: [
             _ozetKutu('Bekleyen', '${_n(ozet['bekleyen']).toInt()}', Icons.pending_actions, _mor),
+            const SizedBox(width: 8),
+            _ozetKutu('Geciken (15dk+)', '${_n(ozet['geciken']).toInt()}', Icons.warning_amber_rounded, _n(ozet['geciken']) > 0 ? _kirmizi : _yesil),
           ]),
           const SizedBox(height: 8),
           Row(children: [
-            _ozetKutu('Geciken (15dk+)', '${_n(ozet['geciken']).toInt()}', Icons.warning_amber_rounded, _n(ozet['geciken']) > 0 ? _kirmizi : _yesil),
+            _ozetKutu('En Eski (bekleyen)', _sure(_n(ozet['en_eski_dk']).toInt()), Icons.hourglass_bottom, _n(ozet['en_eski_dk']) >= 15 ? _kirmizi : _amber),
             const SizedBox(width: 8),
-            _ozetKutu('En Eski', _sure(_n(ozet['en_eski_dk']).toInt()), Icons.hourglass_bottom, _n(ozet['en_eski_dk']) >= 15 ? _kirmizi : _amber),
+            _ozetKutu('Ölçülen (bugün)', '${_n(ozet['olcum']).toInt()} sipariş', Icons.straighten, _sub2),
           ]),
           const SizedBox(height: 14),
           // Öneriler

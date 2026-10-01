@@ -1186,6 +1186,11 @@ class _DetayScreenState extends State<DetayScreen> {
         Text('Bu adisyon için müşteri anketi doldurulmamış.', style: TextStyle(color: _sub, fontSize: 12)),
       ]),
       const SizedBox(height: 14),
+      // Mutfak sureleri (hazir olan kalemlerden) — patron kac dk bekledi / pisirdi / toplam / gecikme gorsun
+      if (_n((d!['mutfak'] as Map?)?['hazir_kalem'] ?? 0) > 0) ...[
+        _mutfakSureKutu(d!['mutfak'] as Map),
+        const SizedBox(height: 14),
+      ],
       // Siparis icerigi
       _kutu('🍽️ Sipariş İçeriği', [
         if (kalemler.isEmpty)
@@ -1263,6 +1268,41 @@ class _DetayScreenState extends State<DetayScreen> {
         Row(mainAxisSize: MainAxisSize.min,
             children: List.generate(5, (i) => Icon(i < p ? Icons.star : Icons.star_border, size: 11, color: const Color(0xFFF59E0B)))),
       ]);
+
+  // Adisyonun mutfak sureleri: bekleme (geldi->basla) / hazirlik (basla->hazir) / toplam / gecikme + en yavas
+  Widget _mutfakSureKutu(Map m) {
+    final bek = _n(m['bekleme_ort']).toInt();
+    final haz = _n(m['hazirlik_ort']).toInt();
+    final top = _n(m['toplam_ort']).toInt();
+    final gec = _n(m['gecikme_top']).toInt();
+    final enYavas = m['en_yavas'] as Map?;
+    Widget mini(String et, String dg, Color c) => Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+            decoration: BoxDecoration(color: c.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(12), border: Border.all(color: c.withValues(alpha: 0.25))),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(et, style: TextStyle(color: _sub2, fontSize: 10.5, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 4),
+              FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(dg, style: TextStyle(color: c, fontSize: 16, fontWeight: FontWeight.bold))),
+            ]),
+          ),
+        );
+    return _kutu('⏱️ Mutfak Süresi (ortalama)', [
+      Row(children: [
+        mini('Bekleme', '$bek dk', const Color(0xFFF59E0B)),
+        const SizedBox(width: 8),
+        mini('Hazırlık', '$haz dk', _mavi),
+        const SizedBox(width: 8),
+        mini('Toplam', '$top dk', _yesil),
+        const SizedBox(width: 8),
+        mini('Gecikme', '$gec dk', gec > 0 ? _kirmizi : _yesil),
+      ]),
+      if (enYavas != null) ...[
+        const SizedBox(height: 10),
+        Text('🐢 En yavaş kalem: ${enYavas['ad']} · ${_n(enYavas['dk']).toInt()} dk', style: TextStyle(color: _sub, fontSize: 12)),
+      ],
+    ]);
+  }
 
   Widget _kalemSatir(Map k, bool acik) {
     final iptal = k['durum'] == 'iptal';
