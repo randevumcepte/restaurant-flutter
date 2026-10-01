@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import '../providers/tema_provider.dart';
 import '../services/api.dart';
 import '../services/yazici_servisi.dart';
+import '../responsive.dart';
 import 'ai_analiz_sheet.dart';
 import 'odeme_ekrani.dart';
 import 'urun_ekle_screen.dart';
@@ -49,6 +50,7 @@ class _DetayScreenState extends State<DetayScreen> {
   static const _mavi = Color(0xFF4F46E5);
   static const _yesil = Color(0xFF10B981);
   static const _kirmizi = Color(0xFFF43F5E);
+  static const _turuncu = Color(0xFFF59E0B);
 
   num _n(dynamic v) => v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0);
   String _tam(num v) => '${_f.format(v.round())}TL';
@@ -417,6 +419,8 @@ class _DetayScreenState extends State<DetayScreen> {
     final urunler = (d!['urunler'] as List?) ?? [];
     final yuzde = _n(d!['maliyetYuzde']).toInt();
     final renk = yuzde >= 35 ? _kirmizi : (yuzde >= 25 ? const Color(0xFFF59E0B) : _yesil);
+    // MASAÜSTÜ: geniş ekranda veri-yoğun çok sütunlu düzen. TELEFON düzeni (aşağısı) AYNEN korunur.
+    if (genisMi(context)) return _maliyetGenis(urunler, yuzde, renk);
     return [
       _ozetSerit('${_tam(_n(d!['toplamMaliyet']))}  ·  %$yuzde', 'toplam food-cost', renk),
       const SizedBox(height: 12),
@@ -466,6 +470,237 @@ class _DetayScreenState extends State<DetayScreen> {
         ),
       ]),
     );
+  }
+
+  // ================= FOOD-COST — MASAÜSTÜ (veri-yoğun, çok sütunlu) =================
+  // SADECE geniş ekranda devreye girer; telefon düzeni _maliyet() içinde korunur.
+  Color _fcRenk(int y) => y >= 35 ? _kirmizi : (y >= 25 ? _turuncu : _yesil);
+
+  List<Widget> _maliyetGenis(List urunler, int yuzde, Color renk) {
+    final toplamMaliyet = _n(d!['toplamMaliyet']);
+    final toplamSatis = _n(d!['toplamSatis']);
+    final brutKar = _n(d!['brutKar']);
+    final marj = toplamSatis > 0 ? (brutKar / toplamSatis * 100).round() : 0;
+
+    // Her ürün için brüt kâr + marj türet (backend'e dokunmadan).
+    final list = urunler.map<Map>((e) {
+      final u = Map.of(e as Map);
+      final s = _n(u['satis']);
+      final m = _n(u['maliyet']);
+      u['kar'] = s - m;
+      u['marj'] = s > 0 ? ((s - m) / s * 100).round() : 0;
+      return u;
+    }).toList();
+
+    final kritik = list.where((u) => _n(u['yuzde']) >= 35).length;
+    final izlen = list.where((u) => _n(u['yuzde']) >= 25 && _n(u['yuzde']) < 35).length;
+    final saglikli = list.where((u) => _n(u['yuzde']) < 25).length;
+
+    final enMaliyetli = [...list]..sort((a, b) => _n(b['maliyet']).compareTo(_n(a['maliyet'])));
+    final enKarli = [...list]..sort((a, b) => _n(b['kar']).compareTo(_n(a['kar'])));
+
+    return [
+      _maliyetHero(toplamMaliyet, yuzde, renk),
+      const SizedBox(height: 12),
+      Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Expanded(child: _statKart('Satış', _tam(toplamSatis))),
+        const SizedBox(width: 10),
+        Expanded(child: _statKart('Food-Cost', '${_tam(toplamMaliyet)} · %$yuzde')),
+        const SizedBox(width: 10),
+        Expanded(child: _statKart('Brüt Kâr', _tam(brutKar))),
+        const SizedBox(width: 10),
+        Expanded(child: _statKart('Kâr Marjı', '%$marj')),
+        const SizedBox(width: 10),
+        Expanded(child: _statKart('Ürün Çeşidi', '${list.length}')),
+      ]),
+      const SizedBox(height: 14),
+      Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Expanded(flex: 3, child: _maliyetTabloKutu(list)),
+        const SizedBox(width: 14),
+        Expanded(flex: 2, child: Column(mainAxisSize: MainAxisSize.min, children: [
+          _maliyetHedefKutu(yuzde, renk),
+          const SizedBox(height: 14),
+          _saglikDagilimKutu(kritik, izlen, saglikli, list.length),
+          const SizedBox(height: 14),
+          _payListesiKutu('🔥 Maliyeti En Yüksek', enMaliyetli.take(5).toList(), (u) => _n(u['maliyet']), _kirmizi, (u) => _tam(_n(u['maliyet']))),
+          const SizedBox(height: 14),
+          _payListesiKutu('💚 En Kârlı Ürünler', enKarli.take(5).toList(), (u) => _n(u['kar']), _yesil, (u) => _k(_n(u['kar']))),
+        ])),
+      ]),
+    ];
+  }
+
+  Widget _maliyetHero(num maliyet, int yuzde, Color renk) {
+    final durum = yuzde >= 35 ? 'Hedefin üstünde' : (yuzde >= 25 ? 'Hedef bandında' : 'Sağlıklı seviyede');
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: [renk.withValues(alpha: 0.9), renk.withValues(alpha: 0.55)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(children: [
+        Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+          Text('${_tam(maliyet)}  ·  %$yuzde', style: const TextStyle(color: Colors.white, fontSize: 34, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 2),
+          const Text('toplam food-cost', style: TextStyle(color: Colors.white70, fontSize: 13)),
+        ]),
+        const Spacer(),
+        Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
+          _heroChip('Hedef %28–35'),
+          const SizedBox(height: 8),
+          _heroChip(durum, dolu: true),
+        ]),
+      ]),
+    );
+  }
+
+  Widget _heroChip(String s, {bool dolu = false}) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(color: dolu ? Colors.white : Colors.white24, borderRadius: BorderRadius.circular(20)),
+        child: Text(s, style: TextStyle(color: dolu ? const Color(0xFF1F2937) : Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+      );
+
+  Widget _maliyetTabloKutu(List list) => _kutu('🧾 Ürün Bazında Maliyet · ${list.length} ürün (dokunun → reçete)', [
+        _tabloBaslik(),
+        Divider(color: _line, height: 16),
+        if (list.isEmpty)
+          Padding(padding: const EdgeInsets.symmetric(vertical: 10), child: Text('Bu dönemde satış yok.', style: TextStyle(color: _sub, fontSize: 12)))
+        else
+          for (int i = 0; i < list.length; i++) ...[
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _push(tip: 'urun', id: _n((list[i] as Map)['urun_id']).toInt(), baslik: list[i]['ad'].toString()),
+              child: _tabloSatir(list[i] as Map, i + 1),
+            ),
+            if (i < list.length - 1) Divider(color: _line.withValues(alpha: 0.5), height: 1),
+          ],
+      ]);
+
+  Widget _tabloBaslik() {
+    final st = TextStyle(color: _sub2, fontSize: 11, fontWeight: FontWeight.w700);
+    return Row(children: [
+      SizedBox(width: 26, child: Text('#', style: st)),
+      Expanded(flex: 5, child: Text('ÜRÜN', style: st)),
+      Expanded(flex: 2, child: Text('ADET', textAlign: TextAlign.right, style: st)),
+      Expanded(flex: 3, child: Text('SATIŞ', textAlign: TextAlign.right, style: st)),
+      Expanded(flex: 3, child: Text('MALİYET', textAlign: TextAlign.right, style: st)),
+      Expanded(flex: 3, child: Text('BRÜT KÂR', textAlign: TextAlign.right, style: st)),
+      Expanded(flex: 4, child: Text('FOOD-COST', textAlign: TextAlign.right, style: st)),
+    ]);
+  }
+
+  Widget _tabloSatir(Map u, int sira) {
+    final y = _n(u['yuzde']).toInt();
+    final renk = _fcRenk(y);
+    final kar = _n(u['kar']);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 9),
+      child: Row(children: [
+        SizedBox(width: 26, child: Text('$sira', style: TextStyle(color: _sub2, fontSize: 11))),
+        Expanded(flex: 5, child: Text(u['ad'].toString(), overflow: TextOverflow.ellipsis, style: TextStyle(color: _ink, fontSize: 13, fontWeight: FontWeight.w600))),
+        Expanded(flex: 2, child: Text('${_n(u['adet']).toInt()}×', textAlign: TextAlign.right, style: TextStyle(color: _sub, fontSize: 12))),
+        Expanded(flex: 3, child: Text(_k(_n(u['satis'])), textAlign: TextAlign.right, style: TextStyle(color: _ink, fontSize: 12.5))),
+        Expanded(flex: 3, child: Text(_tam(_n(u['maliyet'])), textAlign: TextAlign.right, style: TextStyle(color: _ink, fontSize: 12.5, fontWeight: FontWeight.w600))),
+        Expanded(flex: 3, child: Text(_k(kar), textAlign: TextAlign.right, style: TextStyle(color: kar >= 0 ? _yesil : _kirmizi, fontSize: 12.5, fontWeight: FontWeight.w600))),
+        Expanded(flex: 4, child: _fcBar(y, renk)),
+      ]),
+    );
+  }
+
+  Widget _fcBar(int y, Color renk) => Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+        Expanded(
+          child: Container(
+            height: 7, margin: const EdgeInsets.only(right: 8),
+            decoration: BoxDecoration(color: _line, borderRadius: BorderRadius.circular(4)),
+            child: FractionallySizedBox(
+              alignment: Alignment.centerLeft, widthFactor: (y / 50).clamp(0.0, 1.0).toDouble(),
+              child: Container(decoration: BoxDecoration(color: renk, borderRadius: BorderRadius.circular(4))),
+            ),
+          ),
+        ),
+        SizedBox(width: 38, child: Text('%$y', textAlign: TextAlign.right, style: TextStyle(color: renk, fontSize: 12, fontWeight: FontWeight.bold))),
+      ]);
+
+  Widget _maliyetHedefKutu(int yuzde, Color renk) => _kutu('🎯 Food-Cost Hedefi', [
+        LayoutBuilder(builder: (ctx, c) {
+          final w = c.maxWidth;
+          return SizedBox(height: 30, child: Stack(children: [
+            Positioned(left: 0, right: 0, top: 11, child: Container(height: 8, decoration: BoxDecoration(color: _line, borderRadius: BorderRadius.circular(4)))),
+            Positioned(left: w * 28 / 50, width: w * (35 - 28) / 50, top: 11, child: Container(height: 8, decoration: BoxDecoration(color: _yesil.withValues(alpha: 0.55), borderRadius: BorderRadius.circular(4)))),
+            Positioned(left: (w * (yuzde / 50).clamp(0.0, 1.0) - 6).clamp(0.0, w - 12), top: 5, child: Container(width: 12, height: 20, decoration: BoxDecoration(color: renk, borderRadius: BorderRadius.circular(4), border: Border.all(color: Colors.white, width: 2)))),
+          ]));
+        }),
+        const SizedBox(height: 6),
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Text('%0', style: TextStyle(color: _sub2, fontSize: 10)),
+          Text('hedef %28–35', style: TextStyle(color: _yesil, fontSize: 11, fontWeight: FontWeight.w600)),
+          Text('%50', style: TextStyle(color: _sub2, fontSize: 10)),
+        ]),
+        const SizedBox(height: 10),
+        Text(
+          yuzde >= 35
+              ? 'Food-cost hedef bandının ÜSTÜNDE (%$yuzde). En maliyetli kalemleri, porsiyon ve satış fiyatını gözden geçirin.'
+              : (yuzde >= 25 ? 'Food-cost hedef bandında (%$yuzde). Dengeli seviye.' : 'Food-cost hedefin ALTINDA (%$yuzde). Kârlılık güçlü.'),
+          style: TextStyle(color: _sub, fontSize: 12, height: 1.35),
+        ),
+      ]);
+
+  Widget _saglikDagilimKutu(int kritik, int izlen, int saglikli, int toplam) => _kutu('🚦 Sağlık Dağılımı', [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: SizedBox(height: 12, child: Row(children: [
+            if (saglikli > 0) Expanded(flex: saglikli, child: Container(color: _yesil)),
+            if (izlen > 0) Expanded(flex: izlen, child: Container(color: _turuncu)),
+            if (kritik > 0) Expanded(flex: kritik, child: Container(color: _kirmizi)),
+            if (toplam == 0) Expanded(child: Container(color: _line)),
+          ])),
+        ),
+        const SizedBox(height: 12),
+        _legendSatir(_yesil, 'Sağlıklı (<%25)', saglikli),
+        _legendSatir(_turuncu, 'İzlenmeli (%25–35)', izlen),
+        _legendSatir(_kirmizi, 'Kritik (≥%35)', kritik),
+      ]);
+
+  Widget _legendSatir(Color c, String ad, int adet) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(children: [
+          Container(width: 10, height: 10, decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(3))),
+          const SizedBox(width: 8),
+          Expanded(child: Text(ad, style: TextStyle(color: _ink, fontSize: 12.5))),
+          Text('$adet ürün', style: TextStyle(color: _sub, fontSize: 12, fontWeight: FontWeight.w600)),
+        ]),
+      );
+
+  Widget _payListesiKutu(String baslik, List items, num Function(Map) deger, Color renk, String Function(Map) etiket) {
+    final maks = items.fold<num>(1, (a, e) => deger(e as Map) > a ? deger(e) : a);
+    return _kutu(baslik, [
+      if (items.isEmpty)
+        Text('Veri yok.', style: TextStyle(color: _sub, fontSize: 12))
+      else
+        for (final Map e in items)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Expanded(child: Text(e['ad'].toString(), overflow: TextOverflow.ellipsis, style: TextStyle(color: _ink, fontSize: 12.5))),
+                const SizedBox(width: 8),
+                Text(etiket(e), style: TextStyle(color: _ink, fontSize: 12, fontWeight: FontWeight.bold)),
+              ]),
+              const SizedBox(height: 5),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: Container(
+                  height: 7, color: _line,
+                  child: FractionallySizedBox(
+                    alignment: Alignment.centerLeft, widthFactor: (deger(e) / maks).clamp(0.0, 1.0).toDouble(),
+                    child: Container(color: renk),
+                  ),
+                ),
+              ),
+            ]),
+          ),
+    ]);
   }
 
   // ---------------- KAPANAN ADISYON ----------------
