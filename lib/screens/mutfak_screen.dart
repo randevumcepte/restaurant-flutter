@@ -516,6 +516,11 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
     // 1) Yeni + gecikmis (henuz baslanmadi) -> normal yanip soner. 2) Kritik -> kirmizi yanip soner.
     // Basla'ya basinca 1. kademe susar (saat sifirlanir); hazirlik suresi de asilirsa 2. kademe devreye girer.
     final blinkVar = kritik || (gecikmeVar && !basladi);
+    // BASLADIKTAN sonra hazirlik sayaci (sifirdan) + ilerleme
+    final hazirlikGecen = _n(s['hazirlik_gecen']).toInt();
+    final hazirlikKalan = hedef - hazirlikGecen;
+    final prepRenk = hazirlikKalan < 0 ? _kirmizi : (hazirlikKalan <= hedef ~/ 3 ? _amber : _yesil);
+    final prepOran = hedef > 0 ? (hazirlikGecen / hedef).clamp(0.0, 1.0).toDouble() : 0.0;
     final icerik = Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -537,24 +542,45 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
             Text('· ${_adet(toplamAdet)} ürün', style: TextStyle(color: _sub, fontSize: 12)),
           ]),
         ),
-        // SÜRE ŞERİDİ: geçen + kalan/gecikme + ilerleme çubuğu
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-          child: Row(children: [
-            Icon(Icons.schedule, size: 13, color: renk),
-            const SizedBox(width: 4),
-            Text('${_sure(gecen)} geçti', style: TextStyle(color: _sub, fontSize: 12, fontWeight: FontWeight.w600)),
-            const Spacer(),
-            Text(_kalanYazi(kalan), style: TextStyle(color: renk, fontSize: 12.5, fontWeight: FontWeight.bold)),
-          ]),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 6, 12, 2),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: LinearProgressIndicator(value: oran, minHeight: 5, backgroundColor: renk.withValues(alpha: 0.15), color: renk),
+        // SÜRE: baslamadan -> "geldi" sayaci; basladiktan -> HAZIRLIK sayaci (sifirdan) + kucuk toplam
+        if (!basladi) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+            child: Row(children: [
+              Icon(Icons.schedule, size: 13, color: renk),
+              const SizedBox(width: 4),
+              Text('${_sure(gecen)} geçti', style: TextStyle(color: _sub, fontSize: 12, fontWeight: FontWeight.w600)),
+              const Spacer(),
+              Text(_kalanYazi(kalan), style: TextStyle(color: renk, fontSize: 12.5, fontWeight: FontWeight.bold)),
+            ]),
           ),
-        ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 6, 12, 2),
+            child: ClipRRect(borderRadius: BorderRadius.circular(6),
+              child: LinearProgressIndicator(value: oran, minHeight: 5, backgroundColor: renk.withValues(alpha: 0.15), color: renk)),
+          ),
+        ] else ...[
+          // Basladi -> HAZIRLIK sayaci (basladiktan beri), sifirdan
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+            child: Row(children: [
+              Icon(Icons.outdoor_grill, size: 14, color: prepRenk),
+              const SizedBox(width: 4),
+              Text('hazırlık ${_sure(hazirlikGecen)}', style: TextStyle(color: _sub, fontSize: 12, fontWeight: FontWeight.w600)),
+              const Spacer(),
+              Text(_kalanYazi(hazirlikKalan), style: TextStyle(color: prepRenk, fontSize: 12.5, fontWeight: FontWeight.bold)),
+            ]),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 6, 12, 1),
+            child: ClipRRect(borderRadius: BorderRadius.circular(6),
+              child: LinearProgressIndicator(value: prepOran, minHeight: 5, backgroundColor: prepRenk.withValues(alpha: 0.15), color: prepRenk)),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 3, 12, 0),
+            child: Text('toplam ${_sure(gecen)} (geldiğinden beri)', style: TextStyle(color: _sub, fontSize: 10.5)),
+          ),
+        ],
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 6, 12, 4),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
