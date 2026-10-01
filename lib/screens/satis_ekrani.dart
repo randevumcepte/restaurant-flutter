@@ -863,8 +863,8 @@ class _SatisEkraniState extends State<SatisEkrani> {
             Expanded(
               child: Stack(fit: StackFit.expand, children: [
                 gorsel != null
-                    ? Image.network(gorsel, fit: BoxFit.cover, errorBuilder: (_, _, _) => _fotoYer(t, u['ad'].toString()))
-                    : _fotoYer(t, u['ad'].toString()),
+                    ? Image.network(gorsel, fit: BoxFit.cover, errorBuilder: (_, _, _) => _fotoYer(t, u['emoji']?.toString()))
+                    : _fotoYer(t, u['emoji']?.toString()),
                 if (adet > 0)
                   Positioned(top: 6, right: 6, child: Container(
                     width: 26, height: 26, alignment: Alignment.center,
@@ -893,11 +893,17 @@ class _SatisEkraniState extends State<SatisEkrani> {
     );
   }
 
-  Widget _fotoYer(TemaProvider t, String ad) => Container(
-        color: t.card2,
-        alignment: Alignment.center,
-        child: Icon(Icons.restaurant_menu, color: t.sub.withValues(alpha: 0.5), size: 32),
-      );
+  // Foto yoksa QR menu gibi EMOJI kutusu (yemege uygun emoji)
+  Widget _fotoYer(TemaProvider t, [String? emoji]) {
+    final e = (emoji != null && emoji.isNotEmpty) ? emoji : '🍽️';
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: [t.card2, t.card], begin: Alignment.topLeft, end: Alignment.bottomRight),
+      ),
+      alignment: Alignment.center,
+      child: Text(e, style: const TextStyle(fontSize: 46)),
+    );
+  }
 
   // ---------- SAĞ: adisyon + ödeme ----------
   Widget _adisyonPaneli(TemaProvider t) {
