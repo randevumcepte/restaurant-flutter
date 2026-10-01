@@ -137,7 +137,30 @@ class Api {
     return jsonDecode(r.body) as Map<String, dynamic>;
   }
 
-  static Future<Map<String, dynamic>> menu(String token) => _get('/api/menu', token);
+  // ---------------- MENÜ ÖNBELLEĞİ ----------------
+  // Masa açılışı yavaştı çünkü tüm menü (kategoriler+ürünler) her masada baştan indiriliyordu.
+  // Menü nadir değişir → oturum boyunca RAM'de tut; TTL dolunca veya menü düzenlenince yenile.
+  static Map<String, dynamic>? _menuCache;
+  static DateTime? _menuCacheZaman;
+  static const Duration _menuCacheOmru = Duration(minutes: 5);
+
+  /// Menü. [taze]=true önbelleği atlar (ör. manuel yenileme).
+  static Future<Map<String, dynamic>> menu(String token, {bool taze = false}) async {
+    if (!taze && _menuCache != null && _menuCacheZaman != null &&
+        DateTime.now().difference(_menuCacheZaman!) < _menuCacheOmru) {
+      return _menuCache!;
+    }
+    final m = await _get('/api/menu', token);
+    _menuCache = m;
+    _menuCacheZaman = DateTime.now();
+    return m;
+  }
+
+  /// Menü değişince (ürün/kategori ekle-düzenle-sil, fiyat, foto) önbelleği düşür.
+  static void menuCacheTemizle() {
+    _menuCache = null;
+    _menuCacheZaman = null;
+  }
 
   static Future<Map<String, dynamic>> adisyonUrunEkle(String token, int adisyonId, List<Map<String, int>> kalemler) async {
     final r = await http.post(
@@ -336,22 +359,26 @@ class Api {
       'one_cikan': oneCikan ? '1' : '0', 'one_soz': oneSoz,
     };
     if (id != null) body['id'] = '$id';
-    return _post('/api/patron/urun-kaydet', token, body);
+    return _postMenu('/api/patron/urun-kaydet', token, body);
   }
+
+  // Menüyü değiştiren POST'lar: başarı sonrası önbelleği düşür (fiyat/ürün anında yansısın).
+  static Future<Map<String, dynamic>> _postMenu(String path, String token, Map<String, String> body) =>
+      _post(path, token, body).then((r) { menuCacheTemizle(); return r; });
 
   // One cikan urunlerin sirasi (surukle-birak) -> ids istenen sirada
   static Future<Map<String, dynamic>> oneSiraKaydet(String token, List<int> ids) =>
       _post('/api/patron/one-sira-kaydet', token, {'ids': jsonEncode(ids)});
 
-  static Future<Map<String, dynamic>> urunSil(String token, int id) => _post('/api/patron/urun-sil', token, {'id': '$id'});
+  static Future<Map<String, dynamic>> urunSil(String token, int id) => _postMenu('/api/patron/urun-sil', token, {'id': '$id'});
 
   static Future<Map<String, dynamic>> kategoriKaydet(String token, {int? id, required String ad, int sira = 0}) {
     final body = {'ad': ad, 'sira': '$sira'};
     if (id != null) body['id'] = '$id';
-    return _post('/api/patron/kategori-kaydet', token, body);
+    return _postMenu('/api/patron/kategori-kaydet', token, body);
   }
 
-  static Future<Map<String, dynamic>> kategoriSil(String token, int id) => _post('/api/patron/kategori-sil', token, {'id': '$id'});
+  static Future<Map<String, dynamic>> kategoriSil(String token, int id) => _postMenu('/api/patron/kategori-sil', token, {'id': '$id'});
 
   static Future<Map<String, dynamic>> urunFotoYukle(String token, int urunId, String dosyaYolu) async {
     final req = http.MultipartRequest('POST', Uri.parse('$base/api/patron/urun-foto'));
@@ -362,6 +389,7 @@ class Api {
     final streamed = await req.send();
     final r = await http.Response.fromStream(streamed);
     if (r.statusCode == 401) throw ApiYetkiHatasi();
+    menuCacheTemizle(); // foto değişti → menü önbelleğini düşür
     return jsonDecode(r.body) as Map<String, dynamic>;
   }
 

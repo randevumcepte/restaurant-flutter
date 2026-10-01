@@ -79,11 +79,18 @@ class _SatisEkraniState extends State<SatisEkrani> {
     final auth = context.read<AuthProvider>();
     setState(() => loading = true);
     try {
-      final menu = await Api.menu(auth.token!);
-      final fis = await Api.fis(auth.token!, widget.adisyonId);
-      Map<String, dynamic>? kl;
-      try { kl = await Api.adisyonKalemleri(auth.token!, widget.adisyonId); } catch (_) {}
+      // 3 çağrı PARALEL (önceden sıralıydı → 3 ayrı round-trip = yavaş açılış).
+      // Menü ayrıca Api içinde önbellekli → ilk masadan sonra neredeyse anında.
+      final sonuc = await Future.wait([
+        Api.menu(auth.token!),
+        Api.fis(auth.token!, widget.adisyonId),
+        Api.adisyonKalemleri(auth.token!, widget.adisyonId)
+            .catchError((_) => <String, dynamic>{}),
+      ]);
       if (!mounted) return;
+      final menu = sonuc[0];
+      final fis = sonuc[1];
+      final Map<String, dynamic>? kl = sonuc[2]['ok'] == 1 ? sonuc[2] : null;
       kategoriler = (menu['kategoriler'] as List?) ?? [];
       urunler = (menu['urunler'] as List?) ?? [];
       _urunById.clear();
