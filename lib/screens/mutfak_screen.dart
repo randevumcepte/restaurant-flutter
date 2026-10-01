@@ -28,6 +28,7 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
 
   // --- Sekme 1: aktif siparişler ---
   List siparisler = [];
+  List<int> _mutfakSira = []; // elle surukle-birak ile belirlenen adisyon sirasi (one alma)
   List istasyonlar = [];
   List toplu = [];
   int toplamBekleyen = 0;
@@ -92,13 +93,38 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
 
   String get _token => context.read<AuthProvider>().token!;
 
+  // Elle (surukle-birak) belirlenen sirayi uygula: once manuel sirali olanlar, sonra YENI gelenler.
+  // _mutfakSira'yi mevcut adisyonlara gore gunceller (artik olmayanlari atar).
+  List _siraUygula(List list) {
+    if (_mutfakSira.isEmpty) return list;
+    final byId = {for (final e in list) _n((e as Map)['adisyon_id']).toInt(): e};
+    final sonuc = [];
+    for (final id in _mutfakSira) {
+      final e = byId.remove(id);
+      if (e != null) sonuc.add(e);
+    }
+    sonuc.addAll(byId.values); // manuel sirada olmayan (yeni gelen) adisyonlar -> sona
+    _mutfakSira = [for (final e in sonuc) _n((e as Map)['adisyon_id']).toInt()];
+    return sonuc;
+  }
+
+  // Fis surukle-birak -> listeyi yeniden sirala + manuel sirayi kaydet (yenilemelerde korunur)
+  void _elleSirala(int oldI, int newI) {
+    setState(() {
+      if (newI > oldI) newI -= 1;
+      final item = siparisler.removeAt(oldI);
+      siparisler.insert(newI, item);
+      _mutfakSira = [for (final e in siparisler) _n((e as Map)['adisyon_id']).toInt()];
+    });
+  }
+
   Future<void> _siparisYukle({bool sessiz = false}) async {
     if (!sessiz) setState(() => loading1 = true);
     try {
       final res = await Api.mutfak(_token, istasyon: seciliIst);
       if (!mounted) return;
       setState(() {
-        siparisler = (res['siparisler'] as List?) ?? [];
+        siparisler = _siraUygula((res['siparisler'] as List?) ?? []); // elle one alinan sira korunur
         istasyonlar = (res['istasyonlar'] as List?) ?? [];
         toplu = (res['toplu'] as List?) ?? [];
         toplamBekleyen = _n(res['toplam_bekleyen']).toInt();
@@ -356,7 +382,7 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
                 : RefreshIndicator(
                     onRefresh: _siparisYukle,
                     color: _mor, backgroundColor: _card,
-                    child: _rayGovde(siparisler, _hSip, (m) => _kart(m)),
+                    child: _rayGovde(siparisler, _hSip, (m) => _kart(m), reorder: true),
                   ),
       ),
     ]);
@@ -632,13 +658,39 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
   }
 
   // Masaustu: tek sira YATAY fis rayi (elle sag-sol kaydir, en az 7 fis gorunur). Telefon: dikey tek sutun.
-  Widget _rayGovde(List liste, ScrollController hc, Widget Function(Map) kartYap) {
+  Widget _rayGovde(List liste, ScrollController hc, Widget Function(Map) kartYap, {bool reorder = false}) {
     return LayoutBuilder(builder: (ctx, c) {
       final genis = c.maxWidth >= 640;
       if (genis) {
         final gorunur = (c.maxWidth / 260).floor().clamp(7, 20); // EN AZ 7 fis; genis ekranda daha fazla
         final kartW = (c.maxWidth - 24 - 12 * (gorunur - 1)) / gorunur;
         final h = (c.maxHeight - 28).clamp(240.0, 100000.0);
+        if (reorder) {
+          // SURUKLE-BIRAK: fisi basili tut + surukle -> one al (butonlar yine calisir; tiklamayla cakismaz)
+          return Scrollbar(
+            controller: hc, thumbVisibility: true,
+            child: ReorderableListView.builder(
+              scrollController: hc,
+              scrollDirection: Axis.horizontal,
+              buildDefaultDragHandles: false,
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
+              itemCount: liste.length,
+              onReorder: (oldI, newI) => _elleSirala(oldI, newI),
+              proxyDecorator: (child, i, anim) => Transform.scale(scale: 1.04, child: child),
+              itemBuilder: (ctx, i) {
+                final m = liste[i] as Map;
+                return ReorderableDelayedDragStartListener(
+                  key: ValueKey('kds-${_n(m['adisyon_id']).toInt()}'),
+                  index: i,
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 12),
+                    child: SizedBox(width: kartW, height: h, child: SingleChildScrollView(child: kartYap(m))),
+                  ),
+                );
+              },
+            ),
+          );
+        }
         return ScrollConfiguration(
           behavior: ScrollConfiguration.of(ctx).copyWith(dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse, PointerDeviceKind.trackpad}),
           child: Scrollbar(
