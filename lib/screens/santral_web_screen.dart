@@ -23,7 +23,7 @@ class _SantralWebScreenState extends State<SantralWebScreen> {
   Widget build(BuildContext context) {
     final url = '${Api.base}${widget.path}';
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: const Color(0xFF0F172A),
         foregroundColor: Colors.white,
@@ -52,9 +52,15 @@ class _SantralWebScreenState extends State<SantralWebScreen> {
       body: InAppWebView(
         initialUrlRequest: URLRequest(url: WebUri(url)),
         initialSettings: InAppWebViewSettings(
-          transparentBackground: true,
+          // transparentBackground Windows/WebView2'de agir compositing + kaydirma
+          // takilmasi yapar -> opak brak. Donanim hizlandirma acik.
+          transparentBackground: false,
           javaScriptEnabled: true,
           supportZoom: false,
+          hardwareAcceleration: true,
+          disableVerticalScroll: false,
+          disableHorizontalScroll: false,
+          useHybridComposition: true, // Android: daha akici kaydirma
         ),
         onWebViewCreated: (c) => _ctrl = c,
         onProgressChanged: (c, p) {
