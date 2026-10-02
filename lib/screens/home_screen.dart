@@ -9,7 +9,12 @@ import 'package:url_launcher/url_launcher.dart';
 import 'yonetim_drawer.dart';
 import '../widgets/onay_dinleyici.dart';
 import 'dashboard_screen.dart';
-import 'santral_web_screen.dart';
+import 'santral_kayitlar_screen.dart';
+import 'santral_ayar_screen.dart';
+import 'santral_egitim_screen.dart';
+import 'santral_ses_screen.dart';
+import 'dahili_yonetim_screen.dart';
+import 'freepbx_ayar_screen.dart';
 import 'garson_ozet_screen.dart';
 import 'masalar_screen.dart';
 import 'mutfak_screen.dart';
@@ -412,12 +417,12 @@ class _YanMenuState extends State<_YanMenu> {
                         Divider(height: 1, color: t.line, indent: 14, endIndent: 14),
                         const SizedBox(height: 8),
                         _baslik(t, 'AI SANTRAL', acik),
-                        _link(t, Icons.support_agent, 'AI Santral — Kayıtlar', () => git(const SantralWebScreen('/santral-kayitlar', 'AI Santral — Kayıtlar')), renk: const Color(0xFF8B5CF6)),
-                        _link(t, Icons.call_split, 'Aktarma / Teslimat', () => git(const SantralWebScreen('/santral-ayar', 'Aktarma / Teslimat')), renk: const Color(0xFF8B5CF6)),
-                        _link(t, Icons.school_outlined, 'Santral AI Eğitimi', () => git(const SantralWebScreen('/santral-egitim', 'Santral AI Eğitimi')), renk: const Color(0xFF8B5CF6)),
-                        _link(t, Icons.graphic_eq, 'Santral — Ses', () => git(const SantralWebScreen('/santral-ses', 'Santral — Ses')), renk: const Color(0xFF8B5CF6)),
-                        _link(t, Icons.dialpad, 'Dahili Yönetimi', () => git(const SantralWebScreen('/dahili-yonetim', 'Dahili Yönetimi')), renk: const Color(0xFF0EA5E9)),
-                        _link(t, Icons.settings_input_antenna, 'FreePBX API', () => git(const SantralWebScreen('/freepbx-ayar', 'FreePBX API')), renk: const Color(0xFF0EA5E9)),
+                        _link(t, Icons.support_agent, 'AI Santral — Kayıtlar', () => git(const SantralKayitlarScreen()), renk: const Color(0xFF8B5CF6)),
+                        _link(t, Icons.call_split, 'Aktarma / Teslimat', () => git(const SantralAyarScreen()), renk: const Color(0xFF8B5CF6)),
+                        _link(t, Icons.school_outlined, 'Santral AI Eğitimi', () => git(const SantralEgitimScreen()), renk: const Color(0xFF8B5CF6)),
+                        _link(t, Icons.graphic_eq, 'Santral — Ses', () => git(const SantralSesScreen()), renk: const Color(0xFF8B5CF6)),
+                        _link(t, Icons.dialpad, 'Dahili Yönetimi', () => git(const DahiliYonetimScreen()), renk: const Color(0xFF0EA5E9)),
+                        _link(t, Icons.settings_input_antenna, 'FreePBX API', () => git(const FreepbxAyarScreen()), renk: const Color(0xFF0EA5E9)),
                       ],
                     ]),
                   ),

@@ -50,7 +50,8 @@ dependencies:
   qr_flutter: ^4.1.0         # kasa donen QR
   mobile_scanner: ^5.2.3     # personel QR tarayici
   geolocator: ^13.0.2        # mesai geofence konum
-  webview_windows: ^0.4.0    # AI Santral panel sayfalari gomulu webview (Windows/WebView2, native kaydirma)
+  audioplayers: ^6.1.0       # AI Santral cagri kayitlari + TTS deneme ses oynatma
+  file_picker: ^8.1.2        # AI Santral egitim: menu PDF'inden kalip cikarma
 
 dev_dependencies:
   flutter_test:
