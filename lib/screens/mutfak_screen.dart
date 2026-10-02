@@ -837,8 +837,25 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
   Widget _serviseKart(Map s) {
     final dk = _n(s['dk']).toInt();
     final kalemler = (s['kalemler'] as List?) ?? [];
+    final adId = _n(s['adisyon_id']).toInt();
+    final toplamAdet = kalemler.fold<num>(0, (t, k) => t + _n((k as Map)['adet']));
     // Beklerken soğur: uzun bekleyen kırmızı
     final renk = dk >= 10 ? _kirmizi : (dk >= 5 ? _amber : _mavi);
+    // KANAL ikonu (Siparis sekmesiyle ayni mantik): masa / motor / torba / telefon
+    final masali = s['masali'] == true;
+    final kanal = (s['kanal']?.toString() ?? '').toLowerCase();
+    IconData kanalIkon;
+    if (masali) {
+      kanalIkon = Icons.table_restaurant_rounded;
+    } else if (kanal.contains('paket') || kanal.contains('kurye') || kanal.contains('yemeksepeti') || kanal.contains('getir') || kanal.contains('trendyol')) {
+      kanalIkon = Icons.two_wheeler_rounded;
+    } else if (kanal.contains('gel') || kanal.contains('al')) {
+      kanalIkon = Icons.shopping_bag_rounded;
+    } else if (kanal.contains('online') || kanal.contains('web') || kanal.contains('app')) {
+      kanalIkon = Icons.smartphone_rounded;
+    } else {
+      kanalIkon = Icons.receipt_long_rounded;
+    }
     return Container(
       decoration: BoxDecoration(
         color: _card,
@@ -849,31 +866,38 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(color: renk.withValues(alpha: 0.12), borderRadius: const BorderRadius.vertical(top: Radius.circular(13))),
-          child: Row(children: [
-            Icon(Icons.room_service, size: 15, color: _sub),
-            const SizedBox(width: 6),
-            Flexible(child: Text(s['masa'].toString(), overflow: TextOverflow.ellipsis, style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.bold))),
-            const Spacer(),
-            Text('✓ hazır ${_sure(dk)} önce', style: TextStyle(color: renk, fontSize: 11.5, fontWeight: FontWeight.bold)),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            // 1. SATIR: "Servise Hazir" rozeti + urun adedi ... hazir suresi
+            Row(children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(color: renk.withValues(alpha: 0.95), borderRadius: BorderRadius.circular(20)),
+                child: const Text('🔔 Servise Hazır', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(width: 8),
+              Expanded(child: Text('✓ ${_sure(dk)} önce', overflow: TextOverflow.ellipsis, maxLines: 1, style: TextStyle(color: renk, fontSize: 11.5, fontWeight: FontWeight.w700))),
+            ]),
+            const SizedBox(height: 7),
+            // 2. SATIR: masa (varsa) + No #numara
+            Row(children: [
+              Icon(kanalIkon, size: masali ? 17 : 20, color: masali ? _ink : _amber),
+              if (masali) ...[
+                const SizedBox(width: 5),
+                Flexible(child: Text(s['masa'].toString(), overflow: TextOverflow.ellipsis, maxLines: 1, style: TextStyle(color: _ink, fontSize: 16, fontWeight: FontWeight.w800, height: 1.1))),
+                const SizedBox(width: 6),
+                Text('· ${_adet(toplamAdet)} ürün', style: TextStyle(color: _sub, fontSize: 11.5, fontWeight: FontWeight.w600)),
+              ] else
+                const Spacer(),
+              const SizedBox(width: 8),
+              Text('No ', style: TextStyle(color: _sub, fontSize: 10.5, fontWeight: FontWeight.w600)),
+              Text('#$adId', style: TextStyle(color: _mor, fontSize: 13.5, fontWeight: FontWeight.w900)),
+            ]),
           ]),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            for (final k in kalemler)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 3),
-                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Container(
-                    constraints: const BoxConstraints(minWidth: 34),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(color: _mavi, borderRadius: BorderRadius.circular(8)),
-                    child: Text('${_adet(_n((k as Map)['adet']))}×', textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 14.5, fontWeight: FontWeight.w900)),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(child: Text(k['ad'].toString(), style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.w700))),
-                ]),
-              ),
+            for (final k in kalemler) _kalemSatir(k as Map),
           ]),
         ),
         Padding(
