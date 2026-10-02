@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -36,6 +37,8 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
 
   final stt.SpeechToText _speech = stt.SpeechToText();
   final FlutterTts _tts = FlutterTts();
+  // Windows (kasa) flutter_tts eklentisi native coker (0xc0000005) -> o platformda TTS'i HIC cagirma.
+  static final bool _sesVar = !Platform.isWindows;
 
   bool _hazir = false;
   bool _dinliyor = false;
@@ -170,6 +173,7 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
   }
 
   Future<void> _sesAyarla() async {
+    if (!_sesVar) return; // Windows: TTS yok (eklenti native coker)
     try {
       final engines = await _tts.getEngines;
       if (engines is List && engines.contains('com.google.android.tts')) {
@@ -247,7 +251,7 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
   @override
   void dispose() {
     _speech.stop();
-    _tts.stop();
+    if (_sesVar) _tts.stop();
     _pulse.dispose();
     super.dispose();
   }
@@ -272,7 +276,7 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
       _vadKesti = false;
       BargeVad.basla(() {
         _vadKesti = true;
-        try { _tts.stop(); } catch (_) {}
+        if (_sesVar) { try { _tts.stop(); } catch (_) {} }
         // Ozcan konusmaya BASLADI -> dinlemeyi HEMEN baslat (STT init'i TTS-stop ile es zamanli;
         // boylece ilk kelime kacmaz). Sonuc _vadSoru'ya gider, dongu isler.
         vadC = Completer<String>();
@@ -280,15 +284,21 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
       });
     }
     try {
-      await _tts.stop();
-      if (tok != _konusToken) return;
-      _ttsBitti = Completer<void>();
-      await _tts.speak(spoken);
-      // GERCEKTEN bitene kadar bekle. awaitSpeakCompletion bazi cihazlarda erken doner;
-      // o yuzden completion handler'i + uzunluga gore guvenlik suresi ile TAM bekle.
-      if (tok == _konusToken && _ttsBitti != null && !_ttsBitti!.isCompleted) {
-        final tahmin = Duration(milliseconds: 800 + spoken.length * 75);
-        await Future.any([_ttsBitti!.future, Future.delayed(tahmin)]);
+      if (_sesVar) {
+        await _tts.stop();
+        if (tok != _konusToken) return;
+        _ttsBitti = Completer<void>();
+        await _tts.speak(spoken);
+        // GERCEKTEN bitene kadar bekle. awaitSpeakCompletion bazi cihazlarda erken doner;
+        // o yuzden completion handler'i + uzunluga gore guvenlik suresi ile TAM bekle.
+        if (tok == _konusToken && _ttsBitti != null && !_ttsBitti!.isCompleted) {
+          final tahmin = Duration(milliseconds: 800 + spoken.length * 75);
+          await Future.any([_ttsBitti!.future, Future.delayed(tahmin)]);
+        }
+      } else {
+        // Windows (kasa): sesli okuma yok -> metin ekranda gorunur; okuma suresi kadar kisa bekle
+        if (tok != _konusToken) return;
+        await Future.delayed(Duration(milliseconds: 600 + spoken.length * 40));
       }
     } catch (_) {} finally {
       if (bargeIn) BargeVad.dur();
@@ -511,13 +521,13 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
       if (_konusuyor) {
         // KONUSURKEN dokunuldu -> asistan sussun, seni DINLEMEYE gecsin (oturumu BITIRME).
         _konusuyor = false;
-        try { await _tts.stop(); } catch (_) {} // _konus doner -> dongu _dinle'ye gecer
+        if (_sesVar) { try { await _tts.stop(); } catch (_) {} } // _konus doner -> dongu _dinle'ye gecer
         return;
       }
       // Bosta/dinliyorken dokunuldu -> gorusmeyi bitir.
       _iptal = true;
       await _speech.stop();
-      await _tts.stop();
+      if (_sesVar) await _tts.stop();
       _dinlemeTamamla();
       _ss(() => _mesgul = false);
       return;
@@ -525,7 +535,7 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
     final auth = context.read<AuthProvider>(); // await'lerden ONCE yakala (context guvenli)
     // Temiz baslangic: onceki oturum kalintilarini sifirla (2. konusma sorunsuz baslasin).
     try { await _speech.stop(); } catch (_) {}
-    try { await _tts.stop(); } catch (_) {}
+    if (_sesVar) { try { await _tts.stop(); } catch (_) {} }
     _dinlemeBekle = false;
     _konusmaBasladi = false;
     _ss(() { _mesgul = true; _iptal = false; });

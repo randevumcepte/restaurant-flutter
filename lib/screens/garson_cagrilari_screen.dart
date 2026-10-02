@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'menu_hamburger.dart';
 import 'package:flutter/services.dart';
@@ -28,6 +29,8 @@ class _GarsonCagrilariScreenState extends State<GarsonCagrilariScreen> {
   String? hata;
   Timer? _timer;
   final FlutterTts _tts = FlutterTts();
+  // Windows (kasa) flutter_tts native coker -> o platformda TTS'i HIC cagirma.
+  static final bool _sesVar = !Platform.isWindows;
 
   // GÜÇLÜ desenli titreşim — yoğun restoranda hissedilsin (karşılanana kadar her poll tekrar).
   Future<void> _titret() async {
@@ -50,8 +53,10 @@ class _GarsonCagrilariScreenState extends State<GarsonCagrilariScreen> {
   @override
   void initState() {
     super.initState();
-    _tts.setLanguage('tr-TR');
-    _tts.setSpeechRate(0.48);
+    if (_sesVar) {
+      _tts.setLanguage('tr-TR');
+      _tts.setSpeechRate(0.48);
+    }
     _cek();
     _timer = Timer.periodic(const Duration(seconds: 4), (_) => _cek());
   }
@@ -59,7 +64,7 @@ class _GarsonCagrilariScreenState extends State<GarsonCagrilariScreen> {
   @override
   void dispose() {
     _timer?.cancel();
-    _tts.stop();
+    if (_sesVar) _tts.stop();
     try { Vibration.cancel(); } catch (_) {}
     super.dispose();
   }
@@ -118,7 +123,7 @@ class _GarsonCagrilariScreenState extends State<GarsonCagrilariScreen> {
           // KARŞILANANA KADAR TEKRAR: açık çağrı oldukça her yenilemede (≈4 sn) güçlü titret.
           if (liste.isNotEmpty) {
             _titret();
-            if (sesli) {
+            if (sesli && _sesVar) {
               if (yeniler.isNotEmpty) {
                 _anonsSayac = 0;
                 final ilkYeni = yeniler.first;
