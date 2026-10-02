@@ -383,8 +383,12 @@ class _YanMenuState extends State<_YanMenu> {
                   Expanded(
                     child: ListView(padding: const EdgeInsets.symmetric(vertical: 8), children: [
                       _baslik(t, 'PANEL', acik),
-                      for (int i = 0; i < widget.sekmeler.length; i++)
+                      for (int i = 0; i < widget.sekmeler.length; i++) ...[
                         _tab(t, widget.sekmeler[i], i == widget.aktifIndex, () => widget.onSekme(i)),
+                        // Mutfak'in hemen altina Rezervasyon (icerik panelinde acilir — tab degil)
+                        if (widget.sekmeler[i].label == 'Mutfak')
+                          _link(t, Icons.event_available_outlined, 'Rezervasyon', () => git(const RezervasyonScreen()), renk: const Color(0xFF8B5CF6)),
+                      ],
                       if (widget.onAsistan != null) ...[
                         const SizedBox(height: 6),
                         _asistanBtn(widget.onAsistan!, acik),
@@ -401,7 +405,6 @@ class _YanMenuState extends State<_YanMenu> {
                       if (patron) _link(t, Icons.local_offer_outlined, 'İndirimler', () => git(const IndirimlerScreen()), renk: t.yesil),
                       if (patron) _link(t, Icons.shield_outlined, 'Kaçak Önleme', () => git(const OdemeModuScreen()), renk: const Color(0xFFF43F5E)),
                       _link(t, Icons.account_balance_wallet_outlined, 'Cari / Açık Hesaplar', () => git(const CariHesaplarScreen())),
-                      _link(t, Icons.event_available_outlined, 'Rezervasyonlar', () => git(const RezervasyonScreen())),
                       if (patron) _link(t, Icons.badge_outlined, 'Personel & Maaş', () => git(const PersonelScreen())),
                       if (patron) _link(t, Icons.table_restaurant_outlined, 'Masa & Bölge Atama', () => git(const MasaAtamaScreen())),
                       if (patron) _link(t, Icons.emoji_events_outlined, 'Garson Performansı', () => git(const GarsonPerformansScreen()), renk: t.yesil),
