@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show SystemSound, SystemSoundType; // yeni siparis uyari sesi
-import 'package:flutter/gestures.dart' show PointerDeviceKind; // masaustu: fare ile yatay surukle
 import '../ana_sekme.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
@@ -29,7 +28,8 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
 
   // --- Sekme 1: aktif siparişler ---
   List siparisler = [];
-  List<int> _mutfakSira = []; // elle surukle-birak ile belirlenen adisyon sirasi (one alma)
+  List<int> _mutfakSira = []; // "One Al" ile belirlenen adisyon sirasi (one cekilenler basta)
+  int _yogunluk = 1; // izgara yogunlugu: 0=buyuk/seyrek .. 3=kucuk/sik (kolon sayisi/kart boyutu)
   Set<int> _bilinenSiparis = {}; // yeni siparis tespiti (ses uyarisi)
   bool _ilkYukleme = true;
   List istasyonlar = [];
@@ -111,12 +111,14 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
     return sonuc;
   }
 
-  // Fis surukle-birak -> listeyi yeniden sirala + manuel sirayi kaydet (yenilemelerde korunur)
-  void _elleSirala(int oldI, int newI) {
+  // "Öne Al": bir fisi listenin basina (sol-ust) cek + manuel sirayi kaydet (yenilemelerde korunur)
+  void _oneAl(int adId) {
     setState(() {
-      if (newI > oldI) newI -= 1;
-      final item = siparisler.removeAt(oldI);
-      siparisler.insert(newI, item);
+      final idx = siparisler.indexWhere((e) => _n((e as Map)['adisyon_id']).toInt() == adId);
+      if (idx > 0) {
+        final item = siparisler.removeAt(idx);
+        siparisler.insert(0, item);
+      }
       _mutfakSira = [for (final e in siparisler) _n((e as Map)['adisyon_id']).toInt()];
     });
   }
@@ -571,6 +573,19 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
               ],
               const SizedBox(width: 8),
               Expanded(child: Text('· ${_adet(toplamAdet)} ürün', overflow: TextOverflow.ellipsis, maxLines: 1, style: TextStyle(color: _sub, fontSize: 11.5, fontWeight: FontWeight.w600))),
+              // ÖNE AL: fisi sol-uste cek (izgarada sira onceliklendirme)
+              Tooltip(
+                message: 'Öne al (önceliklendir)',
+                child: InkWell(
+                  onTap: () => _oneAl(adId),
+                  borderRadius: BorderRadius.circular(7),
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(color: _mor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(7)),
+                    child: Icon(Icons.vertical_align_top_rounded, size: 16, color: _mor),
+                  ),
+                ),
+              ),
             ]),
             const SizedBox(height: 7),
             // 2. SATIR: MASA adi (belirgin, ikonlu) solda + NUMARA sagda (sadece masa ile yarisir -> hep sigar)
@@ -769,58 +784,47 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
     );
   }
 
-  // Masaustu: tek sira YATAY fis rayi (elle sag-sol kaydir, en az 7 fis gorunur). Telefon: dikey tek sutun.
+  // Yogunluga gore hedef kart genisligi (buyuk/seyrek -> kucuk/sik). Kolon sayisini bu belirler.
+  double _hedefKartW() => const [310.0, 250.0, 205.0, 170.0][_yogunluk.clamp(0, 3)];
+
+  // Masaustu: COK SUTUNLU IZGARA (dunya standardi KDS) — ekrani doldurur, en eski sol-ustte,
+  // degisken yukseklikli masonry (bosluksuz), dikey kaydirma sadece tasarsa. Telefon: dikey tek sutun.
   Widget _rayGovde(List liste, ScrollController hc, Widget Function(Map) kartYap, {bool reorder = false}) {
     return LayoutBuilder(builder: (ctx, c) {
       final genis = c.maxWidth >= 640;
       if (genis) {
-        final gorunur = (c.maxWidth / 260).floor().clamp(7, 20); // EN AZ 7 fis; genis ekranda daha fazla
-        final kartW = (c.maxWidth - 24 - 12 * (gorunur - 1)) / gorunur;
-        final h = (c.maxHeight - 28).clamp(240.0, 100000.0);
-        if (reorder) {
-          // SURUKLE-BIRAK: fisi basili tut + surukle -> one al (butonlar yine calisir; tiklamayla cakismaz)
-          return Scrollbar(
-            controller: hc, thumbVisibility: true,
-            child: ReorderableListView.builder(
-              scrollController: hc,
-              scrollDirection: Axis.horizontal,
-              buildDefaultDragHandles: false,
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
-              itemCount: liste.length,
-              onReorder: (oldI, newI) => _elleSirala(oldI, newI),
-              proxyDecorator: (child, i, anim) => Transform.scale(scale: 1.04, child: child),
-              itemBuilder: (ctx, i) {
-                final m = liste[i] as Map;
-                return ReorderableDelayedDragStartListener(
-                  key: ValueKey('kds-${_n(m['adisyon_id']).toInt()}'),
-                  index: i,
-                  child: Padding(
-                    padding: const EdgeInsets.only(right: 12),
-                    child: SizedBox(width: kartW, height: h, child: SingleChildScrollView(child: kartYap(m))),
-                  ),
-                );
-              },
-            ),
-          );
+        const bosluk = 10.0;
+        final kolon = (c.maxWidth / _hedefKartW()).floor().clamp(2, 14);
+        final kartW = (c.maxWidth - 24 - bosluk * (kolon - 1)) / kolon;
+        // MASONRY: her karti o an EN KISA sutuna koy -> sutunlar dengeli dolar, alt bosluk kalmaz.
+        final sutunlar = List.generate(kolon, (_) => <Widget>[]);
+        final sutunYuk = List.filled(kolon, 0.0);
+        for (final m in liste) {
+          int en = 0;
+          for (int j = 1; j < kolon; j++) {
+            if (sutunYuk[j] < sutunYuk[en]) en = j;
+          }
+          final kalemSay = ((m as Map)['kalemler'] as List?)?.length ?? 1;
+          final tahminH = 120.0 + kalemSay * 40.0; // dengeleme icin yaklasik yukseklik
+          sutunlar[en].add(Padding(padding: const EdgeInsets.only(bottom: bosluk), child: kartYap(m)));
+          sutunYuk[en] += tahminH + bosluk;
         }
-        return ScrollConfiguration(
-          behavior: ScrollConfiguration.of(ctx).copyWith(dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse, PointerDeviceKind.trackpad}),
-          child: Scrollbar(
-            controller: hc, thumbVisibility: true,
+        return Column(children: [
+          _yogunlukCubugu(liste.length, kolon),
+          Expanded(
             child: SingleChildScrollView(
               controller: hc,
-              scrollDirection: Axis.horizontal,
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
+              padding: const EdgeInsets.fromLTRB(12, 2, 12, 16),
               child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                for (int i = 0; i < liste.length; i++) ...[
-                  if (i > 0) const SizedBox(width: 12),
-                  SizedBox(width: kartW, height: h, child: SingleChildScrollView(child: kartYap(liste[i] as Map))),
+                for (int j = 0; j < kolon; j++) ...[
+                  if (j > 0) const SizedBox(width: bosluk),
+                  SizedBox(width: kartW, child: Column(mainAxisSize: MainAxisSize.min, children: sutunlar[j])),
                 ],
               ]),
             ),
           ),
-        );
+        ]);
       }
       // Telefon: dikey tek sutun
       final kartW = c.maxWidth - 24;
@@ -832,6 +836,40 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
         ]),
       );
     });
+  }
+
+  // Ince yogunluk cubugu: aktif fis sayisi + sutun sayisi + boyut kucult/buyut (-/+).
+  Widget _yogunlukCubugu(int fisSay, int kolon) {
+    Widget btn(IconData ik, VoidCallback? f, String ipucu) => Tooltip(
+          message: ipucu,
+          child: InkWell(
+            onTap: f,
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: f == null ? _line.withValues(alpha: 0.3) : _mor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(ik, size: 18, color: f == null ? _sub2 : _mor),
+            ),
+          ),
+        );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 2),
+      child: Row(children: [
+        Text('$fisSay fiş', style: TextStyle(color: _ink, fontSize: 13, fontWeight: FontWeight.w800)),
+        const SizedBox(width: 8),
+        Text('· $kolon sütun', style: TextStyle(color: _sub, fontSize: 11.5)),
+        const Spacer(),
+        Text('Boyut', style: TextStyle(color: _sub, fontSize: 11.5)),
+        const SizedBox(width: 6),
+        // "+" boyut buyut (yogunluk azalt), "-" boyut kucult (yogunluk art = daha cok fis)
+        btn(Icons.remove, _yogunluk < 3 ? () => setState(() => _yogunluk++) : null, 'Kartları küçült (daha çok fiş)'),
+        const SizedBox(width: 6),
+        btn(Icons.add, _yogunluk > 0 ? () => setState(() => _yogunluk--) : null, 'Kartları büyüt'),
+      ]),
+    );
   }
 
   Widget _serviseKart(Map s) {
