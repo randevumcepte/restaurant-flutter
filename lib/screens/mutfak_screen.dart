@@ -575,9 +575,13 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
             const SizedBox(height: 7),
             // 2. SATIR: MASA adi (belirgin, ikonlu) solda + NUMARA sagda (sadece masa ile yarisir -> hep sigar)
             Row(children: [
-              Icon(kanalIkon, size: 17, color: masali ? _ink : _amber),
-              const SizedBox(width: 5),
-              Flexible(child: Text(s['masa'].toString(), overflow: TextOverflow.ellipsis, maxLines: 1, style: TextStyle(color: _ink, fontSize: 16, fontWeight: FontWeight.w800, height: 1.1))),
+              Icon(kanalIkon, size: masali ? 17 : 20, color: masali ? _ink : _amber),
+              // Masada masa adi yazilir; pakette SADECE ikon kalir (yazi yok)
+              if (masali) ...[
+                const SizedBox(width: 5),
+                Flexible(child: Text(s['masa'].toString(), overflow: TextOverflow.ellipsis, maxLines: 1, style: TextStyle(color: _ink, fontSize: 16, fontWeight: FontWeight.w800, height: 1.1))),
+              ] else
+                const Spacer(),
               const SizedBox(width: 8),
               // NUMARA: "No #1198" — masa satirinin sagi, belirgin (ikinci tasarimdaki gibi)
               Text('No ', style: TextStyle(color: _sub, fontSize: 10.5, fontWeight: FontWeight.w600)),
