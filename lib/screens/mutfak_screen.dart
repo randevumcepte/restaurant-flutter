@@ -29,7 +29,7 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
   // --- Sekme 1: aktif siparişler ---
   List siparisler = [];
   List<int> _mutfakSira = []; // "One Al" ile belirlenen adisyon sirasi (one cekilenler basta)
-  int _yogunluk = 1; // izgara yogunlugu: 0=buyuk/seyrek .. 3=kucuk/sik (kolon sayisi/kart boyutu)
+  int _yogunluk = 2; // izgara yogunlugu: 0=buyuk/seyrek .. 3=kucuk/sik (varsayilan sik -> cok fis sigsin)
   Set<int> _bilinenSiparis = {}; // yeni siparis tespiti (ses uyarisi)
   bool _ilkYukleme = true;
   List istasyonlar = [];
@@ -551,7 +551,7 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
     }
     final icerik = Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(color: renk.withValues(alpha: 0.12), borderRadius: const BorderRadius.vertical(top: Radius.circular(13))),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             // 1. SATIR: durum rozeti + ek tur rozeti + urun adedi (NUMARA burada DEGIL -> cakisma yok)
@@ -594,7 +594,7 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
               // Masada masa adi yazilir; pakette SADECE ikon kalir (yazi yok)
               if (masali) ...[
                 const SizedBox(width: 5),
-                Flexible(child: Text(s['masa'].toString(), overflow: TextOverflow.ellipsis, maxLines: 1, style: TextStyle(color: _ink, fontSize: 16, fontWeight: FontWeight.w800, height: 1.1))),
+                Flexible(child: Text(s['masa'].toString(), overflow: TextOverflow.ellipsis, maxLines: 1, style: TextStyle(color: _ink, fontSize: 14.5, fontWeight: FontWeight.w800, height: 1.1))),
               ] else
                 const Spacer(),
               const SizedBox(width: 8),
@@ -732,20 +732,20 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
     // Alerji/özel istek vurgusu
     final alerji = not.toLowerCase().contains('alerji') || not.toLowerCase().contains('alerjik');
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Container(
           margin: const EdgeInsets.only(top: 1),
-          constraints: const BoxConstraints(minWidth: 34),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(color: _mor, borderRadius: BorderRadius.circular(8)),
-          child: Text('${_adet(_n(k['adet']))}×', textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w900)),
+          constraints: const BoxConstraints(minWidth: 27),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(color: _mor, borderRadius: BorderRadius.circular(7)),
+          child: Text('${_adet(_n(k['adet']))}×', textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900)),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 7),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              Flexible(child: Text(k['ad'].toString(), style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.w700))),
+              Flexible(child: Text(k['ad'].toString(), style: TextStyle(color: _ink, fontSize: 13.5, fontWeight: FontWeight.w700, height: 1.15))),
               if (kur.isNotEmpty && kur != 'null') ...[
                 const SizedBox(width: 6),
                 Container(
@@ -785,7 +785,7 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
   }
 
   // Yogunluga gore hedef kart genisligi (buyuk/seyrek -> kucuk/sik). Kolon sayisini bu belirler.
-  double _hedefKartW() => const [310.0, 250.0, 205.0, 170.0][_yogunluk.clamp(0, 3)];
+  double _hedefKartW() => const [275.0, 215.0, 170.0, 140.0][_yogunluk.clamp(0, 3)];
 
   // Masaustu: COK SUTUNLU IZGARA (dunya standardi KDS) — ekrani doldurur, en eski sol-ustte,
   // degisken yukseklikli masonry (bosluksuz), dikey kaydirma sadece tasarsa. Telefon: dikey tek sutun.
@@ -805,7 +805,7 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
             if (sutunYuk[j] < sutunYuk[en]) en = j;
           }
           final kalemSay = ((m as Map)['kalemler'] as List?)?.length ?? 1;
-          final tahminH = 120.0 + kalemSay * 40.0; // dengeleme icin yaklasik yukseklik
+          final tahminH = 100.0 + kalemSay * 30.0; // dengeleme icin yaklasik yukseklik (kompakt)
           sutunlar[en].add(Padding(padding: const EdgeInsets.only(bottom: bosluk), child: kartYap(m)));
           sutunYuk[en] += tahminH + bosluk;
         }
@@ -902,7 +902,7 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
       ),
       child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(color: renk.withValues(alpha: 0.12), borderRadius: const BorderRadius.vertical(top: Radius.circular(13))),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             // 1. SATIR: "Servise Hazir" rozeti + urun adedi ... hazir suresi
@@ -921,7 +921,7 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
               Icon(kanalIkon, size: masali ? 17 : 20, color: masali ? _ink : _amber),
               if (masali) ...[
                 const SizedBox(width: 5),
-                Flexible(child: Text(s['masa'].toString(), overflow: TextOverflow.ellipsis, maxLines: 1, style: TextStyle(color: _ink, fontSize: 16, fontWeight: FontWeight.w800, height: 1.1))),
+                Flexible(child: Text(s['masa'].toString(), overflow: TextOverflow.ellipsis, maxLines: 1, style: TextStyle(color: _ink, fontSize: 14.5, fontWeight: FontWeight.w800, height: 1.1))),
                 const SizedBox(width: 6),
                 Text('· ${_adet(toplamAdet)} ürün', style: TextStyle(color: _sub, fontSize: 11.5, fontWeight: FontWeight.w600)),
               ] else
