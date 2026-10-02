@@ -50,7 +50,7 @@ dependencies:
   qr_flutter: ^4.1.0         # kasa donen QR
   mobile_scanner: ^5.2.3     # personel QR tarayici
   geolocator: ^13.0.2        # mesai geofence konum
-  flutter_inappwebview: ^6.1.5 # AI Santral panel sayfalari gomulu webview (Windows+Android)
+  webview_windows: ^0.4.0    # AI Santral panel sayfalari gomulu webview (Windows/WebView2, native kaydirma)
 
 dev_dependencies:
   flutter_test:

@@ -1,9 +1,11 @@
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:webview_windows/webview_windows.dart';
 import '../services/api.dart';
 
 /// AI Santral panel sayfalarini (web, standalone HTML) uygulama ICINDE gosterir.
-/// Harici tarayici yerine gomulu webview (Windows + Android).
+/// Windows'ta webview_windows (WebView2) -> native kaydirma sorunsuz calisir.
 class SantralWebScreen extends StatefulWidget {
   final String path;   // ornek: '/santral-kayitlar'
   final String baslik; // ustteki baslik
@@ -14,18 +16,53 @@ class SantralWebScreen extends StatefulWidget {
 }
 
 class _SantralWebScreenState extends State<SantralWebScreen> {
-  InAppWebViewController? _ctrl;
-  double _ilerleme = 0;
+  final _ctrl = WebviewController();
+  bool _hazir = false;
+  String? _hata;
 
-  static const _mor = Color(0xFF8B5CF6);
+  static const _koyu = Color(0xFF0F172A);
+
+  String get _url => '${Api.base}${widget.path}';
+
+  @override
+  void initState() {
+    super.initState();
+    if (Platform.isWindows) {
+      _baslat();
+    } else {
+      _hata = 'desktop-disi';
+    }
+  }
+
+  Future<void> _baslat() async {
+    try {
+      await _ctrl.initialize();
+      await _ctrl.setBackgroundColor(Colors.transparent);
+      await _ctrl.loadUrl(_url);
+      if (mounted) setState(() => _hazir = true);
+    } catch (e) {
+      if (mounted) setState(() => _hata = e.toString());
+    }
+  }
+
+  Future<void> _tarayicida() async {
+    try {
+      await launchUrl(Uri.parse(_url), mode: LaunchMode.externalApplication);
+    } catch (_) {}
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final url = '${Api.base}${widget.path}';
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0F172A),
+        backgroundColor: _koyu,
         foregroundColor: Colors.white,
         elevation: 0,
         title: Text(widget.baslik,
@@ -34,39 +71,58 @@ class _SantralWebScreenState extends State<SantralWebScreen> {
           IconButton(
             tooltip: 'Yenile',
             icon: const Icon(Icons.refresh, color: Colors.white),
-            onPressed: () => _ctrl?.reload(),
+            onPressed: _hazir ? () => _ctrl.reload() : null,
+          ),
+          IconButton(
+            tooltip: 'Tarayıcıda aç',
+            icon: const Icon(Icons.open_in_new, color: Colors.white),
+            onPressed: _tarayicida,
           ),
         ],
-        bottom: _ilerleme < 1.0
-            ? PreferredSize(
-                preferredSize: const Size.fromHeight(2),
-                child: LinearProgressIndicator(
-                  value: _ilerleme == 0 ? null : _ilerleme,
-                  minHeight: 2,
-                  backgroundColor: Colors.transparent,
-                  valueColor: const AlwaysStoppedAnimation<Color>(_mor),
-                ),
-              )
-            : null,
       ),
-      body: InAppWebView(
-        initialUrlRequest: URLRequest(url: WebUri(url)),
-        initialSettings: InAppWebViewSettings(
-          // transparentBackground Windows/WebView2'de agir compositing + kaydirma
-          // takilmasi yapar -> opak brak. Donanim hizlandirma acik.
-          transparentBackground: false,
-          javaScriptEnabled: true,
-          supportZoom: false,
-          hardwareAcceleration: true,
-          disableVerticalScroll: false,
-          disableHorizontalScroll: false,
-          useHybridComposition: true, // Android: daha akici kaydirma
+      body: _govde(),
+    );
+  }
+
+  Widget _govde() {
+    if (_hata != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.public_off, size: 48, color: Color(0xFF94A3B8)),
+              const SizedBox(height: 12),
+              Text(
+                _hata == 'desktop-disi'
+                    ? 'Bu sayfa masaüstü uygulamasında görüntülenir.'
+                    : 'Sayfa açılamadı.\nWebView2 bileşeni gerekli olabilir.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Color(0xFF475569), fontSize: 14),
+              ),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: _tarayicida,
+                icon: const Icon(Icons.open_in_new),
+                label: const Text('Tarayıcıda aç'),
+                style: FilledButton.styleFrom(backgroundColor: const Color(0xFF8B5CF6)),
+              ),
+            ],
+          ),
         ),
-        onWebViewCreated: (c) => _ctrl = c,
-        onProgressChanged: (c, p) {
-          if (mounted) setState(() => _ilerleme = p / 100.0);
-        },
-      ),
+      );
+    }
+    return Stack(
+      children: [
+        if (_hazir) Positioned.fill(child: Webview(_ctrl)),
+        if (!_hazir)
+          const Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF8B5CF6)),
+            ),
+          ),
+      ],
     );
   }
 }
