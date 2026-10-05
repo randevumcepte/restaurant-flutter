@@ -45,6 +45,11 @@ class _SatisEkraniState extends State<SatisEkrani> {
   static const _turuncu = Color(0xFFF59E0B);
 
   num _n(dynamic v) => v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0);
+
+  // Birleşik masa ise başlık tüm grubu gösterir ("4 + 5"), değilse tek masa adı.
+  List<String> get _birlesikGrup => ((_fis?['birlesik_masalar'] as List?) ?? []).map((e) => e.toString()).toList();
+  bool get _birlesikMi => _birlesikGrup.length > 1;
+  String get _baslikAd => _birlesikMi ? _birlesikGrup.join(' + ') : widget.masaAd;
   String _tl(num v) {
     final d = v.toDouble();
     return d == d.roundToDouble() ? '${_f.format(d.round())} TL' : '${_f.format(d)} TL';
@@ -781,7 +786,21 @@ class _SatisEkraniState extends State<SatisEkrani> {
       backgroundColor: t.bg,
       appBar: AppBar(
         backgroundColor: t.bg, elevation: 0, iconTheme: IconThemeData(color: t.ink),
-        title: Text(widget.masaAd, style: TextStyle(color: t.ink, fontSize: 17, fontWeight: FontWeight.bold)),
+        title: Row(mainAxisSize: MainAxisSize.min, children: [
+          Flexible(child: Text(_baslikAd, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.ink, fontSize: 17, fontWeight: FontWeight.bold))),
+          if (_birlesikMi) ...[
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(color: _mor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
+              child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.merge_type, size: 13, color: _mor),
+                SizedBox(width: 3),
+                Text('Birleşik', style: TextStyle(color: _mor, fontSize: 11.5, fontWeight: FontWeight.w700)),
+              ]),
+            ),
+          ],
+        ]),
         actions: [
           IconButton(tooltip: 'Alınan Ödemeler', onPressed: _odemelerSheet, icon: Icon(Icons.price_check, color: t.mor1)),
           IconButton(tooltip: 'Barkod okut', onPressed: _barkodOkut, icon: Icon(Icons.qr_code_scanner, color: t.mor1)),
@@ -948,10 +967,20 @@ class _SatisEkraniState extends State<SatisEkrani> {
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
         decoration: const BoxDecoration(gradient: LinearGradient(colors: [_mor, _mavi])),
         child: Row(children: [
-          const Icon(Icons.table_restaurant, color: Colors.white, size: 22),
+          Icon(_birlesikMi ? Icons.merge_type : Icons.table_restaurant, color: Colors.white, size: 22),
           const SizedBox(width: 10),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(widget.masaAd, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+            Row(children: [
+              Flexible(child: Text(_baslikAd, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold))),
+              if (_birlesikMi) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1.5),
+                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.25), borderRadius: BorderRadius.circular(20)),
+                  child: const Text('🔗 Birleşik masa', style: TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.w700)),
+                ),
+              ],
+            ]),
             Text('Adisyon${_fis?['adisyon_no'] != null ? ' #${_fis!['adisyon_no']}' : ''} · $kalemSayi ürün', style: const TextStyle(color: Color(0xFFE9D5FF), fontSize: 11.5)),
           ])),
         ]),
