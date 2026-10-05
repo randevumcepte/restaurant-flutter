@@ -366,12 +366,13 @@ class _MasalarScreenState extends State<MasalarScreen> {
     final odenen = _n(m['odenen']);
     final hesap = m['hesap_istendi'] == true;
     String dkYazi(int d) => d >= 60 ? '${(d / 60).floor()} sa ${d % 60} dk' : '$d dk';
-    if (odenen > 0) return (renk: const Color(0xFF059669), etiket: 'Ödendi', ikon: Icons.check_circle_rounded);
-    if (hesap) return (renk: const Color(0xFF7C3AED), etiket: 'Hesap istedi', ikon: Icons.request_quote_rounded);
-    if (kalemSay == 0 && acilisDk >= 12) return (renk: const Color(0xFFD97706), etiket: 'Sipariş bekliyor · ${dkYazi(acilisDk)}', ikon: Icons.hourglass_bottom_rounded);
-    if (kalemSay == 0) return (renk: const Color(0xFF2563EB), etiket: 'Yeni açıldı', ikon: Icons.fiber_new_rounded);
-    if (sonDk >= 45) return (renk: const Color(0xFFEA580C), etiket: 'Durgun · ${dkYazi(sonDk)}', ikon: Icons.notifications_active_rounded);
-    return (renk: const Color(0xFF4F46E5), etiket: 'Serviste', ikon: Icons.restaurant_rounded);
+    // Yumuşak/soft tonlar (göze hoş) — beyaz yazı yine okunur.
+    if (odenen > 0) return (renk: const Color(0xFF2ECC71), etiket: 'Ödendi', ikon: Icons.check_circle_rounded);
+    if (hesap) return (renk: const Color(0xFF9E7CF0), etiket: 'Hesap istedi', ikon: Icons.request_quote_rounded);
+    if (kalemSay == 0 && acilisDk >= 12) return (renk: const Color(0xFFEDA94A), etiket: 'Sipariş bekliyor · ${dkYazi(acilisDk)}', ikon: Icons.hourglass_bottom_rounded);
+    if (kalemSay == 0) return (renk: const Color(0xFF5B92F0), etiket: 'Yeni açıldı', ikon: Icons.fiber_new_rounded);
+    if (sonDk >= 45) return (renk: const Color(0xFFF2864F), etiket: 'Durgun · ${dkYazi(sonDk)}', ikon: Icons.notifications_active_rounded);
+    return (renk: const Color(0xFF7E7BEF), etiket: 'Serviste', ikon: Icons.restaurant_rounded);
   }
 
   // Renk açıklaması şeridi (masa durumları)
@@ -388,12 +389,12 @@ class _MasalarScreenState extends State<MasalarScreen> {
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(children: [
-          nokta(const Color(0xFF2563EB), 'Yeni'), const SizedBox(width: 14),
-          nokta(const Color(0xFFD97706), 'Sipariş bekliyor'), const SizedBox(width: 14),
-          nokta(const Color(0xFF4F46E5), 'Serviste'), const SizedBox(width: 14),
-          nokta(const Color(0xFFEA580C), 'Durgun'), const SizedBox(width: 14),
-          nokta(const Color(0xFF7C3AED), 'Hesap istedi'), const SizedBox(width: 14),
-          nokta(const Color(0xFF059669), 'Ödendi'), const SizedBox(width: 14),
+          nokta(const Color(0xFF5B92F0), 'Yeni'), const SizedBox(width: 14),
+          nokta(const Color(0xFFEDA94A), 'Sipariş bekliyor'), const SizedBox(width: 14),
+          nokta(const Color(0xFF7E7BEF), 'Serviste'), const SizedBox(width: 14),
+          nokta(const Color(0xFFF2864F), 'Durgun'), const SizedBox(width: 14),
+          nokta(const Color(0xFF9E7CF0), 'Hesap istedi'), const SizedBox(width: 14),
+          nokta(const Color(0xFF2ECC71), 'Ödendi'), const SizedBox(width: 14),
           nokta(t.line, 'Boş'),
         ]),
       ),
@@ -439,11 +440,11 @@ class _MasalarScreenState extends State<MasalarScreen> {
     // Ana durum rengi (açık->durum motoru, birleşik/rezerve/kirli/boş->sabit)
     final Color renk = ds?.renk ??
         (coklu || acik
-            ? const Color(0xFF4F46E5)
+            ? const Color(0xFF7E7BEF)
             : durum == 'rezerve'
-                ? const Color(0xFFD97706)
+                ? const Color(0xFFEDA94A)
                 : durum == 'kirli'
-                    ? const Color(0xFFEA580C)
+                    ? const Color(0xFFF2864F)
                     : (t.koyu ? const Color(0xFF3B4668) : const Color(0xFF94A3B8)));
     final renkli = acik || coklu;
     final tutar = _n(m['tutar']).round();
