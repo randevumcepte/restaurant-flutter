@@ -547,17 +547,15 @@ class _MasalarScreenState extends State<MasalarScreen> {
     final srcAcik = source['adisyon_id'] != null;
     final tgtAcik = target['adisyon_id'] != null;
 
-    // 1) DOLU -> DOLU: fatura birlestir
+    // 1) DOLU -> DOLU: ENGELLE. İki ayrı açık hesabı birleştirmek hesapları karıştırır.
+    // Kural: açık adisyonlu masalar birleştirilmez; önce biri kapatılır/ödenir.
     if (srcAcik && tgtAcik) {
-      final combined = _n(source['tutar']) + _n(target['tutar']);
-      final onay = await _onayDialog(
-        baslik: 'Masaları Birleştir', ikon: Icons.merge_type, renk: const Color(0xFF4F46E5),
-        mesaj: '${source['ad']} hesabı ${target['ad']} masasına aktarılacak.\n'
-            '${source['ad']} boşalacak, birleşik hesap ${target['ad']} masasında toplanacak.',
-        vurgu: 'Birleşik toplam: ${_f.format(combined.round())}TL', onayText: 'Birleştir',
+      await _onayDialog(
+        baslik: 'Birleştirilemez', ikon: Icons.block, renk: const Color(0xFFEF4444),
+        mesaj: '${source['ad']} ve ${target['ad']} masalarının İKİSİNDE DE açık hesap var.\n\n'
+            'Hesaplar karışmasın diye bu iki masa birleştirilemez. Önce birinin hesabını kapatın/ödeyin, sonra birleştirin.',
+        vurgu: null, onayText: 'Anladım',
       );
-      if (onay != true) return;
-      await _apiCagir(() => Api.masaBirlestir(auth.token!, _n(target['adisyon_id']).toInt(), _n(source['adisyon_id']).toInt()));
       return;
     }
 
