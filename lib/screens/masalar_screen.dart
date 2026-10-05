@@ -533,9 +533,9 @@ class _MasalarScreenState extends State<MasalarScreen> {
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: acik
-                ? Text(_n(m['tutar']) > 0 ? '${_f.format(_n(m['tutar']).round())}TL' : 'açık',
-                    style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: vurgu))
-                : Text('● boş', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: vurgu)),
+                ? Text(_n(m['tutar']) > 0 ? '${_f.format(_n(m['tutar']).round())} ₺' : 'açık',
+                    style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: vurgu, height: 1.0, letterSpacing: -0.3))
+                : Text('● boş', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: vurgu)),
           ),
           // DURUM ETİKETİ (açık masa) — renkle beraber ne durumda olduğu yazıyla da belli
           if (ds != null)
