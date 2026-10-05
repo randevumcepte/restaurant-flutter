@@ -910,12 +910,15 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
       builder: (ctx) => StatefulBuilder(builder: (ctx, setSt) {
         final onToplam = kalemler.fold<double>(0, (a, b) => a + _n((b as Map)['fiyat']).toDouble() * _n(b['adet']).toInt());
+        final rezKisi = _n(rez['kisi']).toInt();
         final masaItems = <DropdownMenuItem<int?>>[const DropdownMenuItem<int?>(value: null, child: Text('— Masa seç —'))];
         final idsSet = <int>{};
         for (final m in bosMasalar) {
-          final mid = _n((m as Map)['id']).toInt();
+          final mm = m as Map;
+          if (_n(mm['kapasite']).toInt() < rezKisi) continue; // kişi sayısına uygun olmayan masayı gösterme
+          final mid = _n(mm['id']).toInt();
           idsSet.add(mid);
-          masaItems.add(DropdownMenuItem<int?>(value: mid, child: Text('Masa ${m['ad']}')));
+          masaItems.add(DropdownMenuItem<int?>(value: mid, child: Text('Masa ${mm['ad']} · ${_n(mm['kapasite']).toInt()} kişilik')));
         }
         if (secMasa != null && !idsSet.contains(secMasa)) {
           masaItems.insert(1, DropdownMenuItem<int?>(value: secMasa, child: Text('Masa ${rez['masa_ad'] ?? secMasa} (atanmış)')));
@@ -1010,6 +1013,7 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
     final telC = TextEditingController();
     final notC = TextEditingController();
     final musteriNotC = TextEditingController();
+    final kisiC = TextEditingController(text: '2');
     int kisi = 2;
     String saat = '19:30';
     DateTime secilenTarih = DateTime.tryParse(tarih) ?? DateTime.now();
@@ -1092,6 +1096,9 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
         }
 
         final onToplam = onSiparis.fold<double>(0, (a, b) => a + _n(b['fiyat']).toDouble() * _n(b['adet']).toInt());
+        // Kişi sayısına uygun (kapasite >= kişi) boş masalar; seçili masa yetersizse sıfırla
+        final uygunMasalar = bosMasalar.where((m) => _n((m as Map)['kapasite']).toInt() >= kisi).toList();
+        if (masaId != null && !uygunMasalar.any((m) => _n((m as Map)['id']).toInt() == masaId)) masaId = null;
 
         return Padding(
           padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 18, right: 18, top: 14),
@@ -1121,10 +1128,17 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
               TextField(controller: adC, style: const TextStyle(color: Colors.white), decoration: dec('Ad Soyad')),
               const SizedBox(height: 12),
               Row(children: [
-                const Text('Kişi:', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
-                const SizedBox(width: 10),
-                Expanded(child: Slider(value: kisi.toDouble(), min: 1, max: 16, divisions: 15, activeColor: _mor, label: '$kisi', onChanged: (v) => setSt(() => kisi = v.round()))),
-                Text('$kisi', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                const Text('Kişi sayısı', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
+                const Spacer(),
+                IconButton(onPressed: () => setSt(() { final v = (kisi - 1).clamp(1, 99); kisi = v; kisiC.text = '$v'; }), icon: const Icon(Icons.remove_circle_outline, color: Color(0xFF94A3B8))),
+                SizedBox(width: 64, child: TextField(
+                  controller: kisiC, textAlign: TextAlign.center, keyboardType: TextInputType.number,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17),
+                  decoration: InputDecoration(filled: true, fillColor: const Color(0xFF0F1424), isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 10), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)),
+                  onChanged: (v) => setSt(() { final n = int.tryParse(v.trim()); if (n != null && n >= 1) kisi = n.clamp(1, 99); }),
+                )),
+                IconButton(onPressed: () => setSt(() { final v = (kisi + 1).clamp(1, 99); kisi = v; kisiC.text = '$v'; }), icon: const Icon(Icons.add_circle_outline, color: _mor)),
               ]),
               Row(children: [
                 Expanded(child: OutlinedButton.icon(
@@ -1140,9 +1154,12 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
                   items: [for (final s in saatler) DropdownMenuItem(value: s, child: Text(s))], onChanged: (v) => setSt(() => saat = v ?? saat))),
               ]),
               const SizedBox(height: 12),
-              DropdownButtonFormField<int?>(initialValue: masaId, dropdownColor: _card, decoration: dec('Masa (opsiyonel)'), style: const TextStyle(color: Colors.white),
-                items: [const DropdownMenuItem<int?>(value: null, child: Text('— Masa atama —')), for (final m in bosMasalar) DropdownMenuItem<int?>(value: _n((m as Map)['id']).toInt(), child: Text('Masa ${m['ad']}'))],
+              DropdownButtonFormField<int?>(initialValue: masaId, dropdownColor: _card, decoration: dec('Masa (opsiyonel) · $kisi kişiye uygun'), style: const TextStyle(color: Colors.white),
+                items: [const DropdownMenuItem<int?>(value: null, child: Text('— Masa atama —')),
+                  for (final m in uygunMasalar) DropdownMenuItem<int?>(value: _n((m as Map)['id']).toInt(), child: Text('Masa ${m['ad']} · ${_n(m['kapasite']).toInt()} kişilik'))],
                 onChanged: (v) => setSt(() => masaId = v)),
+              if (uygunMasalar.isEmpty)
+                const Padding(padding: EdgeInsets.only(top: 4), child: Text('Bu kişi sayısına uygun boş masa yok (sonra atayabilirsiniz).', style: TextStyle(color: Color(0xFFF59E0B), fontSize: 11))),
               const SizedBox(height: 14),
               const Text('Özel İstek', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12, fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
