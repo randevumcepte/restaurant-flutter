@@ -398,34 +398,29 @@ class _MasalarScreenState extends State<MasalarScreen> {
     final odenen = _n(m['odenen']);
     final hesap = m['hesap_istendi'] == true;
     String dkYazi(int d) => d >= 60 ? '${(d / 60).floor()} sa ${d % 60} dk' : '$d dk';
-    // ÖDENDİ -> yeşil (hesap kapandı, masa toparlanmayı bekliyor)
+    // Dolgun canlı renkler (beyaz yazı için) — her durum net ayırt edilir.
+    // ÖDENDİ -> yeşil
     if (odenen > 0) {
-      return (grad: k ? const [Color(0xFF0E5A3A), Color(0xFF0A3F29)] : const [Color(0xFFA7F3D0), Color(0xFF6EE7B7)],
-        border: k ? const Color(0xFF34D399) : const Color(0xFF059669), accent: k ? const Color(0xFFBBF7D0) : const Color(0xFF065F46), etiket: '✅ Ödendi');
+      return (grad: const [Color(0xFF10B981), Color(0xFF059669)], border: const Color(0xFF047857), accent: Colors.white, etiket: '✅ Ödendi');
     }
-    // HESAP İSTEDİ -> mor (garson hesap götürsün)
+    // HESAP İSTEDİ -> mor
     if (hesap) {
-      return (grad: k ? const [Color(0xFF4B2E8A), Color(0xFF331F5E)] : const [Color(0xFFDDD6FE), Color(0xFFC4B5FD)],
-        border: k ? const Color(0xFFA78BFA) : const Color(0xFF7C3AED), accent: k ? const Color(0xFFE9D5FF) : const Color(0xFF5B21B6), etiket: '💳 Hesap istedi');
+      return (grad: const [Color(0xFF8B5CF6), Color(0xFF7C3AED)], border: const Color(0xFF6D28D9), accent: Colors.white, etiket: '💳 Hesap istedi');
     }
-    // OTURDU AMA SİPARİŞ VERMEDİ, zaman geçti -> sarı/amber (garson gitsin)
+    // OTURDU AMA SİPARİŞ VERMEDİ, zaman geçti -> amber (garson gitsin)
     if (kalemSay == 0 && acilisDk >= 12) {
-      return (grad: k ? const [Color(0xFF7A5C0E), Color(0xFF574009)] : const [Color(0xFFFEF08A), Color(0xFFFDE047)],
-        border: k ? const Color(0xFFEAB308) : const Color(0xFFCA8A04), accent: k ? const Color(0xFFFEF9C3) : const Color(0xFF854D0E), etiket: '⏳ Sipariş bekliyor · ${dkYazi(acilisDk)}');
+      return (grad: const [Color(0xFFF59E0B), Color(0xFFD97706)], border: const Color(0xFFB45309), accent: Colors.white, etiket: '⏳ Sipariş bekliyor · ${dkYazi(acilisDk)}');
     }
     // YENİ AÇILDI -> mavi
     if (kalemSay == 0) {
-      return (grad: k ? const [Color(0xFF1E4C96), Color(0xFF13306A)] : const [Color(0xFFBFDBFE), Color(0xFF93C5FD)],
-        border: k ? const Color(0xFF60A5FA) : const Color(0xFF2563EB), accent: k ? const Color(0xFFDBEAFE) : const Color(0xFF1D4ED8), etiket: '🆕 Yeni açıldı');
+      return (grad: const [Color(0xFF3B82F6), Color(0xFF2563EB)], border: const Color(0xFF1D4ED8), accent: Colors.white, etiket: '🆕 Yeni açıldı');
     }
-    // UZUN SÜREDİR YENİ SİPARİŞ YOK (ör. bir çay, 45 dk+) -> turuncu (ilgilen/upsell)
+    // UZUN SÜREDİR YENİ SİPARİŞ YOK -> turuncu (ilgilen/upsell)
     if (sonDk >= 45) {
-      return (grad: k ? const [Color(0xFF8A3D0E), Color(0xFF5E2909)] : const [Color(0xFFFED7AA), Color(0xFFFDBA74)],
-        border: k ? const Color(0xFFF97316) : const Color(0xFFEA580C), accent: k ? const Color(0xFFFFEDD5) : const Color(0xFF9A3412), etiket: '🔔 Durgun · ${dkYazi(sonDk)}');
+      return (grad: const [Color(0xFFF97316), Color(0xFFEA580C)], border: const Color(0xFFC2410C), accent: Colors.white, etiket: '🔔 Durgun · ${dkYazi(sonDk)}');
     }
     // AKTİF / SERVİSTE -> indigo (normal dolu)
-    return (grad: k ? const [Color(0xFF3730A3), Color(0xFF26206E)] : const [Color(0xFFC7D2FE), Color(0xFFA5B4FC)],
-      border: k ? const Color(0xFF818CF8) : const Color(0xFF4F46E5), accent: k ? const Color(0xFFE0E7FF) : const Color(0xFF3730A3), etiket: '🍽️ Serviste');
+    return (grad: const [Color(0xFF6366F1), Color(0xFF4F46E5)], border: const Color(0xFF4338CA), accent: Colors.white, etiket: '🍽️ Serviste');
   }
 
   // Renk açıklaması şeridi (masa durumları)
@@ -527,8 +522,8 @@ class _MasalarScreenState extends State<MasalarScreen> {
             const SizedBox(height: 2),
             Text('birleşik masa', style: TextStyle(fontSize: 9, color: t.sub)),
           ] else ...[
-            Text(m['ad'].toString(), style: TextStyle(fontWeight: FontWeight.bold, color: t.ink)),
-            Text('${m['kapasite']} kişi', style: TextStyle(fontSize: 10, color: t.sub)),
+            Text(m['ad'].toString(), style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: ds != null ? Colors.white : t.ink)),
+            Text('${m['kapasite']} kişi', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: ds != null ? Colors.white.withValues(alpha: 0.82) : t.sub)),
           ],
           Padding(
             padding: const EdgeInsets.only(top: 4),
@@ -544,7 +539,7 @@ class _MasalarScreenState extends State<MasalarScreen> {
               child: Container(
                 margin: const EdgeInsets.symmetric(horizontal: 6),
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
-                decoration: BoxDecoration(color: kenar, borderRadius: BorderRadius.circular(20)),
+                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.24), borderRadius: BorderRadius.circular(20)),
                 child: Text(ds.etiket, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white)),
               ),
