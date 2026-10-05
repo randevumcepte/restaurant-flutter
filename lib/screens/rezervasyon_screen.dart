@@ -6,6 +6,7 @@ import '../providers/tema_provider.dart';
 import '../responsive.dart';
 import '../services/api.dart';
 import '../ui/masaustu_kit.dart';
+import '../widgets/ses_oynatici.dart';
 
 /// Online masa rezervasyonu — gün seçici + günlük özet + rezervasyon kartları
 /// (onayla/geldi/gelmedi/iptal) + yeni rezervasyon ekleme.
@@ -681,6 +682,18 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
                     Text('📞 $tel', style: TextStyle(color: t.sub, fontSize: 12)),
                   if (not.isNotEmpty)
                     Text('📝 $not', style: TextStyle(color: t.sub2, fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  if ((rm['sesler'] as List?)?.isNotEmpty ?? false)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 3),
+                      child: InkWell(
+                        onTap: () => _cagriDinle(rm),
+                        child: Row(mainAxisSize: MainAxisSize.min, children: const [
+                          Icon(Icons.play_circle_fill, size: 15, color: Color(0xFF7C3AED)),
+                          SizedBox(width: 4),
+                          Text('Çağrıyı dinle', style: TextStyle(color: Color(0xFF7C3AED), fontSize: 12, fontWeight: FontWeight.w600)),
+                        ]),
+                      ),
+                    ),
                 ]),
               ),
               Text('${_n(rm['kisi']).toInt()}', style: TextStyle(color: t.ink, fontSize: 14, fontWeight: FontWeight.w600)),
@@ -708,6 +721,37 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
       return Align(alignment: Alignment.centerRight, child: Text('—', style: TextStyle(color: t.sub)));
     }
     return Row(mainAxisAlignment: MainAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: btns);
+  }
+
+  // AI Santral cagri ses kayitlarini dinle (yonetici). rm['sesler'] = [{url,tur,boyut}]
+  void _cagriDinle(Map rm) {
+    final t = context.read<TemaProvider>();
+    final sesler = (rm['sesler'] as List?) ?? [];
+    showDialog(
+      context: context,
+      builder: (c) => AlertDialog(
+        backgroundColor: t.card,
+        title: Row(children: [
+          const Icon(Icons.support_agent, color: Color(0xFF7C3AED)),
+          const SizedBox(width: 8),
+          Expanded(child: Text('Çağrı Kaydı — ${rm['ad'] ?? ''}', style: TextStyle(color: t.ink, fontSize: 16))),
+        ]),
+        content: SizedBox(
+          width: 460,
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            for (final s in sesler) ...[
+              SesOynatici(
+                url: '${Api.base}${(s as Map)['url']}',
+                etiket: s['tur'] == 'aktarma' ? '↪️ Yetkiliye aktarılan görüşme' : '🤖 AI görüşmesi',
+                boyutKb: ((s['boyut'] ?? 0) / 1024).round(),
+              ),
+              const SizedBox(height: 10),
+            ],
+          ]),
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(c), child: const Text('Kapat'))],
+      ),
+    );
   }
 
   Widget _gunPill(Map g) {
@@ -816,6 +860,18 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
             Padding(
               padding: const EdgeInsets.only(top: 6),
               child: Text('📞 ${r['telefon']}', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12.5)),
+            ),
+          if ((r['sesler'] as List?)?.isNotEmpty ?? false)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: InkWell(
+                onTap: () => _cagriDinle(r),
+                child: Row(mainAxisSize: MainAxisSize.min, children: const [
+                  Icon(Icons.play_circle_fill, size: 16, color: Color(0xFF8B5CF6)),
+                  SizedBox(width: 5),
+                  Text('Çağrıyı dinle', style: TextStyle(color: Color(0xFF8B5CF6), fontSize: 12.5, fontWeight: FontWeight.w600)),
+                ]),
+              ),
             ),
           // Aksiyonlar
           if (!pasif && durum != 'geldi') ...[
