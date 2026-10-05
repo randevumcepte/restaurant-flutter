@@ -165,37 +165,6 @@ class _MasalarScreenState extends State<MasalarScreen> {
     );
   }
 
-  /// Masa kartı görünümü — durum + tema. Katmanlı gradient + belirgin kenar + okunaklı vurgu.
-  /// ($1 gradient renkleri, $2 kenar, $3 tutar/durum vurgu rengi)
-  (List<Color>, Color, Color) _masaStil(String durum) {
-    final k = _t.koyu;
-    switch (durum) {
-      case 'dolu': // DOLU: canlı mor/indigo — belirgin dursun
-        return (
-          k ? const [Color(0xFF3E2F78), Color(0xFF241E45)] : const [Color(0xFFEEF0FF), Color(0xFFDDE1FF)],
-          k ? const Color(0xFF8B6FF0) : const Color(0xFFA5B4FC),
-          k ? const Color(0xFFC9B8FF) : const Color(0xFF4F46E5),
-        );
-      case 'rezerve': // REZERVE: amber
-        return (
-          k ? const [Color(0xFF3C3113), Color(0xFF29220D)] : const [Color(0xFFFFFBEB), Color(0xFFFEF3C7)],
-          k ? const Color(0xFFB88A1E) : const Color(0xFFFCD34D),
-          k ? const Color(0xFFFCD34D) : const Color(0xFFB45309),
-        );
-      case 'kirli': // KİRLİ: turuncu
-        return (
-          k ? const [Color(0xFF3C2913), Color(0xFF291C0D)] : const [Color(0xFFFFF7ED), Color(0xFFFFEDD5)],
-          k ? const Color(0xFFB5651D) : const Color(0xFFFDBA74),
-          k ? const Color(0xFFFDBA74) : const Color(0xFFC2410C),
-        );
-      default: // BOŞ: sakin kart + yeşil "müsait" vurgusu
-        return (
-          k ? const [Color(0xFF171E33), Color(0xFF121829)] : const [Colors.white, Color(0xFFF7F9FF)],
-          k ? const Color(0xFF2B3552) : const Color(0xFFE4E7F2),
-          k ? const Color(0xFF5FD8A6) : const Color(0xFF10B981),
-        );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -390,36 +359,19 @@ class _MasalarScreenState extends State<MasalarScreen> {
 
   // AÇIK masanın renk-DURUMU (gradient, kenar, vurgu, etiket). Öncelik sırası:
   // Ödendi > Hesap istedi > Sipariş bekliyor > Durgun > Yeni > Serviste.
-  ({List<Color> grad, Color border, Color accent, String etiket}) _masaDurum(Map m) {
+  ({Color renk, String etiket, IconData ikon}) _masaDurum(Map m) {
     final kalemSay = _n(m['kalem_say']).toInt();
     final acilisDk = _n(m['acilis_dk']).toInt();
     final sonDk = _n(m['son_siparis_dk'] ?? -1).toInt();
     final odenen = _n(m['odenen']);
     final hesap = m['hesap_istendi'] == true;
     String dkYazi(int d) => d >= 60 ? '${(d / 60).floor()} sa ${d % 60} dk' : '$d dk';
-    // Dolgun canlı renkler (beyaz yazı için) — her durum net ayırt edilir.
-    // ÖDENDİ -> yeşil
-    if (odenen > 0) {
-      return (grad: const [Color(0xFF10B981), Color(0xFF059669)], border: const Color(0xFF047857), accent: Colors.white, etiket: '✅ Ödendi');
-    }
-    // HESAP İSTEDİ -> mor
-    if (hesap) {
-      return (grad: const [Color(0xFF8B5CF6), Color(0xFF7C3AED)], border: const Color(0xFF6D28D9), accent: Colors.white, etiket: '💳 Hesap istedi');
-    }
-    // OTURDU AMA SİPARİŞ VERMEDİ, zaman geçti -> amber (garson gitsin)
-    if (kalemSay == 0 && acilisDk >= 12) {
-      return (grad: const [Color(0xFFF59E0B), Color(0xFFD97706)], border: const Color(0xFFB45309), accent: Colors.white, etiket: '⏳ Sipariş bekliyor · ${dkYazi(acilisDk)}');
-    }
-    // YENİ AÇILDI -> mavi
-    if (kalemSay == 0) {
-      return (grad: const [Color(0xFF3B82F6), Color(0xFF2563EB)], border: const Color(0xFF1D4ED8), accent: Colors.white, etiket: '🆕 Yeni açıldı');
-    }
-    // UZUN SÜREDİR YENİ SİPARİŞ YOK -> turuncu (ilgilen/upsell)
-    if (sonDk >= 45) {
-      return (grad: const [Color(0xFFF97316), Color(0xFFEA580C)], border: const Color(0xFFC2410C), accent: Colors.white, etiket: '🔔 Durgun · ${dkYazi(sonDk)}');
-    }
-    // AKTİF / SERVİSTE -> indigo (normal dolu)
-    return (grad: const [Color(0xFF6366F1), Color(0xFF4F46E5)], border: const Color(0xFF4338CA), accent: Colors.white, etiket: '🍽️ Serviste');
+    if (odenen > 0) return (renk: const Color(0xFF059669), etiket: 'Ödendi', ikon: Icons.check_circle_rounded);
+    if (hesap) return (renk: const Color(0xFF7C3AED), etiket: 'Hesap istedi', ikon: Icons.request_quote_rounded);
+    if (kalemSay == 0 && acilisDk >= 12) return (renk: const Color(0xFFD97706), etiket: 'Sipariş bekliyor · ${dkYazi(acilisDk)}', ikon: Icons.hourglass_bottom_rounded);
+    if (kalemSay == 0) return (renk: const Color(0xFF2563EB), etiket: 'Yeni açıldı', ikon: Icons.fiber_new_rounded);
+    if (sonDk >= 45) return (renk: const Color(0xFFEA580C), etiket: 'Durgun · ${dkYazi(sonDk)}', ikon: Icons.notifications_active_rounded);
+    return (renk: const Color(0xFF4F46E5), etiket: 'Serviste', ikon: Icons.restaurant_rounded);
   }
 
   // Renk açıklaması şeridi (masa durumları)
@@ -437,10 +389,10 @@ class _MasalarScreenState extends State<MasalarScreen> {
         scrollDirection: Axis.horizontal,
         child: Row(children: [
           nokta(const Color(0xFF2563EB), 'Yeni'), const SizedBox(width: 14),
-          nokta(const Color(0xFFB45309), 'Sipariş bekliyor'), const SizedBox(width: 14),
+          nokta(const Color(0xFFD97706), 'Sipariş bekliyor'), const SizedBox(width: 14),
           nokta(const Color(0xFF4F46E5), 'Serviste'), const SizedBox(width: 14),
-          nokta(const Color(0xFFC2410C), 'Durgun'), const SizedBox(width: 14),
-          nokta(const Color(0xFF6D28D9), 'Hesap istedi'), const SizedBox(width: 14),
+          nokta(const Color(0xFFEA580C), 'Durgun'), const SizedBox(width: 14),
+          nokta(const Color(0xFF7C3AED), 'Hesap istedi'), const SizedBox(width: 14),
           nokta(const Color(0xFF059669), 'Ödendi'), const SizedBox(width: 14),
           nokta(t.line, 'Boş'),
         ]),
@@ -482,69 +434,88 @@ class _MasalarScreenState extends State<MasalarScreen> {
       );
     }
 
-    final stil = _masaStil(durum);
     final coklu = grup.length > 1;
-    // AÇIK masa (birleşik değil) -> renk-durum motoru; diğerleri eski stil
     final ds = (acik && !coklu) ? _masaDurum(m) : null;
-    final grad = ds?.grad ?? stil.$1;
-    final kenar = coklu ? const Color(0xFFC4B5FD) : (ds?.border ?? stil.$2);
-    final vurgu = ds?.accent ?? stil.$3;
+    // Ana durum rengi (açık->durum motoru, birleşik/rezerve/kirli/boş->sabit)
+    final Color renk = ds?.renk ??
+        (coklu || acik
+            ? const Color(0xFF4F46E5)
+            : durum == 'rezerve'
+                ? const Color(0xFFD97706)
+                : durum == 'kirli'
+                    ? const Color(0xFFEA580C)
+                    : (t.koyu ? const Color(0xFF3B4668) : const Color(0xFF94A3B8)));
+    final renkli = acik || coklu;
+    final tutar = _n(m['tutar']).round();
     return Container(
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        gradient: coklu ? null : LinearGradient(colors: grad, begin: Alignment.topLeft, end: Alignment.bottomRight),
-        color: coklu ? (t.koyu ? const Color(0xFF2A2350) : const Color(0xFFF5F3FF)) : null,
+        color: t.card,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: kenar, width: coklu ? 2 : (ds != null ? 1.7 : 1.4)),
-        boxShadow: t.koyu
-            ? (acik ? [BoxShadow(color: kenar.withValues(alpha: 0.22), blurRadius: 14, offset: const Offset(0, 5))] : null)
-            : t.golge,
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Birlesikse "Masa 1 + Masa 2" rozeti, degilse normal masa adi
-          if (grup.length > 1) ...[
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 6),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(color: const Color(0xFF4F46E5), borderRadius: BorderRadius.circular(20)),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.merge_type, size: 12, color: Colors.white),
-                const SizedBox(width: 3),
-                Flexible(
-                  child: Text(grup.join(' + '),
-                      textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Colors.white)),
-                ),
-              ]),
-            ),
-            const SizedBox(height: 2),
-            Text('birleşik masa', style: TextStyle(fontSize: 9, color: t.sub)),
-          ] else ...[
-            Text(m['ad'].toString(), style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: ds != null ? Colors.white : t.ink)),
-            Text('${m['kapasite']} kişi', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: ds != null ? Colors.white.withValues(alpha: 0.82) : t.sub)),
-          ],
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: acik
-                ? Text(_n(m['tutar']) > 0 ? '${_f.format(_n(m['tutar']).round())} ₺' : 'açık',
-                    style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: vurgu, height: 1.0, letterSpacing: -0.3))
-                : Text('● boş', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: vurgu)),
-          ),
-          // DURUM ETİKETİ (açık masa) — renkle beraber ne durumda olduğu yazıyla da belli
-          if (ds != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 6),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
-                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.24), borderRadius: BorderRadius.circular(20)),
-                child: Text(ds.etiket, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white)),
-              ),
-            ),
+        border: Border.all(color: renkli ? renk.withValues(alpha: 0.42) : t.line, width: renkli ? 1.3 : 1),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: t.koyu ? 0.28 : 0.05), blurRadius: 9, offset: const Offset(0, 3)),
+          if (renkli) BoxShadow(color: renk.withValues(alpha: t.koyu ? 0.26 : 0.16), blurRadius: 13, offset: const Offset(0, 5)),
         ],
       ),
+      child: Row(children: [
+        // SOL RENK ŞERİDİ — durumu kenardan belli eder (modern POS)
+        Container(width: 5, color: renk),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(11, 8, 10, 8),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 1. SATIR: masa adı (+kişi) veya birleşik rozeti
+                if (coklu)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                    decoration: BoxDecoration(color: renk, borderRadius: BorderRadius.circular(20)),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      const Icon(Icons.merge_type, size: 12, color: Colors.white),
+                      const SizedBox(width: 3),
+                      Flexible(child: Text(grup.join(' + '), maxLines: 1, overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Colors.white))),
+                    ]),
+                  )
+                else
+                  Row(crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [
+                    Flexible(child: Text(m['ad'].toString(), maxLines: 1, overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: t.ink, height: 1.0))),
+                    const SizedBox(width: 7),
+                    Text('${m['kapasite']} kişi', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: t.sub)),
+                  ]),
+                const SizedBox(height: 4),
+                // 2. SATIR: tutar (büyük, renkli) veya müsait
+                if (acik)
+                  Text('${_f.format(tutar)} ₺',
+                      style: TextStyle(fontSize: 20.5, fontWeight: FontWeight.w900, color: renk, height: 1.0, letterSpacing: -0.5))
+                else
+                  Text('Müsait', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF10B981))),
+                // 3. SATIR: durum çipi (ikon + etiket, yumuşak renk zemin)
+                if (ds != null) ...[
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(color: renk.withValues(alpha: t.koyu ? 0.26 : 0.12), borderRadius: BorderRadius.circular(20)),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(ds.ikon, size: 11, color: renk),
+                      const SizedBox(width: 4),
+                      Flexible(child: Text(ds.etiket, maxLines: 1, overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w800, color: renk))),
+                    ]),
+                  ),
+                ] else if (coklu) ...[
+                  const SizedBox(height: 4),
+                  Text('birleşik masa', style: TextStyle(fontSize: 9.5, color: t.sub)),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ]),
     );
   }
 
