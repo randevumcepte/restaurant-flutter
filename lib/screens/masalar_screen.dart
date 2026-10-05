@@ -391,7 +391,6 @@ class _MasalarScreenState extends State<MasalarScreen> {
   // AÇIK masanın renk-DURUMU (gradient, kenar, vurgu, etiket). Öncelik sırası:
   // Ödendi > Hesap istedi > Sipariş bekliyor > Durgun > Yeni > Serviste.
   ({List<Color> grad, Color border, Color accent, String etiket}) _masaDurum(Map m) {
-    final k = _t.koyu;
     final kalemSay = _n(m['kalem_say']).toInt();
     final acilisDk = _n(m['acilis_dk']).toInt();
     final sonDk = _n(m['son_siparis_dk'] ?? -1).toInt();
