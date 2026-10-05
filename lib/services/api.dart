@@ -384,7 +384,7 @@ class Api {
 
   // One cikan urunlerin sirasi (surukle-birak) -> ids istenen sirada
   static Future<Map<String, dynamic>> oneSiraKaydet(String token, List<int> ids) =>
-      _post('/api/patron/one-sira-kaydet', token, {'ids': jsonEncode(ids)});
+      _postMenu('/api/patron/one-sira-kaydet', token, {'ids': jsonEncode(ids)}); // menü sırası değişti -> önbellek düş
 
   static Future<Map<String, dynamic>> urunSil(String token, int id) => _postMenu('/api/patron/urun-sil', token, {'id': '$id'});
 

@@ -283,6 +283,33 @@ class _MasalarScreenState extends State<MasalarScreen> {
     );
   }
 
+  // Bölünmüş hesap: aynı masada birden fazla açık adisyon -> hangisini aç? (hayalet adisyon erişilebilir)
+  Future<int?> _bolunmusHesapSec(Map m, List ekstra) async {
+    final t = _t;
+    final secenek = <Map>[
+      {'adisyon_id': _n(m['adisyon_id']).toInt(), 'tutar': _n(m['tutar']).toDouble()},
+      ...ekstra.cast<Map>(),
+    ];
+    return showModalBottomSheet<int>(useRootNavigator: true, context: context, backgroundColor: t.card,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      builder: (ctx) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        const SizedBox(height: 14),
+        Text('Masa ${m['ad']} — ${secenek.length} açık hesap', style: TextStyle(color: t.ink, fontWeight: FontWeight.bold, fontSize: 16)),
+        const SizedBox(height: 2),
+        Text('Hangi hesabı açmak istersiniz?', style: TextStyle(color: t.sub, fontSize: 12.5)),
+        const SizedBox(height: 8),
+        for (int i = 0; i < secenek.length; i++)
+          ListTile(
+            leading: CircleAvatar(backgroundColor: const Color(0xFF7C3AED), radius: 15, child: Text('${i + 1}', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold))),
+            title: Text('Hesap ${i + 1}${i == 0 ? ' (ana)' : ''}', style: TextStyle(color: t.ink)),
+            trailing: Text('${_f.format(_n(secenek[i]['tutar']).round())} ₺', style: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold)),
+            onTap: () => Navigator.pop(ctx, _n(secenek[i]['adisyon_id']).toInt()),
+          ),
+        const SizedBox(height: 14),
+      ])),
+    );
+  }
+
   Widget _masaHucre(Map m) {
     final acik = m['adisyon_id'] != null;
     final birlesik = m['durum'].toString() == 'birlesik'; // baska masaya birlesmis kaynak masa
@@ -295,8 +322,15 @@ class _MasalarScreenState extends State<MasalarScreen> {
               builder: (_) => SatisEkrani(adisyonId: _n(m['birlesik_hedef_adisyon_id']).toInt(), masaAd: m['birlesik_hedef_ad']?.toString() ?? m['ad'].toString())));
           _yukle();
         } else if (acik) {
+          int hedefAd = _n(m['adisyon_id']).toInt();
+          final ekstra = (m['ekstra_adisyonlar'] as List?) ?? [];
+          if (ekstra.isNotEmpty) {
+            final sec = await _bolunmusHesapSec(m, ekstra);
+            if (sec == null) return;
+            hedefAd = sec;
+          }
           await Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => SatisEkrani(adisyonId: _n(m['adisyon_id']).toInt(), masaAd: m['ad'].toString())));
+              builder: (_) => SatisEkrani(adisyonId: hedefAd, masaAd: m['ad'].toString())));
           _yukle();
         } else {
           await _masaAc(m);

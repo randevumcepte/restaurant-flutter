@@ -19,6 +19,8 @@ class _YaziciAyarlariScreenState extends State<YaziciAyarlariScreen> {
   final _portC = TextEditingController();
   final _kodC = TextEditingController();
   final _mutfakIpC = TextEditingController();
+  final _barIpC = TextEditingController();
+  final _izgaraIpC = TextEditingController();
   String mutfakMod = 'ekran';
   bool dar = false;
   bool cekmece = true;
@@ -36,6 +38,8 @@ class _YaziciAyarlariScreenState extends State<YaziciAyarlariScreen> {
         _portC.text = _srv.port.toString();
         _kodC.text = _srv.kodSayfa.toString();
         _mutfakIpC.text = _srv.mutfakIp;
+        _barIpC.text = _srv.istasyonIp['bar'] ?? '';
+        _izgaraIpC.text = _srv.istasyonIp['izgara'] ?? '';
         mutfakMod = _srv.mutfakMod;
         dar = _srv.dar;
         cekmece = _srv.cekmece;
@@ -46,7 +50,7 @@ class _YaziciAyarlariScreenState extends State<YaziciAyarlariScreen> {
   }
 
   @override
-  void dispose() { _ipC.dispose(); _portC.dispose(); _kodC.dispose(); _mutfakIpC.dispose(); super.dispose(); }
+  void dispose() { _ipC.dispose(); _portC.dispose(); _kodC.dispose(); _mutfakIpC.dispose(); _barIpC.dispose(); _izgaraIpC.dispose(); super.dispose(); }
 
   Future<void> _kaydet({bool sessiz = false}) async {
     _srv.ip = _ipC.text.trim();
@@ -57,6 +61,10 @@ class _YaziciAyarlariScreenState extends State<YaziciAyarlariScreen> {
     _srv.turkce = turkce;
     _srv.mutfakMod = mutfakMod;
     _srv.mutfakIp = _mutfakIpC.text.trim();
+    final istMap = <String, String>{};
+    if (_barIpC.text.trim().isNotEmpty) istMap['bar'] = _barIpC.text.trim();
+    if (_izgaraIpC.text.trim().isNotEmpty) istMap['izgara'] = _izgaraIpC.text.trim();
+    _srv.istasyonIp = istMap;
     await _srv.kaydet();
     if (!sessiz && mounted) _snack('Ayarlar kaydedildi', const Color(0xFF10B981));
   }
@@ -158,6 +166,13 @@ class _YaziciAyarlariScreenState extends State<YaziciAyarlariScreen> {
                 if (mutfakMod != 'ekran') ...[
                   const SizedBox(height: 12),
                   _alan(t, 'Mutfak yazıcısı IP (boş = ana yazıcı)', _mutfakIpC, ipuc: 'örn. 192.168.1.51', klavye: TextInputType.number),
+                  const SizedBox(height: 10),
+                  Text('İstasyon yazıcıları (boş = mutfak yazıcısı). Bar/ızgara siparişi KENDİ fişine + KENDİ yazıcısına gider.',
+                      style: TextStyle(color: t.sub, fontSize: 11.5, height: 1.35)),
+                  const SizedBox(height: 8),
+                  _alan(t, '🍹 Bar yazıcısı IP', _barIpC, ipuc: 'örn. 192.168.1.52', klavye: TextInputType.number),
+                  const SizedBox(height: 10),
+                  _alan(t, '🔥 Izgara yazıcısı IP', _izgaraIpC, ipuc: 'örn. 192.168.1.53', klavye: TextInputType.number),
                 ],
               ])),
               const SizedBox(height: 20),

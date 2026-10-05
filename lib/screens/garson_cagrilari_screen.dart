@@ -69,8 +69,8 @@ class _GarsonCagrilariScreenState extends State<GarsonCagrilariScreen> {
     super.dispose();
   }
 
-  String _tipYazi(String t) => t == 'tasima' ? 'Taşıma talebi' : (t == 'odeme' ? 'Ödeme alınacak' : (t == 'hesap' ? 'Hesap istiyor' : (t == 'siparis' ? 'Sipariş verdi' : 'Garson çağırıyor')));
-  IconData _tipIkon(String t) => t == 'tasima' ? Icons.swap_horiz : (t == 'odeme' ? Icons.payments_outlined : (t == 'hesap' ? Icons.credit_card : (t == 'siparis' ? Icons.receipt_long : Icons.notifications_active)));
+  String _tipYazi(String t) => t == 'servise_hazir' ? 'Servise hazır (mutfak)' : (t == 'tasima' ? 'Taşıma talebi' : (t == 'odeme' ? 'Ödeme alınacak' : (t == 'hesap' ? 'Hesap istiyor' : (t == 'siparis' ? 'Sipariş verdi' : 'Garson çağırıyor'))));
+  IconData _tipIkon(String t) => t == 'servise_hazir' ? Icons.room_service_outlined : (t == 'tasima' ? Icons.swap_horiz : (t == 'odeme' ? Icons.payments_outlined : (t == 'hesap' ? Icons.credit_card : (t == 'siparis' ? Icons.receipt_long : Icons.notifications_active))));
 
   // Masa taşıma talebini onayla (yetki yoksa PIN sor)
   Future<void> _tasimaOnayla(Map<String, dynamic> c, {String? pin}) async {

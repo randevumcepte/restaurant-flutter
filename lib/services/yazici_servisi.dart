@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -20,8 +21,17 @@ class YaziciServisi {
   // MUTFAK ÇIKTI MODU: ekran (sadece KDS) · yazici (sadece fiş) · ikisi (KDS + fiş)
   String mutfakMod = 'ekran';
   String mutfakIp = ''; // boş = ana yazıcı IP'si kullanılır (ayrı mutfak yazıcısı için doldur)
+  // İSTASYON -> YAZICI IP eşlemesi (bar/izgara/firin/soguk/tatli ayrı yazıcı). Boşsa mutfakIp/ana kullanılır.
+  Map<String, String> istasyonIp = {};
   bool get mutfakYazar => mutfakMod == 'yazici' || mutfakMod == 'ikisi';
   String get _mutfakHedefIp => mutfakIp.trim().isNotEmpty ? mutfakIp.trim() : ip.trim();
+  String _istasyonHedefIp(String ist) {
+    final v = istasyonIp[ist]?.trim() ?? '';
+    return v.isNotEmpty ? v : _mutfakHedefIp;
+  }
+  static const Map<String, String> istasyonAd = {
+    'bar': 'BAR', 'izgara': 'IZGARA', 'firin': 'FIRIN', 'soguk': 'SOGUK', 'tatli': 'TATLI', 'mutfak': 'MUTFAK',
+  };
 
   int get _sut => dar ? 32 : 48;
   bool get ayarli => ip.trim().isNotEmpty;
@@ -40,6 +50,10 @@ class YaziciServisi {
     kodSayfa = p.getInt('yz_kod') ?? 13;
     mutfakMod = p.getString('yz_mutfak_mod') ?? 'ekran';
     mutfakIp = p.getString('yz_mutfak_ip') ?? '';
+    try {
+      final j = p.getString('yz_ist_ip');
+      istasyonIp = (j != null && j.isNotEmpty) ? (jsonDecode(j) as Map).map((k, v) => MapEntry(k.toString(), v.toString())) : {};
+    } catch (_) { istasyonIp = {}; }
   }
 
   Future<void> kaydet() async {
@@ -52,6 +66,7 @@ class YaziciServisi {
     await p.setInt('yz_kod', kodSayfa);
     await p.setString('yz_mutfak_mod', mutfakMod);
     await p.setString('yz_mutfak_ip', mutfakIp.trim());
+    await p.setString('yz_ist_ip', jsonEncode(istasyonIp));
   }
 
   // ---------- ESC/POS byte kurucu ----------
@@ -152,6 +167,13 @@ class YaziciServisi {
     _ikiSutun('Ara Toplam', _tl(d['ara_toplam']));
     if (_n(d['indirim']) > 0) _ikiSutun('İskonto', '-${_tl(d['indirim'])}');
     if (_n(d['ikram']) > 0) _ikiSutun('İkram', '-${_tl(d['ikram'])}');
+    // KDV/matrah (bilgi) — web fiş ile tutarlı. Yeme-içme %10.
+    final toplamN = _n(d['toplam']).toDouble();
+    if (toplamN > 0) {
+      final matrah = toplamN / 1.10;
+      _ikiSutun('Matrah', _tl(matrah));
+      _ikiSutun('KDV %10', _tl(toplamN - matrah));
+    }
     _boyut(1, 1); _kalin(true);
     _ikiSutun('TOPLAM', _tl(d['toplam']));
     _kalin(false); _boyut(0, 0);
@@ -163,15 +185,17 @@ class YaziciServisi {
     return _gonder(_b);
   }
 
-  /// MUTFAK / HAZIRLIK FİŞİ (fiyatsız, büyük punto). d: {masa, garson, tarih, kalemler:[{adet,ad,not?}], not}
+  /// MUTFAK / HAZIRLIK FİŞİ (fiyatsız, büyük punto). d: {masa, garson, tarih, no?, istasyon?, kalemler:[{adet,ad,not?}], not}
   Future<String> mutfakFisi(Map d) async {
     await yukle();
+    final ist = (d['istasyon']?.toString() ?? 'mutfak');
     _init();
     _hizala(1); _boyut(1, 1); _kalin(true);
-    _satir('*** MUTFAK ***');
+    _satir('*** ${istasyonAd[ist] ?? 'MUTFAK'} ***');
     _kalin(false); _boyut(0, 0); _hizala(0);
     _cizgi();
-    _ikiSutun('Masa: ${d['masa'] ?? '-'}', d['tarih']?.toString() ?? '');
+    _ikiSutun('Masa: ${d['masa'] ?? '-'}', (d['no'] != null && '${d['no']}'.isNotEmpty) ? 'Fis #${d['no']}' : (d['tarih']?.toString() ?? ''));
+    if (d['no'] != null) _ikiSutun('', d['tarih']?.toString() ?? '');
     if ((d['garson']?.toString() ?? '').isNotEmpty) _satir('Garson: ${d['garson']}');
     _cizgi();
     _boyut(1, 1);
@@ -185,19 +209,31 @@ class YaziciServisi {
     if ((d['not']?.toString() ?? '').isNotEmpty) { _cizgi(); _satir('NOT: ${d['not']}'); }
     _besle(3);
     _kes();
-    return _gonder(_b, hedefIp: _mutfakHedefIp); // mutfak fişi ayrı mutfak yazıcısına (yoksa ana yazıcı)
+    return _gonder(_b, hedefIp: _istasyonHedefIp(ist)); // istasyon yazıcısı (yoksa mutfak/ana)
   }
 
   /// OTOMATİK mutfak fişi: sipariş mutfağa gönderilince moda göre basılır.
   /// Mod 'ekran' ise HİÇBİR ŞEY yapmaz (sadece KDS). 'yazici'/'ikisi' ise fiş basar.
-  /// kalemler: [{adet, ad, not?}]. Hata olursa sessizce kısa mesaj döner (akışı bozmaz).
-  Future<String?> otoMutfakFisi({required String masa, String? garson, required List<Map> kalemler}) async {
+  /// kalemler: [{adet, ad, not?, istasyon?}]. İSTASYONA GÖRE AYRI FİŞ (bar ayrı, ızgara ayrı) + ayrı yazıcıya.
+  /// Hata olursa sessizce kısa mesaj döner (akışı bozmaz).
+  Future<String?> otoMutfakFisi({required String masa, String? garson, required List<Map> kalemler, dynamic adisyonNo}) async {
     await yukle();
     if (!mutfakYazar) return null;            // sadece ekran modu -> yazdırma yok
     if (kalemler.isEmpty) return null;
     if (_mutfakHedefIp.isEmpty) return 'Mutfak yazıcı IP tanımlı değil';
     final saat = DateFormat('dd.MM HH:mm').format(DateTime.now());
-    return mutfakFisi({'masa': masa, 'garson': garson ?? '', 'tarih': saat, 'kalemler': kalemler});
+    // İstasyona göre grupla -> her istasyona (bar/ızgara/...) KENDİ fişi, kendi yazıcısına
+    final gruplar = <String, List<Map>>{};
+    for (final k in kalemler) {
+      final ist = (k['istasyon']?.toString().isNotEmpty ?? false) ? k['istasyon'].toString() : 'mutfak';
+      (gruplar[ist] ??= []).add(k);
+    }
+    final hatalar = <String>[];
+    for (final e in gruplar.entries) {
+      final r = await mutfakFisi({'masa': masa, 'garson': garson ?? '', 'tarih': saat, 'no': adisyonNo, 'istasyon': e.key, 'kalemler': e.value});
+      if (r != 'ok') hatalar.add('${istasyonAd[e.key] ?? e.key}: $r');
+    }
+    return hatalar.isEmpty ? 'ok' : hatalar.join(' · ');
   }
 
   /// Sadece çekmeceyi aç (kısa besleme + darbe).
