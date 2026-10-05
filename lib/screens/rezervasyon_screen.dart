@@ -899,7 +899,10 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
     List bosMasalar = [];
     try {
       final m = await Api.masalar(_token);
-      bosMasalar = ((m['masalar'] as List?) ?? []).where((x) => (x as Map)['adisyon_id'] == null).toList();
+      bosMasalar = ((m['masalar'] as List?) ?? []).where((x) {
+        final mm = x as Map;
+        return mm['adisyon_id'] == null && mm['durum'] != 'birlesik' && mm['rezervasyon'] == null;
+      }).toList();
     } catch (_) {}
     if (!mounted) return;
 
@@ -992,7 +995,10 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
     List menuUrun = [];
     try {
       final m = await Api.masalar(_token);
-      bosMasalar = ((m['masalar'] as List?) ?? []).where((x) => (x as Map)['adisyon_id'] == null).toList();
+      bosMasalar = ((m['masalar'] as List?) ?? []).where((x) {
+        final mm = x as Map;
+        return mm['adisyon_id'] == null && mm['durum'] != 'birlesik' && mm['rezervasyon'] == null;
+      }).toList();
     } catch (_) {}
     try {
       final mn = await Api.menu(_token);
