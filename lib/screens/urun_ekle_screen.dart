@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
 import '../providers/tema_provider.dart';
 import '../services/api.dart';
+import '../services/yazici_servisi.dart';
 import 'barkod_tarayici.dart';
 
 /// Sipariş girişi (POS çekirdeği): menüden ürün seç -> sepet -> adisyona ekle.
@@ -84,6 +85,12 @@ class _UrunEkleScreenState extends State<UrunEkleScreen> {
       final res = await Api.adisyonUrunEkle(auth.token!, widget.adisyonId, kalemler);
       if (!mounted) return;
       if (res['ok'] == 1) {
+        // MUTFAK ÇIKTISI: moda göre fiş bas (ekran modunda hiçbir şey olmaz)
+        try {
+          final fisKalem = _sepet.entries.map((e) => <String, dynamic>{'adet': e.value, 'ad': _urunById[e.key]?['ad']?.toString() ?? 'Ürün'}).toList();
+          await YaziciServisi().otoMutfakFisi(masa: widget.baslik, kalemler: fisKalem);
+        } catch (_) {}
+        if (!mounted) return;
         Navigator.of(context).pop(true);
       } else {
         setState(() => _gonderiliyor = false);

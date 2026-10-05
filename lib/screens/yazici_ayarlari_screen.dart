@@ -18,6 +18,8 @@ class _YaziciAyarlariScreenState extends State<YaziciAyarlariScreen> {
   final _ipC = TextEditingController();
   final _portC = TextEditingController();
   final _kodC = TextEditingController();
+  final _mutfakIpC = TextEditingController();
+  String mutfakMod = 'ekran';
   bool dar = false;
   bool cekmece = true;
   bool turkce = true;
@@ -33,6 +35,8 @@ class _YaziciAyarlariScreenState extends State<YaziciAyarlariScreen> {
         _ipC.text = _srv.ip;
         _portC.text = _srv.port.toString();
         _kodC.text = _srv.kodSayfa.toString();
+        _mutfakIpC.text = _srv.mutfakIp;
+        mutfakMod = _srv.mutfakMod;
         dar = _srv.dar;
         cekmece = _srv.cekmece;
         turkce = _srv.turkce;
@@ -42,7 +46,7 @@ class _YaziciAyarlariScreenState extends State<YaziciAyarlariScreen> {
   }
 
   @override
-  void dispose() { _ipC.dispose(); _portC.dispose(); _kodC.dispose(); super.dispose(); }
+  void dispose() { _ipC.dispose(); _portC.dispose(); _kodC.dispose(); _mutfakIpC.dispose(); super.dispose(); }
 
   Future<void> _kaydet({bool sessiz = false}) async {
     _srv.ip = _ipC.text.trim();
@@ -51,6 +55,8 @@ class _YaziciAyarlariScreenState extends State<YaziciAyarlariScreen> {
     _srv.dar = dar;
     _srv.cekmece = cekmece;
     _srv.turkce = turkce;
+    _srv.mutfakMod = mutfakMod;
+    _srv.mutfakIp = _mutfakIpC.text.trim();
     await _srv.kaydet();
     if (!sessiz && mounted) _snack('Ayarlar kaydedildi', const Color(0xFF10B981));
   }
@@ -130,6 +136,30 @@ class _YaziciAyarlariScreenState extends State<YaziciAyarlariScreen> {
                 subtitle: Text('Yazıcıya bağlı kasa çekmecesi (RJ11) tetiklenir', style: TextStyle(color: t.sub, fontSize: 11.5)),
                 value: cekmece, onChanged: (v) => setState(() => cekmece = v),
               )),
+              const SizedBox(height: 14),
+              _kartBaslik(t, 'Mutfak Çıktısı (sipariş gönderilince)'),
+              _kutu(t, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  _secim(t, '🖥️ Ekran', mutfakMod == 'ekran', () => setState(() => mutfakMod = 'ekran')),
+                  const SizedBox(width: 8),
+                  _secim(t, '🧾 Yazıcı', mutfakMod == 'yazici', () => setState(() => mutfakMod = 'yazici')),
+                  const SizedBox(width: 8),
+                  _secim(t, '🖥️+🧾 İkisi', mutfakMod == 'ikisi', () => setState(() => mutfakMod = 'ikisi')),
+                ]),
+                const SizedBox(height: 8),
+                Text(
+                  mutfakMod == 'ekran'
+                      ? 'Sipariş sadece Mutfak (KDS) ekranına düşer, fiş basılmaz.'
+                      : mutfakMod == 'yazici'
+                          ? 'Sipariş gönderilince mutfağa otomatik fiş basılır (KDS ekranında da görünür).'
+                          : 'Hem KDS ekranına düşer hem mutfağa otomatik fiş basılır.',
+                  style: TextStyle(color: t.sub, fontSize: 11.5, height: 1.35),
+                ),
+                if (mutfakMod != 'ekran') ...[
+                  const SizedBox(height: 12),
+                  _alan(t, 'Mutfak yazıcısı IP (boş = ana yazıcı)', _mutfakIpC, ipuc: 'örn. 192.168.1.51', klavye: TextInputType.number),
+                ],
+              ])),
               const SizedBox(height: 20),
               _anaButon(t, Icons.save_outlined, 'Kaydet', t.mor1, () => _kaydet()),
               const SizedBox(height: 22),

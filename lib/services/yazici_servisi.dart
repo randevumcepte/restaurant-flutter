@@ -17,6 +17,11 @@ class YaziciServisi {
   bool cekmece = true; // hesap fişi sonrası çekmeceyi tetikle
   bool turkce = true;  // true = CP857 Türkçe · false = ASCII sadeleştir
   int kodSayfa = 13;   // ESC t n — CP857 seçimi (yazıcıya göre; Türkçe bozuksa değiştirilebilir)
+  // MUTFAK ÇIKTI MODU: ekran (sadece KDS) · yazici (sadece fiş) · ikisi (KDS + fiş)
+  String mutfakMod = 'ekran';
+  String mutfakIp = ''; // boş = ana yazıcı IP'si kullanılır (ayrı mutfak yazıcısı için doldur)
+  bool get mutfakYazar => mutfakMod == 'yazici' || mutfakMod == 'ikisi';
+  String get _mutfakHedefIp => mutfakIp.trim().isNotEmpty ? mutfakIp.trim() : ip.trim();
 
   int get _sut => dar ? 32 : 48;
   bool get ayarli => ip.trim().isNotEmpty;
@@ -33,6 +38,8 @@ class YaziciServisi {
     cekmece = p.getBool('yz_cekmece') ?? true;
     turkce = p.getBool('yz_turkce') ?? true;
     kodSayfa = p.getInt('yz_kod') ?? 13;
+    mutfakMod = p.getString('yz_mutfak_mod') ?? 'ekran';
+    mutfakIp = p.getString('yz_mutfak_ip') ?? '';
   }
 
   Future<void> kaydet() async {
@@ -43,6 +50,8 @@ class YaziciServisi {
     await p.setBool('yz_cekmece', cekmece);
     await p.setBool('yz_turkce', turkce);
     await p.setInt('yz_kod', kodSayfa);
+    await p.setString('yz_mutfak_mod', mutfakMod);
+    await p.setString('yz_mutfak_ip', mutfakIp.trim());
   }
 
   // ---------- ESC/POS byte kurucu ----------
@@ -96,17 +105,18 @@ class YaziciServisi {
   };
 
   // ---------- Ağ gönderimi ----------
-  Future<String> _gonder(List<int> bytes) async {
-    if (!ayarli) return 'Yazıcı IP tanımlı değil. Ayarlar → Yazıcı Ayarları';
+  Future<String> _gonder(List<int> bytes, {String? hedefIp}) async {
+    final adres = (hedefIp ?? ip).trim();
+    if (adres.isEmpty) return 'Yazıcı IP tanımlı değil. Ayarlar → Yazıcı Ayarları';
     Socket? s;
     try {
-      s = await Socket.connect(ip.trim(), port, timeout: const Duration(seconds: 5));
+      s = await Socket.connect(adres, port, timeout: const Duration(seconds: 5));
       s.add(bytes);
       await s.flush();
       await Future.delayed(const Duration(milliseconds: 250));
       return 'ok';
     } on SocketException catch (e) {
-      return 'Bağlanılamadı ($ip:$port): ${e.message}';
+      return 'Bağlanılamadı ($adres:$port): ${e.message}';
     } catch (e) {
       return 'Yazıcı hatası: $e';
     } finally {
@@ -175,7 +185,19 @@ class YaziciServisi {
     if ((d['not']?.toString() ?? '').isNotEmpty) { _cizgi(); _satir('NOT: ${d['not']}'); }
     _besle(3);
     _kes();
-    return _gonder(_b); // mutfak fişinde çekmece açma yok
+    return _gonder(_b, hedefIp: _mutfakHedefIp); // mutfak fişi ayrı mutfak yazıcısına (yoksa ana yazıcı)
+  }
+
+  /// OTOMATİK mutfak fişi: sipariş mutfağa gönderilince moda göre basılır.
+  /// Mod 'ekran' ise HİÇBİR ŞEY yapmaz (sadece KDS). 'yazici'/'ikisi' ise fiş basar.
+  /// kalemler: [{adet, ad, not?}]. Hata olursa sessizce kısa mesaj döner (akışı bozmaz).
+  Future<String?> otoMutfakFisi({required String masa, String? garson, required List<Map> kalemler}) async {
+    await yukle();
+    if (!mutfakYazar) return null;            // sadece ekran modu -> yazdırma yok
+    if (kalemler.isEmpty) return null;
+    if (_mutfakHedefIp.isEmpty) return 'Mutfak yazıcı IP tanımlı değil';
+    final saat = DateFormat('dd.MM HH:mm').format(DateTime.now());
+    return mutfakFisi({'masa': masa, 'garson': garson ?? '', 'tarih': saat, 'kalemler': kalemler});
   }
 
   /// Sadece çekmeceyi aç (kısa besleme + darbe).

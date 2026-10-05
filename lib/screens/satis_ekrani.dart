@@ -143,6 +143,13 @@ class _SatisEkraniState extends State<SatisEkrani> {
       final res = await Api.adisyonUrunEkle(auth.token!, widget.adisyonId, kalemler);
       if (!mounted) return false;
       if (res['ok'] == 1) {
+        // MUTFAK ÇIKTISI: moda göre fiş bas (ekran modunda hiçbir şey olmaz)
+        try {
+          final adMap = {for (final u in urunler) _n((u as Map)['id']).toInt(): u['ad'].toString()};
+          final fisKalem = _pending.entries.map((e) => <String, dynamic>{'adet': e.value, 'ad': adMap[e.key] ?? 'Ürün'}).toList();
+          final yr = await YaziciServisi().otoMutfakFisi(masa: widget.masaAd, kalemler: fisKalem);
+          if (yr != null && yr != 'ok' && mounted) _snack('Mutfak yazıcı: $yr', _turuncu);
+        } catch (_) {}
         _pending.clear();
         await _yukle();
         setState(() => _mesgul = false);
