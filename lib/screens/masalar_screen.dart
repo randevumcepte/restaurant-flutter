@@ -343,17 +343,34 @@ class _MasalarScreenState extends State<MasalarScreen> {
   // Hucre + "senin masan" rozeti (atanan masalarda sag ustte)
   Widget _hucreVurgulu(Map m) {
     final govde = _hucreGovde(m);
-    if (!_benimMasalar.contains(_n(m['id']).toInt())) return govde;
+    final benim = _benimMasalar.contains(_n(m['id']).toInt());
+    final acik = m['adisyon_id'] != null;
+    final rezRozet = m['rezervasyon'] != null && acik; // oturmuş rezervasyon -> köşe rozeti (boş rezerve gövdede)
+    if (!benim && !rezRozet) return govde;
     return Stack(children: [
       Positioned.fill(child: govde),
-      Positioned(
-        top: 5, right: 5,
-        child: Container(
-          padding: const EdgeInsets.all(3),
-          decoration: const BoxDecoration(color: Color(0xFF7C3AED), shape: BoxShape.circle),
-          child: const Icon(Icons.person, size: 10, color: Colors.white),
+      if (rezRozet)
+        Positioned(
+          top: 5, left: 5,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(color: const Color(0xFF9D5DC8), borderRadius: BorderRadius.circular(20)),
+            child: const Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(Icons.event_seat, size: 9, color: Colors.white),
+              SizedBox(width: 3),
+              Text('Rezerve', style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold, color: Colors.white)),
+            ]),
+          ),
         ),
-      ),
+      if (benim)
+        Positioned(
+          top: 5, right: 5,
+          child: Container(
+            padding: const EdgeInsets.all(3),
+            decoration: const BoxDecoration(color: Color(0xFF7C3AED), shape: BoxShape.circle),
+            child: const Icon(Icons.person, size: 10, color: Colors.white),
+          ),
+        ),
     ]);
   }
 
@@ -395,6 +412,7 @@ class _MasalarScreenState extends State<MasalarScreen> {
           nokta(const Color(0xFFF2864F), 'Durgun'), const SizedBox(width: 14),
           nokta(const Color(0xFF9E7CF0), 'Hesap istedi'), const SizedBox(width: 14),
           nokta(const Color(0xFF2ECC71), 'Ödendi'), const SizedBox(width: 14),
+          nokta(const Color(0xFF9D5DC8), 'Rezerve'), const SizedBox(width: 14),
           nokta(t.line, 'Boş'),
         ]),
       ),
@@ -437,16 +455,20 @@ class _MasalarScreenState extends State<MasalarScreen> {
 
     final coklu = grup.length > 1;
     final ds = (acik && !coklu) ? _masaDurum(m) : null;
-    // Ana durum rengi (açık->durum motoru, birleşik/rezerve/kirli/boş->sabit)
+    final rez = m['rezervasyon'] as Map?;
+    final rezerveBos = !acik && !coklu && rez != null; // masa atanmış ama henüz oturmamış rezervasyon
+    // Ana durum rengi (açık->durum motoru, rezerve/birleşik/kirli/boş->sabit)
     final Color renk = ds?.renk ??
         (coklu || acik
             ? const Color(0xFF7E7BEF)
-            : durum == 'rezerve'
-                ? const Color(0xFFEDA94A)
-                : durum == 'kirli'
-                    ? const Color(0xFFF2864F)
-                    : (t.koyu ? const Color(0xFF3B4668) : const Color(0xFF94A3B8)));
-    final renkli = acik || coklu;
+            : rezerveBos
+                ? const Color(0xFF9D5DC8) // rezervasyonlu (henüz gelmedi) - mor
+                : durum == 'rezerve'
+                    ? const Color(0xFFEDA94A)
+                    : durum == 'kirli'
+                        ? const Color(0xFFF2864F)
+                        : (t.koyu ? const Color(0xFF3B4668) : const Color(0xFF94A3B8)));
+    final renkli = acik || coklu || rezerveBos;
     final tutar = _n(m['tutar']).round();
     // İçi DOLU DÜZ renkli kart (normal ton, koyulaştırma yok) + beyaz yazı. Boş -> sade açık kart.
     return Container(
@@ -491,10 +513,25 @@ class _MasalarScreenState extends State<MasalarScreen> {
             if (acik)
               Text('${_f.format(tutar)} ₺',
                   style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white, height: 1.0, letterSpacing: -0.5))
+            else if (rezerveBos)
+              Text('📅 ${rez['ad']}', maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: Colors.white, height: 1.05))
             else
               Text('Müsait', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: renkli ? Colors.white : const Color(0xFF10B981))),
             // 3. SATIR: durum çipi (frosted beyaz)
-            if (ds != null) ...[
+            if (rezerveBos) ...[
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.24), borderRadius: BorderRadius.circular(20)),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  const Icon(Icons.event_seat, size: 11, color: Colors.white),
+                  const SizedBox(width: 4),
+                  Flexible(child: Text('Rezerve · ${rez['saat']} · ${rez['kisi']} kişi', maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w500, color: Colors.white))),
+                ]),
+              ),
+            ] else if (ds != null) ...[
               const SizedBox(height: 6),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
