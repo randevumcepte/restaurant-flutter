@@ -233,12 +233,28 @@ class Api {
     return _get('/api/patron/rezervasyon-panel${q.isEmpty ? '' : '?${q.join('&')}'}', token);
   }
   static Future<Map<String, dynamic>> rezervasyonEkle(String token,
-      {required String ad, String? telefon, required int kisi, required String tarih, required String saat, int? masaId, String? not}) {
+      {required String ad, String? telefon, required int kisi, required String tarih, required String saat,
+      int? masaId, String? not, String? musteriNot, List<String>? etiketler, List<Map<String, dynamic>>? onSiparis}) {
     final body = <String, String>{'ad': ad, 'kisi': '$kisi', 'tarih': tarih, 'saat': saat};
     if (telefon != null && telefon.isNotEmpty) body['telefon'] = telefon;
-    if (masaId != null) body['masa_id'] = '$masaId';
+    if (masaId != null && masaId > 0) body['masa_id'] = '$masaId';
     if (not != null && not.isNotEmpty) body['not'] = not;
+    if (musteriNot != null && musteriNot.isNotEmpty) body['musteri_not'] = musteriNot;
+    if (etiketler != null && etiketler.isNotEmpty) body['etiketler'] = etiketler.join(',');
+    if (onSiparis != null && onSiparis.isNotEmpty) body['on_siparis'] = jsonEncode(onSiparis);
     return _post('/api/patron/rezervasyon-ekle', token, body);
+  }
+  // Telefondan musteri bul (CRM kart: gecmis + alerji/not)
+  static Future<Map<String, dynamic>> musteriBul(String token, String telefon) =>
+      _get('/api/patron/musteri-bul?telefon=${Uri.encodeComponent(telefon)}', token);
+  // Rezervasyon detay (musteri + on siparis + etiketler)
+  static Future<Map<String, dynamic>> rezervasyonDetay(String token, int id) =>
+      _get('/api/patron/rezervasyon-detay?id=$id', token);
+  // Rezervasyonu oturt: adisyon ac + on siparisi mutfaga dus
+  static Future<Map<String, dynamic>> rezervasyonOturt(String token, int id, {int? masaId}) {
+    final body = <String, String>{'id': '$id'};
+    if (masaId != null && masaId > 0) body['masa_id'] = '$masaId';
+    return _post('/api/patron/rezervasyon-oturt', token, body);
   }
   static Future<Map<String, dynamic>> rezervasyonDurum(String token, int id, String durum, {int? masaId}) {
     final body = <String, String>{'id': '$id', 'durum': durum};

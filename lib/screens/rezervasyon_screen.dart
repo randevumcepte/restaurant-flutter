@@ -657,26 +657,32 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
             final masa = (rm['masa_ad']?.toString() ?? '');
             return <Widget>[
               Text(rm['saat'].toString(), style: TextStyle(color: renk, fontSize: 15, fontWeight: FontWeight.bold)),
-              Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                Row(mainAxisSize: MainAxisSize.min, children: [
-                  Flexible(
-                    child: Text(
-                      rm['ad'].toString(),
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: pasif ? t.sub : t.ink, fontSize: 14, fontWeight: FontWeight.bold,
-                        decoration: pasif ? TextDecoration.lineThrough : null,
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => _detayAc(_n(rm['id']).toInt()),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                  Row(mainAxisSize: MainAxisSize.min, children: [
+                    Flexible(
+                      child: Text(
+                        rm['ad'].toString(),
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: pasif ? t.sub : t.ink, fontSize: 14, fontWeight: FontWeight.bold,
+                          decoration: pasif ? TextDecoration.lineThrough : null,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(_kaynakIkon(rm['kaynak'].toString()), style: const TextStyle(fontSize: 12)),
+                    const SizedBox(width: 6),
+                    Text(_kaynakIkon(rm['kaynak'].toString()), style: const TextStyle(fontSize: 12)),
+                    const SizedBox(width: 6),
+                    const Icon(Icons.info_outline, size: 13, color: Color(0xFF64748B)),
+                  ]),
+                  if (tel.isNotEmpty)
+                    Text('📞 $tel', style: TextStyle(color: t.sub, fontSize: 12)),
+                  if (not.isNotEmpty)
+                    Text('📝 $not', style: TextStyle(color: t.sub2, fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis),
                 ]),
-                if (tel.isNotEmpty)
-                  Text('📞 $tel', style: TextStyle(color: t.sub, fontSize: 12)),
-                if (not.isNotEmpty)
-                  Text('📝 $not', style: TextStyle(color: t.sub2, fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis),
-              ]),
+              ),
               Text('${_n(rm['kisi']).toInt()}', style: TextStyle(color: t.ink, fontSize: 14, fontWeight: FontWeight.w600)),
               Text(masa.isEmpty ? '—' : 'Masa $masa', style: TextStyle(color: masa.isEmpty ? t.sub : t.ink, fontSize: 13)),
               Align(alignment: Alignment.center, child: MRozet(_durumAd(durum), renk)),
@@ -695,7 +701,7 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
       btns.add(const SizedBox(width: 8));
       btns.add(MButon('İptal', t.kirmizi, () => _durum(id, 'iptal'), dolu: false, ikon: Icons.close));
     } else if (durum == 'onaylandi') {
-      btns.add(MButon('Geldi', t.yesil, () => _durum(id, 'geldi'), ikon: Icons.login));
+      btns.add(MButon('Oturt', _mor, () => _oturtVeyaDetay(id, r), ikon: Icons.login));
       btns.add(const SizedBox(width: 8));
       btns.add(MButon('Gelmedi', t.kirmizi, () => _durum(id, 'gelmedi'), dolu: false, ikon: Icons.person_off));
     } else {
@@ -756,7 +762,10 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
     final renk = _renk(durum);
     final pasif = durum == 'iptal' || durum == 'gelmedi';
     final not = (r['not']?.toString() ?? '');
-    return Container(
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _detayAc(_n(r['id']).toInt()),
+      child: Container(
       decoration: BoxDecoration(
         color: _card,
         borderRadius: BorderRadius.circular(16),
@@ -815,6 +824,7 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
           ],
         ]),
       ),
+      ),
     );
   }
 
@@ -837,14 +847,135 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
         ),
       ));
     }
+    void ekleCustom(String etiket, IconData ikon, Color renk, VoidCallback onPressed) {
+      btns.add(Expanded(child: Padding(padding: const EdgeInsets.only(right: 8),
+        child: OutlinedButton.icon(onPressed: onPressed,
+          style: OutlinedButton.styleFrom(foregroundColor: renk, side: BorderSide(color: renk.withValues(alpha: 0.5)),
+            padding: const EdgeInsets.symmetric(vertical: 9), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+          icon: Icon(ikon, size: 15), label: Text(etiket, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold))))));
+    }
     if (durum == 'bekliyor') {
       ekle('Onayla', Icons.check, _yesil, 'onaylandi');
       ekle('İptal', Icons.close, _kirmizi, 'iptal');
     } else if (durum == 'onaylandi') {
-      ekle('Geldi', Icons.login, _yesil, 'geldi');
+      ekleCustom('Oturt', Icons.login, _mor, () => _oturtVeyaDetay(id, r));
       ekle('Gelmedi', Icons.person_off, _kirmizi, 'gelmedi');
     }
     return btns;
+  }
+
+  // Rezervasyonu oturt: masa atanmissa direkt ac, degilse detaydan masa sec
+  void _oturtVeyaDetay(int id, Map r) {
+    if (r['masa_id'] != null) {
+      _oturt(id);
+    } else {
+      _detayAc(id);
+    }
+  }
+
+  Future<void> _oturt(int id, {int? masaId}) async {
+    try {
+      final r = await Api.rezervasyonOturt(_token, id, masaId: masaId);
+      if (!mounted) return;
+      final ok = r['ok'] == 1;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(ok ? (r['mesaj']?.toString() ?? 'Masa açıldı') : (r['hata']?.toString() ?? 'Oturtulamadı')),
+        backgroundColor: ok ? _yesil : _kirmizi, duration: const Duration(seconds: 3)));
+      if (ok) _yukle();
+    } catch (_) {}
+  }
+
+  // Rezervasyon detay: müşteri geçmişi/alerji + özel istek etiketleri + ön sipariş + masaya oturt
+  Future<void> _detayAc(int id) async {
+    Map? det;
+    try { det = await Api.rezervasyonDetay(_token, id); } catch (_) {}
+    if (!mounted || det == null || det['ok'] != 1) return;
+    final rez = (det['rezervasyon'] as Map?) ?? {};
+    final musteri = det['musteri'] as Map?;
+    final etiketler = (det['etiketler'] as List?) ?? [];
+    final kalemler = (det['kalemler'] as List?) ?? [];
+    final durum = rez['durum'].toString();
+    int? secMasa = rez['masa_id'] != null ? _n(rez['masa_id']).toInt() : null;
+    List bosMasalar = [];
+    try {
+      final m = await Api.masalar(_token);
+      bosMasalar = ((m['masalar'] as List?) ?? []).where((x) => (x as Map)['adisyon_id'] == null).toList();
+    } catch (_) {}
+    if (!mounted) return;
+
+    await showModalBottomSheet(useRootNavigator: true, context: context, backgroundColor: _card, isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      builder: (ctx) => StatefulBuilder(builder: (ctx, setSt) {
+        final onToplam = kalemler.fold<double>(0, (a, b) => a + _n((b as Map)['fiyat']).toDouble() * _n(b['adet']).toInt());
+        final masaItems = <DropdownMenuItem<int?>>[const DropdownMenuItem<int?>(value: null, child: Text('— Masa seç —'))];
+        final idsSet = <int>{};
+        for (final m in bosMasalar) {
+          final mid = _n((m as Map)['id']).toInt();
+          idsSet.add(mid);
+          masaItems.add(DropdownMenuItem<int?>(value: mid, child: Text('Masa ${m['ad']}')));
+        }
+        if (secMasa != null && !idsSet.contains(secMasa)) {
+          masaItems.insert(1, DropdownMenuItem<int?>(value: secMasa, child: Text('Masa ${rez['masa_ad'] ?? secMasa} (atanmış)')));
+        }
+        return Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 18, right: 18, top: 14),
+          child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: const Color(0xFF334155), borderRadius: BorderRadius.circular(4)))),
+            const SizedBox(height: 14),
+            Row(children: [
+              Text(rez['saat'].toString(), style: TextStyle(color: _renk(durum), fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(width: 10),
+              Expanded(child: Text(rez['ad'].toString(), style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold))),
+              Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: _renk(durum).withValues(alpha: 0.16), borderRadius: BorderRadius.circular(20)),
+                child: Text(_durumAd(durum), style: TextStyle(color: _renk(durum), fontSize: 10.5, fontWeight: FontWeight.bold))),
+            ]),
+            const SizedBox(height: 6),
+            Text('${_n(rez['kisi']).toInt()} kişi · ${rez['telefon'] ?? '—'}${(rez['masa_ad']?.toString().isNotEmpty ?? false) ? ' · Masa ${rez['masa_ad']}' : ''}', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
+            if (musteri != null) ...[
+              const SizedBox(height: 10),
+              Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: _mor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12), border: Border.all(color: _mor.withValues(alpha: 0.4))),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [const Icon(Icons.badge_outlined, size: 15, color: _mor), const SizedBox(width: 6),
+                    Expanded(child: Text('${musteri['ad']} · ${_n(musteri['siparis_sayisi']).toInt()} ziyaret · ${_yzStr(musteri['toplam_harcama'])} ₺', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12.5)))]),
+                  if (musteri['notlar']?.toString().isNotEmpty ?? false) Padding(padding: const EdgeInsets.only(top: 3), child: Text('⚠️ ${musteri['notlar']}', style: const TextStyle(color: _amber, fontSize: 11.5))),
+                ])),
+            ],
+            if (etiketler.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Wrap(spacing: 6, runSpacing: 6, children: [for (final e in etiketler) Container(padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                decoration: BoxDecoration(color: const Color(0xFF0F1424), borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFF2D3752))),
+                child: Text(e.toString(), style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 12)))]),
+            ],
+            if (kalemler.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              const Text('Ön Sipariş', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 4),
+              for (final k in kalemler) Padding(padding: const EdgeInsets.symmetric(vertical: 2), child: Row(children: [
+                Text('${_n((k as Map)['adet']).toInt()}×', style: const TextStyle(color: _mor, fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(width: 8),
+                Expanded(child: Text(k['urun_adi'].toString(), style: const TextStyle(color: Colors.white, fontSize: 13), overflow: TextOverflow.ellipsis)),
+                Text('${_yzStr(_n(k['fiyat']).toDouble() * _n(k['adet']).toInt())} ₺', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+              ])),
+              Padding(padding: const EdgeInsets.only(top: 4), child: Text('Toplam: ${_yzStr(onToplam)} ₺', style: const TextStyle(color: _yesil, fontSize: 12, fontWeight: FontWeight.bold))),
+            ],
+            if (rez['not']?.toString().isNotEmpty ?? false) Padding(padding: const EdgeInsets.only(top: 10), child: Text('📝 ${rez['not']}', style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 12.5))),
+            if (durum != 'geldi' && durum != 'iptal') ...[
+              const SizedBox(height: 16),
+              DropdownButtonFormField<int?>(initialValue: secMasa, dropdownColor: _card, style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(labelText: 'Masa', labelStyle: const TextStyle(color: Color(0xFF94A3B8)), filled: true, fillColor: const Color(0xFF0F1424), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)),
+                items: masaItems, onChanged: (v) => setSt(() => secMasa = v)),
+              const SizedBox(height: 10),
+              SizedBox(width: double.infinity, child: FilledButton.icon(
+                style: FilledButton.styleFrom(backgroundColor: _mor, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                onPressed: secMasa == null ? null : () { Navigator.pop(ctx); _oturt(id, masaId: secMasa); },
+                icon: const Icon(Icons.login, color: Colors.white),
+                label: Text('Masaya Oturt${kalemler.isNotEmpty ? ' (${kalemler.length} ön sipariş mutfağa)' : ''}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)))),
+            ],
+            const SizedBox(height: 22),
+          ])),
+        );
+      }),
+    );
   }
 
   Widget _bos() => ListView(children: const [
@@ -854,17 +985,38 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
         Center(child: Text('Bu gün için rezervasyon yok.', style: TextStyle(color: Color(0xFF64748B)))),
       ]);
 
-  // ---- Yeni rezervasyon ----
+  // ---- Yeni rezervasyon (müşteri CRM + masa + özel istek + ön sipariş) ----
   Future<void> _ekleDialog() async {
+    // Masa + menü önden yükle (ön sipariş + masa seçimi için)
+    List bosMasalar = [];
+    List menuUrun = [];
+    try {
+      final m = await Api.masalar(_token);
+      bosMasalar = ((m['masalar'] as List?) ?? []).where((x) => (x as Map)['adisyon_id'] == null).toList();
+    } catch (_) {}
+    try {
+      final mn = await Api.menu(_token);
+      menuUrun = (mn['urunler'] as List?) ?? [];
+    } catch (_) {}
+    if (!mounted) return;
+
     final adC = TextEditingController();
     final telC = TextEditingController();
     final notC = TextEditingController();
+    final musteriNotC = TextEditingController();
     int kisi = 2;
     String saat = '19:30';
     DateTime secilenTarih = DateTime.tryParse(tarih) ?? DateTime.now();
-    final saatler = <String>[for (int h = 12; h <= 23; h++) for (final m in ['00', '30']) '${h.toString().padLeft(2, '0')}:$m'];
+    int? masaId;
+    final seciliEtiket = <String>{};
+    final onSiparis = <Map<String, dynamic>>[]; // {urun_id, ad, fiyat, adet}
+    Map? musteriKart;
+    String? sonZiyaret;
+    bool musteriAraniyor = false;
+    final saatler = <String>[for (int h = 12; h <= 23; h++) for (final mm in ['00', '30']) '${h.toString().padLeft(2, '0')}:$mm'];
+    const etiketSecenek = ['🎂 Doğum günü', '💍 Yıldönümü', '🪟 Pencere kenarı', '👶 Bebek sandalyesi', '♿ Tekerlekli sandalye', '⚠️ Alerji', '⭐ VIP', '🤫 Sessiz köşe'];
 
-    await showModalBottomSheet(useRootNavigator: true, 
+    await showModalBottomSheet(useRootNavigator: true,
       context: context,
       backgroundColor: _card,
       isScrollControlled: true,
@@ -875,77 +1027,168 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
               filled: true, fillColor: const Color(0xFF0F1424),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
             );
-        return Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 18, right: 18, top: 16),
-          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: const Color(0xFF334155), borderRadius: BorderRadius.circular(4)))),
-            const SizedBox(height: 16),
-            const Text('Yeni Rezervasyon', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            TextField(controller: adC, style: const TextStyle(color: Colors.white), decoration: dec('Ad Soyad')),
-            const SizedBox(height: 10),
-            TextField(controller: telC, keyboardType: TextInputType.phone, style: const TextStyle(color: Colors.white), decoration: dec('Telefon')),
-            const SizedBox(height: 14),
-            Row(children: [
-              const Text('Kişi:', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Slider(
-                  value: kisi.toDouble(), min: 1, max: 16, divisions: 15, activeColor: _mor, label: '$kisi',
-                  onChanged: (v) => setSt(() => kisi = v.round()),
-                ),
-              ),
-              Text('$kisi', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-            ]),
-            Row(children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () async {
-                    final d = await showDatePicker(
-                      context: ctx, initialDate: secilenTarih, firstDate: DateTime.now().subtract(const Duration(days: 1)),
-                      lastDate: DateTime.now().add(const Duration(days: 120)),
+
+        Future<void> musteriAra() async {
+          final tel = telC.text.trim();
+          if (tel.length < 7) { setSt(() { musteriKart = null; sonZiyaret = null; }); return; }
+          setSt(() => musteriAraniyor = true);
+          try {
+            final r = await Api.musteriBul(_token, tel);
+            if (r['ok'] == 1 && r['bulundu'] == true) {
+              final mm = r['musteri'] as Map;
+              setSt(() {
+                musteriKart = mm;
+                sonZiyaret = r['son_ziyaret']?.toString();
+                if (adC.text.trim().isEmpty) adC.text = mm['ad']?.toString() ?? '';
+                if (musteriNotC.text.trim().isEmpty && (mm['notlar']?.toString().isNotEmpty ?? false)) musteriNotC.text = mm['notlar'].toString();
+              });
+            } else {
+              setSt(() { musteriKart = null; sonZiyaret = null; });
+            }
+          } catch (_) {}
+          if (ctx.mounted) setSt(() => musteriAraniyor = false);
+        }
+
+        Future<void> urunEkleSheet() async {
+          String ara = '';
+          await showModalBottomSheet(useRootNavigator: true, context: ctx, backgroundColor: _card, isScrollControlled: true,
+            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+            builder: (c2) => StatefulBuilder(builder: (c2, setS2) {
+              final liste = menuUrun.where((u) => ara.isEmpty || (u as Map)['ad'].toString().toLowerCase().contains(ara.toLowerCase())).toList();
+              return Padding(
+                padding: EdgeInsets.only(bottom: MediaQuery.of(c2).viewInsets.bottom, left: 16, right: 16, top: 14),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  const Text('Ürün Ekle (ön sipariş)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                  const SizedBox(height: 10),
+                  TextField(autofocus: true, style: const TextStyle(color: Colors.white), decoration: dec('Ürün ara'), onChanged: (v) => setS2(() => ara = v)),
+                  const SizedBox(height: 8),
+                  SizedBox(height: 320, child: ListView.builder(itemCount: liste.length, itemBuilder: (_, i) {
+                    final u = liste[i] as Map;
+                    return ListTile(
+                      dense: true,
+                      title: Text(u['ad'].toString(), style: const TextStyle(color: Colors.white, fontSize: 14)),
+                      trailing: Text('${_yzStr(u['fiyat'])} ₺', style: const TextStyle(color: _mor, fontWeight: FontWeight.bold)),
+                      onTap: () {
+                        final id = _n(u['id']).toInt();
+                        final mevcut = onSiparis.firstWhere((x) => x['urun_id'] == id, orElse: () => {});
+                        if (mevcut.isEmpty) { onSiparis.add({'urun_id': id, 'ad': u['ad'], 'fiyat': _n(u['fiyat']), 'adet': 1}); }
+                        else { mevcut['adet'] = _n(mevcut['adet']).toInt() + 1; }
+                        Navigator.pop(c2);
+                        setSt(() {});
+                      },
                     );
+                  })),
+                  const SizedBox(height: 12),
+                ]),
+              );
+            }),
+          );
+        }
+
+        final onToplam = onSiparis.fold<double>(0, (a, b) => a + _n(b['fiyat']).toDouble() * _n(b['adet']).toInt());
+
+        return Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 18, right: 18, top: 14),
+          child: SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: const Color(0xFF334155), borderRadius: BorderRadius.circular(4)))),
+              const SizedBox(height: 14),
+              const Text('Yeni Rezervasyon', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 14),
+              TextField(controller: telC, keyboardType: TextInputType.phone, style: const TextStyle(color: Colors.white),
+                decoration: dec('Telefon').copyWith(suffixIcon: musteriAraniyor
+                    ? const Padding(padding: EdgeInsets.all(12), child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: _mor)))
+                    : IconButton(icon: const Icon(Icons.search, color: Color(0xFF94A3B8)), onPressed: musteriAra)),
+                onSubmitted: (_) => musteriAra()),
+              if (musteriKart != null) ...[
+                const SizedBox(height: 8),
+                Container(padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(color: _mor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12), border: Border.all(color: _mor.withValues(alpha: 0.4))),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Row(children: [const Icon(Icons.badge_outlined, size: 15, color: _mor), const SizedBox(width: 6),
+                      Expanded(child: Text('${musteriKart!['ad']} · ${_n(musteriKart!['siparis_sayisi']).toInt()} ziyaret', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)))]),
+                    if (sonZiyaret != null) Padding(padding: const EdgeInsets.only(top: 3), child: Text('Son ziyaret: $sonZiyaret · Toplam: ${_yzStr(musteriKart!['toplam_harcama'])} ₺', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11))),
+                    if (musteriKart!['notlar']?.toString().isNotEmpty ?? false) Padding(padding: const EdgeInsets.only(top: 3), child: Text('⚠️ ${musteriKart!['notlar']}', style: const TextStyle(color: _amber, fontSize: 11))),
+                  ])),
+              ],
+              const SizedBox(height: 10),
+              TextField(controller: adC, style: const TextStyle(color: Colors.white), decoration: dec('Ad Soyad')),
+              const SizedBox(height: 12),
+              Row(children: [
+                const Text('Kişi:', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
+                const SizedBox(width: 10),
+                Expanded(child: Slider(value: kisi.toDouble(), min: 1, max: 16, divisions: 15, activeColor: _mor, label: '$kisi', onChanged: (v) => setSt(() => kisi = v.round()))),
+                Text('$kisi', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+              ]),
+              Row(children: [
+                Expanded(child: OutlinedButton.icon(
+                  onPressed: () async {
+                    final d = await showDatePicker(context: ctx, initialDate: secilenTarih, firstDate: DateTime.now().subtract(const Duration(days: 1)), lastDate: DateTime.now().add(const Duration(days: 120)));
                     if (d != null) setSt(() => secilenTarih = d);
                   },
                   style: OutlinedButton.styleFrom(foregroundColor: Colors.white, side: const BorderSide(color: Color(0xFF2D3752)), padding: const EdgeInsets.symmetric(vertical: 13)),
                   icon: const Icon(Icons.calendar_today, size: 15),
-                  label: Text('${secilenTarih.day}.${secilenTarih.month}.${secilenTarih.year}', style: const TextStyle(fontSize: 13)),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  initialValue: saat,
-                  dropdownColor: _card,
-                  decoration: dec('Saat'),
-                  style: const TextStyle(color: Colors.white),
-                  items: [for (final s in saatler) DropdownMenuItem(value: s, child: Text(s))],
-                  onChanged: (v) => setSt(() => saat = v ?? saat),
-                ),
-              ),
-            ]),
-            const SizedBox(height: 10),
-            TextField(controller: notC, style: const TextStyle(color: Colors.white), decoration: dec('Not (opsiyonel)')),
-            const SizedBox(height: 18),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
+                  label: Text('${secilenTarih.day}.${secilenTarih.month}.${secilenTarih.year}', style: const TextStyle(fontSize: 13)))),
+                const SizedBox(width: 10),
+                Expanded(child: DropdownButtonFormField<String>(initialValue: saat, dropdownColor: _card, decoration: dec('Saat'), style: const TextStyle(color: Colors.white),
+                  items: [for (final s in saatler) DropdownMenuItem(value: s, child: Text(s))], onChanged: (v) => setSt(() => saat = v ?? saat))),
+              ]),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<int?>(initialValue: masaId, dropdownColor: _card, decoration: dec('Masa (opsiyonel)'), style: const TextStyle(color: Colors.white),
+                items: [const DropdownMenuItem<int?>(value: null, child: Text('— Masa atama —')), for (final m in bosMasalar) DropdownMenuItem<int?>(value: _n((m as Map)['id']).toInt(), child: Text('Masa ${m['ad']}'))],
+                onChanged: (v) => setSt(() => masaId = v)),
+              const SizedBox(height: 14),
+              const Text('Özel İstek', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 6),
+              Wrap(spacing: 6, runSpacing: 6, children: [for (final e in etiketSecenek) GestureDetector(
+                onTap: () => setSt(() => seciliEtiket.contains(e) ? seciliEtiket.remove(e) : seciliEtiket.add(e)),
+                child: Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(color: seciliEtiket.contains(e) ? _mor : const Color(0xFF0F1424), borderRadius: BorderRadius.circular(20), border: Border.all(color: seciliEtiket.contains(e) ? _mor : const Color(0xFF2D3752))),
+                  child: Text(e, style: TextStyle(color: seciliEtiket.contains(e) ? Colors.white : const Color(0xFF94A3B8), fontSize: 12))))]),
+              const SizedBox(height: 12),
+              TextField(controller: notC, style: const TextStyle(color: Colors.white), decoration: dec('Serbest not (opsiyonel)')),
+              const SizedBox(height: 10),
+              TextField(controller: musteriNotC, style: const TextStyle(color: Colors.white), decoration: dec('Müşteri notu / alerji (kalıcı)')),
+              const SizedBox(height: 14),
+              Row(children: [
+                const Text('Ön Sipariş (ne yiyecek)', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12, fontWeight: FontWeight.w600)),
+                const Spacer(),
+                TextButton.icon(onPressed: urunEkleSheet, icon: const Icon(Icons.add, size: 16, color: _mor), label: const Text('Ürün Ekle', style: TextStyle(color: _mor, fontSize: 12))),
+              ]),
+              if (onSiparis.isEmpty)
+                const Padding(padding: EdgeInsets.only(bottom: 4), child: Text('Henüz ürün eklenmedi.', style: TextStyle(color: Color(0xFF64748B), fontSize: 12)))
+              else ...[
+                for (final k in onSiparis) Padding(padding: const EdgeInsets.symmetric(vertical: 3), child: Row(children: [
+                  Expanded(child: Text('${k['ad']}', style: const TextStyle(color: Colors.white, fontSize: 13), overflow: TextOverflow.ellipsis)),
+                  IconButton(iconSize: 18, padding: EdgeInsets.zero, constraints: const BoxConstraints(), icon: const Icon(Icons.remove_circle_outline, color: Color(0xFF94A3B8)),
+                    onPressed: () => setSt(() { final a = _n(k['adet']).toInt() - 1; if (a <= 0) { onSiparis.remove(k); } else { k['adet'] = a; } })),
+                  Padding(padding: const EdgeInsets.symmetric(horizontal: 6), child: Text('${_n(k['adet']).toInt()}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                  IconButton(iconSize: 18, padding: EdgeInsets.zero, constraints: const BoxConstraints(), icon: const Icon(Icons.add_circle_outline, color: _mor), onPressed: () => setSt(() => k['adet'] = _n(k['adet']).toInt() + 1)),
+                  const SizedBox(width: 8),
+                  Text('${_yzStr(_n(k['fiyat']).toDouble() * _n(k['adet']).toInt())} ₺', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                ])),
+                Padding(padding: const EdgeInsets.only(top: 4), child: Text('Ön sipariş toplamı: ${_yzStr(onToplam)} ₺', style: const TextStyle(color: _yesil, fontSize: 12, fontWeight: FontWeight.bold))),
+              ],
+              const SizedBox(height: 16),
+              SizedBox(width: double.infinity, child: FilledButton(
                 style: FilledButton.styleFrom(backgroundColor: _mor, padding: const EdgeInsets.symmetric(vertical: 15), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                 onPressed: () async {
                   if (adC.text.trim().isEmpty) return;
                   final iso = '${secilenTarih.year}-${secilenTarih.month.toString().padLeft(2, '0')}-${secilenTarih.day.toString().padLeft(2, '0')}';
                   Navigator.pop(ctx);
                   try {
-                    await Api.rezervasyonEkle(_token, ad: adC.text.trim(), telefon: telC.text.trim(), kisi: kisi, tarih: iso, saat: saat, not: notC.text.trim());
+                    await Api.rezervasyonEkle(_token, ad: adC.text.trim(), telefon: telC.text.trim(), kisi: kisi, tarih: iso, saat: saat,
+                      masaId: masaId, not: notC.text.trim(), musteriNot: musteriNotC.text.trim(),
+                      etiketler: seciliEtiket.toList(),
+                      onSiparis: onSiparis.map((e) => <String, dynamic>{'urun_id': e['urun_id'], 'adet': _n(e['adet']).toInt()}).toList());
                     setState(() => tarih = iso);
                     _yukle(t: iso);
                   } catch (_) {}
                 },
-                child: const Text('Kaydet', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
-              ),
-            ),
-            const SizedBox(height: 20),
-          ]),
+                child: const Text('Kaydet', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)))),
+              const SizedBox(height: 20),
+            ]),
+          ),
         );
       }),
     );
