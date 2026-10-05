@@ -476,23 +476,23 @@ class _MasalarScreenState extends State<MasalarScreen> {
                   const Icon(Icons.merge_type, size: 12, color: Colors.white),
                   const SizedBox(width: 3),
                   Flexible(child: Text(grup.join(' + '), maxLines: 1, overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Colors.white))),
+                      style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w500, color: Colors.white))),
                 ]),
               )
             else
               Row(crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [
                 Flexible(child: Text(m['ad'].toString(), maxLines: 1, overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: renkli ? Colors.white : t.ink, height: 1.0))),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: renkli ? Colors.white : t.ink, height: 1.0))),
                 const SizedBox(width: 7),
-                Text('${m['kapasite']} kişi', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: renkli ? Colors.white.withValues(alpha: 0.82) : t.sub)),
+                Text('${m['kapasite']} kişi', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w400, color: renkli ? Colors.white.withValues(alpha: 0.82) : t.sub)),
               ]),
             const SizedBox(height: 4),
-            // 2. SATIR: tutar (büyük, beyaz) veya müsait
+            // 2. SATIR: tutar (büyük, BOLD) veya müsait
             if (acik)
               Text('${_f.format(tutar)} ₺',
                   style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white, height: 1.0, letterSpacing: -0.5))
             else
-              Text('Müsait', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: renkli ? Colors.white : const Color(0xFF10B981))),
+              Text('Müsait', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: renkli ? Colors.white : const Color(0xFF10B981))),
             // 3. SATIR: durum çipi (frosted beyaz)
             if (ds != null) ...[
               const SizedBox(height: 6),
@@ -503,7 +503,7 @@ class _MasalarScreenState extends State<MasalarScreen> {
                   Icon(ds.ikon, size: 11, color: Colors.white),
                   const SizedBox(width: 4),
                   Flexible(child: Text(ds.etiket, maxLines: 1, overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w800, color: Colors.white))),
+                      style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w500, color: Colors.white))),
                 ]),
               ),
             ] else if (coklu) ...[
