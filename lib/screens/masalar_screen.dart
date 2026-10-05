@@ -447,20 +447,17 @@ class _MasalarScreenState extends State<MasalarScreen> {
                     : (t.koyu ? const Color(0xFF3B4668) : const Color(0xFF94A3B8)));
     final renkli = acik || coklu;
     final tutar = _n(m['tutar']).round();
-    // İçi DOLU renkli kart (açık/birleşik) + beyaz yazı. Boş -> sade açık kart.
-    final hsl = renkli ? HSLColor.fromColor(renk) : null;
-    final renk2 = hsl == null ? renk : hsl.withLightness((hsl.lightness - 0.1).clamp(0.0, 1.0)).toColor();
+    // İçi DOLU DÜZ renkli kart (normal ton, koyulaştırma yok) + beyaz yazı. Boş -> sade açık kart.
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        gradient: renkli ? LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [renk, renk2]) : null,
-        color: renkli ? null : t.card,
+        color: renkli ? renk : t.card,
         borderRadius: BorderRadius.circular(16),
         border: renkli ? null : Border.all(color: t.line, width: 1),
         boxShadow: [
           BoxShadow(
-            color: renkli ? renk.withValues(alpha: 0.38) : Colors.black.withValues(alpha: t.koyu ? 0.28 : 0.06),
-            blurRadius: 11, offset: const Offset(0, 4)),
+            color: renkli ? renk.withValues(alpha: 0.32) : Colors.black.withValues(alpha: t.koyu ? 0.28 : 0.06),
+            blurRadius: 10, offset: const Offset(0, 4)),
         ],
       ),
       child: Padding(
