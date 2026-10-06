@@ -408,7 +408,7 @@ class _PaketScreenState extends State<PaketScreen> {
       btns.add(_btn('Kabul Et', const Color(0xFF16A34A), () => _aksiyon(id, 'kabul')));
       btns.add(_btn('İptal', const Color(0xFFDC2626), () => _aksiyonOnay(id), dolu: false));
     } else if (asama == 'hazir') {
-      btns.add(_btn('Yola Çıkar', const Color(0xFFEA580C), () => _aksiyon(id, 'yola')));
+      btns.add(_btn('Yola Çıkar', const Color(0xFFEA580C), () => _yolaCikar(id)));
       btns.add(_btn('İptal', const Color(0xFFDC2626), () => _aksiyonOnay(id), dolu: false));
     } else if (asama == 'yolda') {
       // Kurye kendi uygulamasından teslim eder. Kuryesiz/gel-al/elden için kasa da teslim+tahsil edebilir.
@@ -464,10 +464,48 @@ class _PaketScreenState extends State<PaketScreen> {
     );
   }
 
-  Future<void> _aksiyon(int id, String aksiyon) async {
+  // Yola çıkarırken kurye ata (kurye uygulaması o siparişi görsün)
+  Future<void> _yolaCikar(int id) async {
+    final auth = context.read<AuthProvider>();
+    List kuryeler = [];
+    try {
+      final res = await Api.kuryeler(auth.token!);
+      kuryeler = (res['kuryeler'] as List?) ?? [];
+    } catch (_) {}
+    if (!mounted) return;
+    final secim = await showDialog<int>(
+      useRootNavigator: true,
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Kurye Ata'),
+        content: SizedBox(
+          width: 340,
+          child: kuryeler.isEmpty
+              ? const Text('Kayıtlı kurye yok. Kuryesiz yola çıkarabilirsiniz (teslimi kasa yapar).')
+              : Column(mainAxisSize: MainAxisSize.min, children: [
+                  for (final k in kuryeler)
+                    ListTile(
+                      leading: const Text('🛵', style: TextStyle(fontSize: 20)),
+                      title: Text(k['ad'].toString()),
+                      subtitle: Text('${k['durum'] ?? ''} · ${_n(k['aktif_teslimat']).toInt()} aktif teslimat'),
+                      onTap: () => Navigator.pop(ctx, _n(k['id']).toInt()),
+                    ),
+                ]),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, -1), child: const Text('Kuryesiz')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Vazgeç')),
+        ],
+      ),
+    );
+    if (secim == null) return; // vazgeçildi
+    _aksiyon(id, 'yola', kuryeId: secim > 0 ? secim : null);
+  }
+
+  Future<void> _aksiyon(int id, String aksiyon, {int? kuryeId}) async {
     final auth = context.read<AuthProvider>();
     try {
-      final res = await Api.paketDurum(auth.token!, id, aksiyon);
+      final res = await Api.paketDurum(auth.token!, id, aksiyon, kuryeId: kuryeId);
       if (!mounted) return;
       if (res['ok'] == 1) {
         const adlar = {'kabul': 'Sipariş kabul edildi', 'yola': 'Yola çıkarıldı', 'teslim': 'Teslim edildi ve kasaya işlendi', 'tahsil': 'Tahsil edildi, kasaya işlendi', 'yeniden': 'Yeniden gönderime alındı', 'iptal': 'Sipariş iptal edildi'};

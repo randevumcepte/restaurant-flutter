@@ -544,9 +544,10 @@ class Api {
 
   static Future<Map<String, dynamic>> paket(String token) => _get('/api/paket', token);
   static Future<Map<String, dynamic>> paketDetay(String token, int id) => _get('/api/paket/$id', token);
-  // Paket durum akisi: aksiyon = kabul | yola | teslim | iptal
-  static Future<Map<String, dynamic>> paketDurum(String token, int id, String aksiyon) =>
-      _post('/api/paket/durum', token, {'id': '$id', 'aksiyon': aksiyon});
+  // Paket durum akisi: aksiyon = kabul | yola | tahsil | teslim | yeniden | iptal
+  static Future<Map<String, dynamic>> paketDurum(String token, int id, String aksiyon, {int? kuryeId}) =>
+      _post('/api/paket/durum', token, {'id': '$id', 'aksiyon': aksiyon, if (kuryeId != null) 'kurye_id': '$kuryeId'});
+  static Future<Map<String, dynamic>> kuryeler(String token) => _get('/api/kuryeler', token);
   static Future<Map<String, dynamic>> raporlar(String token) => _get('/api/raporlar', token);
 }
 
