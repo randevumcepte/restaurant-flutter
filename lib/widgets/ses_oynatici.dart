@@ -9,7 +9,8 @@ class SesOynatici extends StatefulWidget {
   final String url;
   final String etiket;
   final int boyutKb;
-  const SesOynatici({super.key, required this.url, required this.etiket, this.boyutKb = 0});
+  final String tarih; // cagri tarih/saati (ses kaydina yazilir)
+  const SesOynatici({super.key, required this.url, required this.etiket, this.boyutKb = 0, this.tarih = ''});
   @override
   State<SesOynatici> createState() => _SesOynaticiState();
 }
@@ -39,6 +40,17 @@ class _SesOynaticiState extends State<SesOynatici> {
 
   String _fmt(Duration d) => '${d.inMinutes.toString().padLeft(2, '0')}:${(d.inSeconds % 60).toString().padLeft(2, '0')}';
 
+  // "2026-10-06 16:29:25" -> "06.10.2026 16:29"
+  String _tarihFmt(String s) {
+    try {
+      if (s.length >= 16) {
+        final g = s.substring(0, 10).split('-'); // [yyyy,mm,dd]
+        if (g.length == 3) return '${g[2]}.${g[1]}.${g[0]} ${s.substring(11, 16)}';
+      }
+    } catch (_) {}
+    return s;
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = context.watch<TemaProvider>();
@@ -52,6 +64,15 @@ class _SesOynaticiState extends State<SesOynatici> {
           Expanded(child: Text(widget.etiket, style: TextStyle(color: t.ink, fontSize: 13, fontWeight: FontWeight.w600))),
           if (widget.boyutKb > 0) Text('${widget.boyutKb} KB', style: TextStyle(color: t.sub, fontSize: 11)),
         ]),
+        if (widget.tarih.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Row(children: [
+              Icon(Icons.schedule, size: 12, color: t.sub),
+              const SizedBox(width: 4),
+              Text(_tarihFmt(widget.tarih), style: TextStyle(color: t.sub, fontSize: 11)),
+            ]),
+          ),
         const SizedBox(height: 6),
         Row(children: [
           IconButton(

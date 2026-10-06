@@ -696,16 +696,23 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
         ]),
         content: SizedBox(
           width: 460,
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            for (final s in sesler) ...[
-              SesOynatici(
-                url: '${Api.base}${(s as Map)['url']}',
-                etiket: s['tur'] == 'aktarma' ? '↪️ Yetkiliye aktarılan görüşme' : '🤖 AI görüşmesi',
-                boyutKb: ((s['boyut'] ?? 0) / 1024).round(),
+          child: SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text('${sesler.length} görüşme kaydı (bu rezervasyona bağlı tüm aramalar)', style: TextStyle(color: t.sub, fontSize: 12.5)),
               ),
-              const SizedBox(height: 10),
-            ],
-          ]),
+              for (int i = 0; i < sesler.length; i++) ...[
+                SesOynatici(
+                  url: '${Api.base}${(sesler[i] as Map)['url']}',
+                  etiket: (sesler[i] as Map)['tur'] == 'aktarma' ? '↪️ Aktarma görüşmesi' : '🤖 Görüşme ${i + 1}',
+                  boyutKb: (((sesler[i] as Map)['boyut'] ?? 0) / 1024).round(),
+                  tarih: '${(sesler[i] as Map)['tarih'] ?? ''}',
+                ),
+                const SizedBox(height: 10),
+              ],
+            ]),
+          ),
         ),
         actions: [TextButton(onPressed: () => Navigator.pop(c), child: const Text('Kapat'))],
       ),
