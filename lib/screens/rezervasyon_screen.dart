@@ -207,8 +207,15 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
           childAspectRatio: 1.55, mainAxisSpacing: 10, crossAxisSpacing: 10, children: statlar,
         ),
       SizedBox(height: genis ? 16 : 12),
-      // Saat Dagilimi — tam genislik (mockup'ta orta kolondaydi)
-      _pSaatKart(t, saat),
+      // === REZERVASYON LİSTESİ (üstte — saatin yerine alındı) ===
+      MBolumBaslik('Rezervasyonlar', renk: t.mor1, sayi: rezervasyonlar.length),
+      const SizedBox(height: 12),
+      if (rezervasyonlar.isEmpty)
+        Padding(padding: const EdgeInsets.symmetric(vertical: 34), child: Center(child: Text('Bu gün için rezervasyon yok.', style: TextStyle(color: t.sub))))
+      else if (genis)
+        _mTablo(t, rezervasyonlar)
+      else
+        ...rezervasyonlar.map((r) => Padding(padding: const EdgeInsets.only(bottom: 10), child: _kart(r as Map))),
       SizedBox(height: genis ? 16 : 12),
       // Durum + Kaynak (mockup'ta 3'lu satirdaydi -> 2'li)
       if (genis)
@@ -235,16 +242,9 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
         const SizedBox(height: 12),
         _pAylikKart(t, aylik, ayAdi),
       ],
-      SizedBox(height: genis ? 22 : 16),
-      // === REZERVASYON LİSTESİ (artık panelle aynı sayfada) ===
-      MBolumBaslik('Rezervasyonlar', renk: t.mor1, sayi: rezervasyonlar.length),
-      const SizedBox(height: 12),
-      if (rezervasyonlar.isEmpty)
-        Padding(padding: const EdgeInsets.symmetric(vertical: 34), child: Center(child: Text('Bu gün için rezervasyon yok.', style: TextStyle(color: t.sub))))
-      else if (genis)
-        _mTablo(t, rezervasyonlar)
-      else
-        ...rezervasyonlar.map((r) => Padding(padding: const EdgeInsets.only(bottom: 10), child: _kart(r as Map))),
+      SizedBox(height: genis ? 16 : 12),
+      // Saat Dağılımı (artık en altta — liste ile yer değişti)
+      _pSaatKart(t, saat),
       const SizedBox(height: 24),
     ]);
   }
