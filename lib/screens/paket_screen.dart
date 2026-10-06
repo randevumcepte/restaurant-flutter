@@ -249,6 +249,10 @@ class _PaketScreenState extends State<PaketScreen> {
                                                   style: const TextStyle(fontSize: 12, color: Color(0xFF4F46E5))),
                                             ),
                                         ]),
+                                        if (_asama(s) == 'tahsil_bekliyor' || _asama(s) == 'iade') ...[
+                                          const SizedBox(height: 10),
+                                          _mobilAsamaAksiyon(s),
+                                        ],
                                       ],
                                     ),
                                   ),
@@ -277,26 +281,28 @@ class _PaketScreenState extends State<PaketScreen> {
   // ===================== MASAUSTU: gruplu sipariş tablosu (SepetTakip tarzı) =====================
   static const int _fPlat = 20, _fMus = 24, _fAdr = 30, _fTut = 16, _fOde = 26, _fSure = 15, _fIsl = 52;
 
+  // Siparişin aşaması: backend 'asama' döndürür (tahsil_bekliyor | iade | teslimat_durumu)
+  String _asama(dynamic s) => (s['asama'] ?? s['teslimat_durumu'] ?? '').toString();
+
   Widget _masaustuTablo() {
     final gruplar = [
-      {'baslik': 'Yeni Sipariş', 'durumlar': const ['hazirlaniyor', '', 'yeni'], 'renk': const Color(0xFF2563EB)},
-      {'baslik': 'Yola Çıkarılması Gereken', 'durumlar': const ['hazir'], 'renk': const Color(0xFFEA580C)},
-      {'baslik': 'Teslim Edilmesi Gereken', 'durumlar': const ['yolda'], 'renk': const Color(0xFF16A34A)},
+      {'baslik': 'Yeni Sipariş', 'asamalar': const ['hazirlaniyor', '', 'yeni'], 'renk': const Color(0xFF2563EB)},
+      {'baslik': 'Yola Çıkarılması Gereken', 'asamalar': const ['hazir'], 'renk': const Color(0xFFEA580C)},
+      {'baslik': 'Yolda (Kurye Teslim Edecek)', 'asamalar': const ['yolda'], 'renk': const Color(0xFF16A34A)},
+      {'baslik': '💰 Tahsil Edilecek (Para Kuryede)', 'asamalar': const ['tahsil_bekliyor'], 'renk': const Color(0xFF059669)},
+      {'baslik': '⚠️ Teslim Edilemedi', 'asamalar': const ['iade'], 'renk': const Color(0xFFDC2626)},
     ];
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
       children: [
         for (final g in gruplar)
-          ..._grupBolum(g['baslik'] as String, g['renk'] as Color, (g['durumlar'] as List).cast<String>()),
+          ..._grupBolum(g['baslik'] as String, g['renk'] as Color, (g['asamalar'] as List).cast<String>()),
       ],
     );
   }
 
-  List<Widget> _grupBolum(String baslik, Color renk, List<String> durumlar) {
-    final list = siparisler.where((s) {
-      final d = (s['teslimat_durumu'] ?? '').toString();
-      return durumlar.contains(d);
-    }).toList();
+  List<Widget> _grupBolum(String baslik, Color renk, List<String> asamalar) {
+    final list = siparisler.where((s) => asamalar.contains(_asama(s))).toList();
     if (list.isEmpty) return [];
     return [
       Padding(
@@ -349,7 +355,8 @@ class _PaketScreenState extends State<PaketScreen> {
   Widget _dataSatiri(dynamic s, bool son) {
     final plat = (s['platform'] ?? '-').toString();
     final dk = _n(s['gecen_dk']).toInt();
-    final durum = (s['teslimat_durumu'] ?? '').toString();
+    final asama = _asama(s);
+    final iadeNot = (s['teslim_notu'] ?? '').toString();
     final id = _n(s['id']).toInt();
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -365,7 +372,11 @@ class _PaketScreenState extends State<PaketScreen> {
         ),
         Expanded(
           flex: _fAdr,
-          child: Text((s['teslimat_adres'] ?? '-').toString(), maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: _sub)),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+            Text((s['teslimat_adres'] ?? '-').toString(), maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: _sub)),
+            if (asama == 'iade' && iadeNot.isNotEmpty)
+              Text('Sebep: $iadeNot', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: Color(0xFFDC2626), fontWeight: FontWeight.w600)),
+          ]),
         ),
         Expanded(
           flex: _fTut,
@@ -385,26 +396,56 @@ class _PaketScreenState extends State<PaketScreen> {
         ),
         Expanded(
           flex: _fIsl,
-          child: Wrap(alignment: WrapAlignment.end, spacing: 6, runSpacing: 6, children: _aksiyonButonlari(id, durum)),
+          child: Wrap(alignment: WrapAlignment.end, spacing: 6, runSpacing: 6, children: _aksiyonButonlari(id, asama)),
         ),
       ]),
     );
   }
 
-  List<Widget> _aksiyonButonlari(int id, String durum) {
+  List<Widget> _aksiyonButonlari(int id, String asama) {
     final btns = <Widget>[];
-    if (durum == 'hazirlaniyor' || durum == '' || durum == 'yeni') {
+    if (asama == 'hazirlaniyor' || asama == '' || asama == 'yeni') {
       btns.add(_btn('Kabul Et', const Color(0xFF16A34A), () => _aksiyon(id, 'kabul')));
       btns.add(_btn('İptal', const Color(0xFFDC2626), () => _aksiyonOnay(id), dolu: false));
-    } else if (durum == 'hazir') {
+    } else if (asama == 'hazir') {
       btns.add(_btn('Yola Çıkar', const Color(0xFFEA580C), () => _aksiyon(id, 'yola')));
       btns.add(_btn('İptal', const Color(0xFFDC2626), () => _aksiyonOnay(id), dolu: false));
-    } else if (durum == 'yolda') {
-      btns.add(_btn('Teslim Et', const Color(0xFF16A34A), () => _aksiyon(id, 'teslim')));
+    } else if (asama == 'yolda') {
+      // Kurye kendi uygulamasından teslim eder. Kuryesiz/gel-al/elden için kasa da teslim+tahsil edebilir.
+      btns.add(_btn('Teslim + Tahsil', const Color(0xFF16A34A), () => _aksiyon(id, 'teslim')));
+    } else if (asama == 'tahsil_bekliyor') {
+      btns.add(_btn('💰 Tahsil Et', const Color(0xFF059669), () => _aksiyon(id, 'tahsil')));
+    } else if (asama == 'iade') {
+      btns.add(_btn('Yeniden Gönder', const Color(0xFFEA580C), () => _aksiyon(id, 'yeniden')));
+      btns.add(_btn('İptal', const Color(0xFFDC2626), () => _aksiyonOnay(id), dolu: false));
     }
     btns.add(_btn('Detay', const Color(0xFF64748B), () => _detayAc(id), dolu: false));
     btns.add(_btn('Yazdır', const Color(0xFF64748B), () => _yazdir(id), dolu: false));
     return btns;
+  }
+
+  // Mobil kart: aşamaya göre bilgi + aksiyon (Tahsil Et / Yeniden-İptal)
+  Widget _mobilAsamaAksiyon(dynamic s) {
+    final asama = _asama(s);
+    final id = _n(s['id']).toInt();
+    if (asama == 'tahsil_bekliyor') {
+      return Row(children: [
+        const Icon(Icons.check_circle, size: 15, color: Color(0xFF059669)),
+        const SizedBox(width: 5),
+        Expanded(child: Text('Teslim edildi · para kuryede', style: TextStyle(fontSize: 12, color: _sub, fontWeight: FontWeight.w600))),
+        _btn('💰 Tahsil Et', const Color(0xFF059669), () => _aksiyon(id, 'tahsil')),
+      ]);
+    }
+    final not = (s['teslim_notu'] ?? '').toString();
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text('⚠️ Teslim edilemedi${not.isNotEmpty ? ': $not' : ''}', style: const TextStyle(fontSize: 12, color: Color(0xFFDC2626), fontWeight: FontWeight.w600)),
+      const SizedBox(height: 6),
+      Row(children: [
+        _btn('Yeniden Gönder', const Color(0xFFEA580C), () => _aksiyon(id, 'yeniden')),
+        const SizedBox(width: 8),
+        _btn('İptal', const Color(0xFFDC2626), () => _aksiyonOnay(id), dolu: false),
+      ]),
+    ]);
   }
 
   Widget _btn(String label, Color renk, VoidCallback onTap, {bool dolu = true}) {
@@ -429,7 +470,7 @@ class _PaketScreenState extends State<PaketScreen> {
       final res = await Api.paketDurum(auth.token!, id, aksiyon);
       if (!mounted) return;
       if (res['ok'] == 1) {
-        const adlar = {'kabul': 'Sipariş kabul edildi', 'yola': 'Yola çıkarıldı', 'teslim': 'Teslim edildi', 'iptal': 'Sipariş iptal edildi'};
+        const adlar = {'kabul': 'Sipariş kabul edildi', 'yola': 'Yola çıkarıldı', 'teslim': 'Teslim edildi ve kasaya işlendi', 'tahsil': 'Tahsil edildi, kasaya işlendi', 'yeniden': 'Yeniden gönderime alındı', 'iptal': 'Sipariş iptal edildi'};
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(adlar[aksiyon] ?? 'Güncellendi'),
           backgroundColor: aksiyon == 'iptal' ? const Color(0xFFDC2626) : const Color(0xFF16A34A),

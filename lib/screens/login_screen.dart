@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import 'kurye_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -82,6 +83,15 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 16),
               const Text('Demo PIN: 1001 (Sahip) · 1002 (Müdür)',
                   style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+              const SizedBox(height: 18),
+              const Divider(height: 1),
+              const SizedBox(height: 10),
+              TextButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const KuryeScreen())),
+                icon: const Text('🛵', style: TextStyle(fontSize: 18)),
+                label: const Text('Kurye Girişi', style: TextStyle(color: Color(0xFF4F46E5), fontWeight: FontWeight.bold)),
+              ),
             ],
           ),
         ),
