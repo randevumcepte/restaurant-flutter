@@ -418,6 +418,9 @@ class _YanMenuState extends State<_YanMenu> {
                       if (patron) _link(t, Icons.devices_other_outlined, 'Bağlı Cihazlar', () => git(const BagliCihazlarScreen()), renk: const Color(0xFF0EA5E9)),
                       if (patron) _link(t, Icons.print_outlined, 'Yazıcı Ayarları', () => git(const YaziciAyarlariScreen()), renk: const Color(0xFF14B8A6)),
                       if (patron) _link(t, Icons.rule_folder_outlined, 'İptal / İkram Sebepleri', () => git(const SebepYonetimiScreen())),
+                      if (patron) _link(t, Icons.chat_outlined, 'WhatsApp Yönetimi', () async {
+                        try { await launchUrl(Uri.parse('${Api.base}/wa-yonetim'), mode: LaunchMode.externalApplication); } catch (_) {}
+                      }, renk: const Color(0xFF25D366)),
                       if (patron) ...[
                         const SizedBox(height: 10),
                         Divider(height: 1, color: t.line, indent: 14, endIndent: 14),
