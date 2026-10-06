@@ -42,6 +42,9 @@ import 'salon_sema_screen.dart';
 import '../services/adim_servisi.dart';
 import '../services/mesai_servisi.dart';
 import 'mesai_kapisi_screen.dart';
+import 'mesai_qr_screen.dart';
+import 'isletme_konum_screen.dart';
+import 'puantaj_screen.dart';
 import '../services/cihaz_servisi.dart';
 
 /// Uygulama kabugu — iki yuz:
@@ -415,6 +418,15 @@ class _YanMenuState extends State<_YanMenu> {
                       if (patron) _link(t, Icons.devices_other_outlined, 'Bağlı Cihazlar', () => git(const BagliCihazlarScreen()), renk: const Color(0xFF0EA5E9)),
                       if (patron) _link(t, Icons.print_outlined, 'Yazıcı Ayarları', () => git(const YaziciAyarlariScreen()), renk: const Color(0xFF14B8A6)),
                       if (patron) _link(t, Icons.rule_folder_outlined, 'İptal / İkram Sebepleri', () => git(const SebepYonetimiScreen())),
+                      if (patron) ...[
+                        const SizedBox(height: 10),
+                        Divider(height: 1, color: t.line, indent: 14, endIndent: 14),
+                        const SizedBox(height: 8),
+                        _baslik(t, 'MESAİ', acik),
+                        _link(t, Icons.qr_code_2, 'Kasa Mesai QR', () => git(const MesaiQrScreen()), renk: const Color(0xFF14B8A6)),
+                        _link(t, Icons.my_location, 'İşletme Konumu (Mesai)', () => git(const IsletmeKonumScreen()), renk: const Color(0xFF14B8A6)),
+                        _link(t, Icons.how_to_reg_outlined, 'Puantaj (Mesai)', () => git(const PuantajScreen()), renk: const Color(0xFF10B981)),
+                      ],
                       if (patron) ...[
                         const SizedBox(height: 10),
                         Divider(height: 1, color: t.line, indent: 14, endIndent: 14),
