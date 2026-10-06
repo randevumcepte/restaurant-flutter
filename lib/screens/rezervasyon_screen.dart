@@ -520,6 +520,59 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
         'bekliyor': t.amber, 'onaylandi': t.mavi, 'geldi': t.yesil, 'iptal': const Color(0xFF64748B), 'gelmedi': t.kirmizi,
       }[d] ?? t.mor1;
 
+  // Not popup'ı — nota tıklayınca tam metni göster (uzun not kesilmesin).
+  void _notPopup(TemaProvider t, Map rm) {
+    final not = (rm['not']?.toString() ?? '');
+    if (not.isEmpty) return;
+    final sesVar = (rm['sesler'] as List?)?.isNotEmpty ?? false;
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: t.card,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 500),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 14, 18),
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Container(width: 34, height: 34, decoration: BoxDecoration(color: t.amber.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(10)), child: Icon(Icons.sticky_note_2_outlined, size: 19, color: t.amber)),
+                const SizedBox(width: 10),
+                Expanded(child: Text('${rm['ad']} · Not', style: TextStyle(color: t.ink, fontSize: 16, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis)),
+                IconButton(onPressed: () => Navigator.pop(ctx), icon: Icon(Icons.close, color: t.sub, size: 20)),
+              ]),
+              const SizedBox(height: 10),
+              Flexible(child: SingleChildScrollView(
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(color: t.amber.withValues(alpha: t.koyu ? 0.12 : 0.09), borderRadius: BorderRadius.circular(12), border: Border.all(color: t.amber.withValues(alpha: 0.3))),
+                  child: Text(not, style: TextStyle(color: t.ink, fontSize: 14.5, height: 1.5)),
+                ),
+              )),
+              if (sesVar) ...[
+                const SizedBox(height: 14),
+                Align(alignment: Alignment.centerLeft, child: InkWell(
+                  onTap: () { Navigator.pop(ctx); _cagriDinle(rm); },
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
+                    decoration: BoxDecoration(color: const Color(0xFF7C3AED).withValues(alpha: 0.13), borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFF7C3AED).withValues(alpha: 0.45))),
+                    child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(Icons.play_circle_fill, size: 17, color: Color(0xFF7C3AED)),
+                      SizedBox(width: 6),
+                      Text('Çağrıyı dinle', style: TextStyle(color: Color(0xFF7C3AED), fontSize: 13, fontWeight: FontWeight.w700)),
+                    ]),
+                  ),
+                )),
+              ],
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _mTablo(TemaProvider t, List rezervasyonlar) {
     return MTablo(
       sutunlar: const [
@@ -577,22 +630,27 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
                     )),
                 ]),
               ),
-              // NOT (belirgin renkli kutu, ilk bakışta okunur)
+              // NOT (belirgin renkli kutu, tıklayınca tam metin popup)
               not.isEmpty
                   ? Text('—', style: TextStyle(color: t.sub2, fontSize: 13))
-                  : Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: (pasif ? t.sub2 : t.amber).withValues(alpha: t.koyu ? 0.16 : 0.12),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: (pasif ? t.sub2 : t.amber).withValues(alpha: 0.35)),
+                  : GestureDetector(
+                      onTap: () => _notPopup(t, rm),
+                      child: Container(
+                        padding: const EdgeInsets.fromLTRB(10, 8, 8, 8),
+                        decoration: BoxDecoration(
+                          color: (pasif ? t.sub2 : t.amber).withValues(alpha: t.koyu ? 0.16 : 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: (pasif ? t.sub2 : t.amber).withValues(alpha: 0.35)),
+                        ),
+                        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Icon(Icons.sticky_note_2_outlined, size: 15, color: pasif ? t.sub : t.amber),
+                          const SizedBox(width: 7),
+                          Expanded(child: Text(not, maxLines: 2, overflow: TextOverflow.ellipsis,
+                              style: TextStyle(color: pasif ? t.sub : t.ink, fontSize: 13, fontWeight: FontWeight.w500, height: 1.3))),
+                          const SizedBox(width: 4),
+                          Icon(Icons.open_in_full, size: 13, color: (pasif ? t.sub : t.amber).withValues(alpha: 0.8)),
+                        ]),
                       ),
-                      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Icon(Icons.sticky_note_2_outlined, size: 15, color: pasif ? t.sub : t.amber),
-                        const SizedBox(width: 7),
-                        Expanded(child: Text(not, maxLines: 3, overflow: TextOverflow.ellipsis,
-                            style: TextStyle(color: pasif ? t.sub : t.ink, fontSize: 13, fontWeight: FontWeight.w500, height: 1.3))),
-                      ]),
                     ),
               // KİŞİ
               Align(alignment: Alignment.center, child: Text('${_n(rm['kisi']).toInt()}', style: TextStyle(color: t.ink, fontSize: 14, fontWeight: FontWeight.w700))),
