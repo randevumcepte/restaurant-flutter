@@ -19,7 +19,6 @@ class RezervasyonScreen extends StatefulWidget {
 class _RezervasyonScreenState extends State<RezervasyonScreen> {
   Map<String, dynamic>? data;
   Map<String, dynamic>? _panel; // analitik gosterge paneli verisi
-  String _gorunum = 'panel';    // 'panel' | 'liste'
   bool loading = true;
   String tarih = '';
 
@@ -63,22 +62,6 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
     }
   }
 
-  // Tarihi gun bazinda kaydir (panel ok navigasyonu)
-  void _kaydir(int d) {
-    final base = DateTime.tryParse(tarih) ?? DateTime.now();
-    final n = base.add(Duration(days: d));
-    final iso = '${n.year}-${n.month.toString().padLeft(2, '0')}-${n.day.toString().padLeft(2, '0')}';
-    setState(() => tarih = iso);
-    _yukle(t: iso);
-  }
-
-  static const _ayAd = ['', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
-  String _tarihUzun(String iso) {
-    final d = DateTime.tryParse(iso);
-    if (d == null) return iso;
-    return '${d.day} ${_ayAd[d.month]} ${d.year}, ${_gunAd[d.weekday - 1]}';
-  }
-
   String _yzStr(dynamic v) {
     final n = _n(v);
     final s = n % 1 == 0 ? n.toInt().toString() : n.toStringAsFixed(1);
@@ -117,9 +100,6 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
   Widget build(BuildContext context) {
     if (genisMi(context)) return _masaustu(context);
     final t = context.watch<TemaProvider>();
-    final rezervasyonlar = (data?['rezervasyonlar'] as List?) ?? [];
-    final ozet = (data?['ozet'] as Map?) ?? {};
-    final gunler = (data?['gunler'] as List?) ?? [];
     return Scaffold(
       backgroundColor: _bg,
       appBar: AppBar(
@@ -137,73 +117,21 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
       ),
       body: loading && data == null
           ? const Center(child: CircularProgressIndicator(color: _mor))
-          : Column(children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
-                child: Align(alignment: Alignment.centerLeft, child: _segment(t)),
-              ),
-              Expanded(
-                child: _gorunum == 'panel'
-                    ? RefreshIndicator(
-                        onRefresh: () => _yukle(), color: _mor, backgroundColor: _card,
-                        child: _panelGovde(t, genis: false),
-                      )
-                    : Column(children: [
-                        // Gün seçici (7 gün)
-                        SizedBox(
-                          height: 74,
-                          child: ListView(
-                            scrollDirection: Axis.horizontal,
-                            padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
-                            children: [for (final g in gunler) _gunPill(g as Map)],
-                          ),
-                        ),
-                        // Özet
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(12, 2, 12, 8),
-                          child: Row(children: [
-                            _ozetChip('Bekleyen', _n(ozet['bekleyen']).toInt(), _amber),
-                            const SizedBox(width: 8),
-                            _ozetChip('Onaylı', _n(ozet['onayli']).toInt(), _mavi),
-                            const SizedBox(width: 8),
-                            _ozetChip('Geldi', _n(ozet['geldi']).toInt(), _yesil),
-                            const SizedBox(width: 8),
-                            _ozetChip('Kişi', _n(ozet['kisi']).toInt(), _mor),
-                          ]),
-                        ),
-                        Expanded(
-                          child: rezervasyonlar.isEmpty
-                              ? _bos()
-                              : RefreshIndicator(
-                                  onRefresh: () => _yukle(),
-                                  color: _mor, backgroundColor: _card,
-                                  child: ListView.separated(
-                                    padding: const EdgeInsets.fromLTRB(12, 4, 12, 90),
-                                    itemCount: rezervasyonlar.length,
-                                    separatorBuilder: (_, _) => const SizedBox(height: 10),
-                                    itemBuilder: (_, i) => _kart(rezervasyonlar[i] as Map),
-                                  ),
-                                ),
-                        ),
-                      ]),
-              ),
-            ]),
+          : RefreshIndicator(
+              onRefresh: () => _yukle(), color: _mor, backgroundColor: _card,
+              child: _panelGovde(t, genis: false),
+            ),
     );
   }
 
   // ================= MASAÜSTÜ (gece/gündüz) =================
   Widget _masaustu(BuildContext context) {
     final t = context.watch<TemaProvider>();
-    final rezervasyonlar = (data?['rezervasyonlar'] as List?) ?? [];
-    final ozet = (data?['ozet'] as Map?) ?? {};
-    final gunler = (data?['gunler'] as List?) ?? [];
     return MasaustuSayfa(
       baslik: 'Rezervasyonlar',
       ikon: Icons.event_available_outlined,
       altBaslik: tarih.isEmpty ? null : tarih,
       araclar: [
-        _segment(t),
-        const SizedBox(width: 12),
         IconButton(
           onPressed: () => _yukle(),
           icon: Icon(Icons.refresh, color: t.sub2, size: 22),
@@ -214,55 +142,15 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
       ],
       govde: (loading && data == null)
           ? Center(child: CircularProgressIndicator(color: t.mor1))
-          : (_gorunum == 'panel'
-              ? _panelGovde(t, genis: true)
-              : ListView(padding: const EdgeInsets.all(24), children: [
-                  _mGunSecici(t, gunler),
-                  const SizedBox(height: 18),
-                  _mOzet(t, ozet),
-                  const SizedBox(height: 22),
-                  MBolumBaslik('Rezervasyonlar', renk: t.mor1, sayi: rezervasyonlar.length),
-                  if (rezervasyonlar.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 40),
-                      child: Center(child: Text('Bu gün için rezervasyon yok.', style: TextStyle(color: t.sub))),
-                    )
-                  else
-                    _mTablo(t, rezervasyonlar),
-                ])),
+          : _panelGovde(t, genis: true),
     );
   }
 
   // ================= ANALİTİK PANEL (gösterge paneli) =================
-  Widget _segment(TemaProvider t) {
-    Widget seg(String key, String label, IconData ik) {
-      final aktif = _gorunum == key;
-      return GestureDetector(
-        onTap: () => setState(() => _gorunum = key),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(color: aktif ? t.mor1 : Colors.transparent, borderRadius: BorderRadius.circular(9)),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(ik, size: 15, color: aktif ? Colors.white : t.sub),
-            const SizedBox(width: 5),
-            Text(label, style: TextStyle(color: aktif ? Colors.white : t.sub, fontSize: 12.5, fontWeight: FontWeight.w600)),
-          ]),
-        ),
-      );
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(color: t.card, borderRadius: BorderRadius.circular(12), border: Border.all(color: t.line)),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        seg('panel', 'Panel', Icons.donut_large),
-        seg('liste', 'Liste', Icons.list_alt),
-      ]),
-    );
-  }
 
   Widget _panelGovde(TemaProvider t, {required bool genis}) {
+    final rezervasyonlar = (data?['rezervasyonlar'] as List?) ?? [];
+    final gunler = (data?['gunler'] as List?) ?? [];
     final pg = (_panel?['gun'] as Map?) ?? {};
     final durum = (_panel?['durum_dagilim'] as List?) ?? [];
     final saat = (_panel?['saat_dagilim'] as List?) ?? [];
@@ -294,15 +182,12 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
     ];
 
     return ListView(padding: EdgeInsets.all(genis ? 24 : 12), children: [
-      // Tarih navigasyonu
-      Row(children: [
-        _okBtn(t, Icons.chevron_left, () => _kaydir(-1)),
-        const SizedBox(width: 4),
-        Text(_tarihUzun(tarih), style: TextStyle(color: t.ink, fontSize: genis ? 15 : 13.5, fontWeight: FontWeight.bold)),
-        const SizedBox(width: 4),
-        _okBtn(t, Icons.chevron_right, () => _kaydir(1)),
-      ]),
-      SizedBox(height: genis ? 16 : 12),
+      // Gün seçici (7 gün pill)
+      if (genis)
+        _mGunSecici(t, gunler)
+      else
+        SizedBox(height: 74, child: ListView(scrollDirection: Axis.horizontal, padding: EdgeInsets.zero, children: [for (final g in gunler) _gunPill(g as Map)])),
+      SizedBox(height: genis ? 18 : 12),
       // 6 stat kart (mockup'ta 4; ekstra 2 kart + masaustunde 3+3 duzen)
       if (genis) ...[
         IntrinsicHeight(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -350,18 +235,19 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
         const SizedBox(height: 12),
         _pAylikKart(t, aylik, ayAdi),
       ],
+      SizedBox(height: genis ? 22 : 16),
+      // === REZERVASYON LİSTESİ (artık panelle aynı sayfada) ===
+      MBolumBaslik('Rezervasyonlar', renk: t.mor1, sayi: rezervasyonlar.length),
+      const SizedBox(height: 12),
+      if (rezervasyonlar.isEmpty)
+        Padding(padding: const EdgeInsets.symmetric(vertical: 34), child: Center(child: Text('Bu gün için rezervasyon yok.', style: TextStyle(color: t.sub))))
+      else if (genis)
+        _mTablo(t, rezervasyonlar)
+      else
+        ...rezervasyonlar.map((r) => Padding(padding: const EdgeInsets.only(bottom: 10), child: _kart(r as Map))),
       const SizedBox(height: 24),
     ]);
   }
-
-  Widget _okBtn(TemaProvider t, IconData ik, VoidCallback onTap) => GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(color: t.card, borderRadius: BorderRadius.circular(9), border: Border.all(color: t.line)),
-          child: Icon(ik, size: 18, color: t.sub2),
-        ),
-      );
 
   Widget _pKartKutu(TemaProvider t, IconData ik, String baslik, Color renk, Widget govde, {Widget? sag}) {
     return Container(
@@ -611,27 +497,6 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
     );
   }
 
-  Widget _mOzet(TemaProvider t, Map ozet) {
-    Widget kart(String etiket, int deger, Color renk) => Expanded(
-          child: MKart(
-            child: Column(children: [
-              Text('$deger', style: TextStyle(color: renk, fontSize: 26, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 2),
-              Text(etiket, style: TextStyle(color: t.sub, fontSize: 12.5)),
-            ]),
-          ),
-        );
-    return Row(children: [
-      kart('Bekleyen', _n(ozet['bekleyen']).toInt(), t.amber),
-      const SizedBox(width: 14),
-      kart('Onaylı', _n(ozet['onayli']).toInt(), t.mavi),
-      const SizedBox(width: 14),
-      kart('Geldi', _n(ozet['geldi']).toInt(), t.yesil),
-      const SizedBox(width: 14),
-      kart('Kişi', _n(ozet['kisi']).toInt(), t.mor1),
-    ]);
-  }
-
   Color _renkT(TemaProvider t, String d) => {
         'bekliyor': t.amber, 'onaylandi': t.mavi, 'geldi': t.yesil, 'iptal': const Color(0xFF64748B), 'gelmedi': t.kirmizi,
       }[d] ?? t.mor1;
@@ -789,17 +654,6 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
       ),
     );
   }
-
-  Widget _ozetChip(String etiket, int deger, Color renk) => Expanded(
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(12)),
-          child: Column(children: [
-            Text('$deger', style: TextStyle(color: renk, fontSize: 20, fontWeight: FontWeight.bold)),
-            Text(etiket, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
-          ]),
-        ),
-      );
 
   Widget _kart(Map r) {
     final durum = r['durum'].toString();
@@ -1039,13 +893,6 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
       }),
     );
   }
-
-  Widget _bos() => ListView(children: const [
-        SizedBox(height: 120),
-        Icon(Icons.event_available, size: 56, color: Color(0xFF334155)),
-        SizedBox(height: 12),
-        Center(child: Text('Bu gün için rezervasyon yok.', style: TextStyle(color: Color(0xFF64748B)))),
-      ]);
 
   // ---- Yeni rezervasyon (müşteri CRM + masa + özel istek + ön sipariş) ----
   Future<void> _ekleDialog() async {
