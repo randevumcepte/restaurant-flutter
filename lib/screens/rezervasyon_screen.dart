@@ -211,7 +211,7 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
       MBolumBaslik('Rezervasyonlar', renk: t.mor1, sayi: rezervasyonlar.length),
       const SizedBox(height: 12),
       if (rezervasyonlar.isEmpty)
-        Padding(padding: const EdgeInsets.symmetric(vertical: 34), child: Center(child: Text('Bu gün için rezervasyon yok.', style: TextStyle(color: t.sub))))
+        _bosListeKart(t)
       else if (genis)
         _mTablo(t, rezervasyonlar)
       else
@@ -248,6 +248,25 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
       const SizedBox(height: 24),
     ]);
   }
+
+  // Rezervasyon listesi BOŞKEN gösterilecek sabit kart kutusu (dolu gibi dursun, içi boş).
+  Widget _bosListeKart(TemaProvider t) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 20),
+        decoration: BoxDecoration(color: t.card, borderRadius: BorderRadius.circular(16), boxShadow: t.golge),
+        child: Column(children: [
+          Container(
+            width: 62, height: 62,
+            decoration: BoxDecoration(color: t.mor1.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(18)),
+            child: Icon(Icons.event_available_outlined, size: 30, color: t.mor1),
+          ),
+          const SizedBox(height: 14),
+          Text('Bu gün için rezervasyon yok', style: TextStyle(color: t.ink, fontSize: 15, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 6),
+          Text('Yeni rezervasyon eklemek için “Yeni Rezervasyon” butonunu kullanın.',
+              textAlign: TextAlign.center, style: TextStyle(color: t.sub, fontSize: 12.5, height: 1.35)),
+        ]),
+      );
 
   Widget _pKartKutu(TemaProvider t, IconData ik, String baslik, Color renk, Widget govde, {Widget? sag}) {
     return Container(
