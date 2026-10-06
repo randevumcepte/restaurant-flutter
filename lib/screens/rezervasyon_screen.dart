@@ -523,12 +523,12 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
   Widget _mTablo(TemaProvider t, List rezervasyonlar) {
     return MTablo(
       sutunlar: const [
-        MSutun('Saat', flex: 8),
-        MSutun('Müşteri', flex: 26),
-        MSutun('Kişi', flex: 8, hiza: TextAlign.center),
-        MSutun('Masa', flex: 12),
-        MSutun('Durum', flex: 14, hiza: TextAlign.center),
-        MSutun('İşlem', flex: 22, hiza: TextAlign.right),
+        MSutun('Saat', flex: 7),
+        MSutun('Müşteri', flex: 20),
+        MSutun('Not', flex: 28),
+        MSutun('Kişi', flex: 5, hiza: TextAlign.center),
+        MSutun('Durum', flex: 12, hiza: TextAlign.center),
+        MSutun('İşlem', flex: 20, hiza: TextAlign.right),
       ],
       satirlar: [
         for (final r in rezervasyonlar)
@@ -540,49 +540,65 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
             final not = (rm['not']?.toString() ?? '');
             final tel = (rm['telefon']?.toString() ?? '');
             final masa = (rm['masa_ad']?.toString() ?? '');
+            final sesVar = (rm['sesler'] as List?)?.isNotEmpty ?? false;
             return <Widget>[
+              // SAAT
               Text(rm['saat'].toString(), style: TextStyle(color: renk, fontSize: 15, fontWeight: FontWeight.bold)),
+              // MÜŞTERİ (+ tel + masa çipi + Çağrıyı dinle butonu)
               GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: () => _detayAc(_n(rm['id']).toInt()),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
                   Row(mainAxisSize: MainAxisSize.min, children: [
-                    Flexible(
-                      child: Text(
-                        rm['ad'].toString(),
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: pasif ? t.sub : t.ink, fontSize: 14, fontWeight: FontWeight.bold,
-                          decoration: pasif ? TextDecoration.lineThrough : null,
-                        ),
-                      ),
-                    ),
+                    Flexible(child: Text(rm['ad'].toString(), overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: pasif ? t.sub : t.ink, fontSize: 14, fontWeight: FontWeight.bold, decoration: pasif ? TextDecoration.lineThrough : null))),
                     const SizedBox(width: 6),
                     Text(_kaynakIkon(rm['kaynak'].toString()), style: const TextStyle(fontSize: 12)),
-                    const SizedBox(width: 6),
-                    const Icon(Icons.info_outline, size: 13, color: Color(0xFF64748B)),
                   ]),
-                  if (tel.isNotEmpty)
-                    Text('📞 $tel', style: TextStyle(color: t.sub, fontSize: 12)),
-                  if (not.isNotEmpty)
-                    Text('📝 $not', style: TextStyle(color: t.sub2, fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  if ((rm['sesler'] as List?)?.isNotEmpty ?? false)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 3),
-                      child: InkWell(
-                        onTap: () => _cagriDinle(rm),
-                        child: Row(mainAxisSize: MainAxisSize.min, children: const [
-                          Icon(Icons.play_circle_fill, size: 15, color: Color(0xFF7C3AED)),
-                          SizedBox(width: 4),
-                          Text('Çağrıyı dinle', style: TextStyle(color: Color(0xFF7C3AED), fontSize: 12, fontWeight: FontWeight.w600)),
+                  if (tel.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 2), child: Text('📞 $tel', style: TextStyle(color: t.sub, fontSize: 12))),
+                  if (masa.isNotEmpty)
+                    Padding(padding: const EdgeInsets.only(top: 4), child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(color: t.mor1.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
+                      child: Text('🪑 Masa $masa', style: TextStyle(color: t.mor1, fontSize: 11, fontWeight: FontWeight.w600)))),
+                  if (sesVar)
+                    Padding(padding: const EdgeInsets.only(top: 6), child: InkWell(
+                      onTap: () => _cagriDinle(rm),
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+                        decoration: BoxDecoration(color: const Color(0xFF7C3AED).withValues(alpha: 0.13), borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFF7C3AED).withValues(alpha: 0.45))),
+                        child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                          Icon(Icons.play_circle_fill, size: 16, color: Color(0xFF7C3AED)),
+                          SizedBox(width: 5),
+                          Text('Çağrıyı dinle', style: TextStyle(color: Color(0xFF7C3AED), fontSize: 12, fontWeight: FontWeight.w700)),
                         ]),
                       ),
-                    ),
+                    )),
                 ]),
               ),
-              Text('${_n(rm['kisi']).toInt()}', style: TextStyle(color: t.ink, fontSize: 14, fontWeight: FontWeight.w600)),
-              Text(masa.isEmpty ? '—' : 'Masa $masa', style: TextStyle(color: masa.isEmpty ? t.sub : t.ink, fontSize: 13)),
+              // NOT (belirgin renkli kutu, ilk bakışta okunur)
+              not.isEmpty
+                  ? Text('—', style: TextStyle(color: t.sub2, fontSize: 13))
+                  : Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: (pasif ? t.sub2 : t.amber).withValues(alpha: t.koyu ? 0.16 : 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: (pasif ? t.sub2 : t.amber).withValues(alpha: 0.35)),
+                      ),
+                      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Icon(Icons.sticky_note_2_outlined, size: 15, color: pasif ? t.sub : t.amber),
+                        const SizedBox(width: 7),
+                        Expanded(child: Text(not, maxLines: 3, overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: pasif ? t.sub : t.ink, fontSize: 13, fontWeight: FontWeight.w500, height: 1.3))),
+                      ]),
+                    ),
+              // KİŞİ
+              Align(alignment: Alignment.center, child: Text('${_n(rm['kisi']).toInt()}', style: TextStyle(color: t.ink, fontSize: 14, fontWeight: FontWeight.w700))),
+              // DURUM
               Align(alignment: Alignment.center, child: MRozet(_durumAd(durum), renk)),
+              // İŞLEM
               _mAksiyonlar(t, rm, durum),
             ];
           }(),
