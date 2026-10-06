@@ -233,7 +233,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               if (patron) oge(Icons.history, 'Hareketler (Log)', () => git(const HareketlerScreen()), renk: const Color(0xFF7C3AED)),
               if (patron) oge(Icons.print_outlined, 'Yazıcı Ayarları', () => git(const YaziciAyarlariScreen()), renk: const Color(0xFF14B8A6)),
               if (patron) oge(Icons.rule_folder_outlined, 'İptal / İkram Sebepleri', () => git(const SebepYonetimiScreen())),
-              if (patron) oge(Icons.chat_outlined, 'WhatsApp Yönetimi', () { Navigator.of(context).pop(); _webAc('/wa-yonetim'); }, renk: const Color(0xFF25D366)),
+              if (patron) oge(Icons.chat_outlined, 'WhatsApp Yönetimi', () { Navigator.of(context).pop(); _webAc('/whatsapp'); }, renk: const Color(0xFF25D366)),
               oge(Icons.auto_awesome, 'Patron Asistan', () => git(const AsistanScreen()), renk: const Color(0xFFC4B5FD)),
             ]),
           ),
