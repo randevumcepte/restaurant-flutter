@@ -189,22 +189,18 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
         SizedBox(height: 74, child: ListView(scrollDirection: Axis.horizontal, padding: EdgeInsets.zero, children: [for (final g in gunler) _gunPill(g as Map)])),
       SizedBox(height: genis ? 18 : 12),
       // 6 stat kart (mockup'ta 4; ekstra 2 kart + masaustunde 3+3 duzen)
-      if (genis) ...[
+      if (genis)
+        // Hepsi TEK SIRADA (6 kart yan yana)
         IntrinsicHeight(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Expanded(child: statlar[0]), const SizedBox(width: 14),
-          Expanded(child: statlar[1]), const SizedBox(width: 14),
-          Expanded(child: statlar[2]),
-        ])),
-        const SizedBox(height: 14),
-        IntrinsicHeight(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Expanded(child: statlar[3]), const SizedBox(width: 14),
-          Expanded(child: statlar[4]), const SizedBox(width: 14),
-          Expanded(child: statlar[5]),
-        ])),
-      ] else
+          for (int i = 0; i < statlar.length; i++) ...[
+            if (i > 0) const SizedBox(width: 10),
+            Expanded(child: statlar[i]),
+          ],
+        ]))
+      else
         GridView.count(
-          crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
-          childAspectRatio: 1.55, mainAxisSpacing: 10, crossAxisSpacing: 10, children: statlar,
+          crossAxisCount: 3, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+          childAspectRatio: 1.05, mainAxisSpacing: 9, crossAxisSpacing: 9, children: statlar,
         ),
       SizedBox(height: genis ? 16 : 12),
       // === REZERVASYON LİSTESİ (üstte — saatin yerine alındı) ===
@@ -287,17 +283,21 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
 
   Widget _pStat(TemaProvider t, IconData ik, String etiket, String deger, Color renk) {
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: t.card, borderRadius: BorderRadius.circular(16), boxShadow: t.golge),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: renk.withValues(alpha: t.koyu ? 0.18 : 0.11),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: renk.withValues(alpha: 0.28)),
+      ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
         Row(children: [
-          Container(width: 30, height: 30, decoration: BoxDecoration(color: renk.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(9)), child: Icon(ik, size: 17, color: renk)),
-          const SizedBox(width: 8),
-          Expanded(child: Text(etiket, style: TextStyle(color: t.sub, fontSize: 12.5, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
+          Container(width: 28, height: 28, decoration: BoxDecoration(color: renk.withValues(alpha: 0.22), borderRadius: BorderRadius.circular(8)), child: Icon(ik, size: 16, color: renk)),
+          const SizedBox(width: 7),
+          Expanded(child: Text(etiket, style: TextStyle(color: t.koyu ? t.sub2 : t.ink.withValues(alpha: 0.75), fontSize: 11.5, fontWeight: FontWeight.w600, height: 1.15), maxLines: 2, overflow: TextOverflow.ellipsis)),
         ]),
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
         FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft,
-            child: Text(deger, style: TextStyle(color: renk, fontSize: 30, fontWeight: FontWeight.bold))),
+            child: Text(deger, style: TextStyle(color: renk, fontSize: 25, fontWeight: FontWeight.w900, height: 1.0))),
       ]),
     );
   }
