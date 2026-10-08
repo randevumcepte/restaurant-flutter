@@ -1121,7 +1121,7 @@ class _SatisEkraniState extends State<SatisEkrani> {
           Row(children: [
             Text(_secili.isEmpty ? 'Genel Toplam' : 'Seçili ${_secili.length} kalem', style: TextStyle(color: _secili.isEmpty ? t.ink : t.mor1, fontSize: 14, fontWeight: FontWeight.w700)),
             const Spacer(),
-            Text(_tl(_secili.isEmpty ? _genelToplam : _seciliTutar), style: TextStyle(color: t.mor1, fontSize: 26, fontWeight: FontWeight.bold)),
+            Text(_tl(_secili.isEmpty ? _genelToplam : _seciliTutar), style: TextStyle(color: t.mor1, fontSize: 23, fontWeight: FontWeight.bold)),
           ]),
           if (_secili.isNotEmpty)
             Align(alignment: Alignment.centerRight, child: GestureDetector(
@@ -1296,7 +1296,8 @@ class _SatisEkraniState extends State<SatisEkrani> {
           onTap: () => showModalBottomSheet(
             context: context, backgroundColor: t.card, isScrollControlled: true,
             shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-            builder: (_) => SizedBox(height: MediaQuery.of(context).size.height * 0.7, child: _adisyonPaneli(t)),
+            // Yükseklik 0.92: sipariş listesi gerçek yer bulsun (eski 0.7'de butonlar ürünleri eziyordu)
+            builder: (_) => SizedBox(height: MediaQuery.of(context).size.height * 0.92, child: _adisyonPaneli(t)),
           ),
           child: Container(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
