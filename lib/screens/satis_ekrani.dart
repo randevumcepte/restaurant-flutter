@@ -448,11 +448,11 @@ class _SatisEkraniState extends State<SatisEkrani> {
   }
 
   // ---- İKİNCİL İŞLEMLER (iskonto/ikram/iptal) ----
-  Future<void> _islemUygula(String islem, {double? oran, double? tutar, String? onayPin}) async {
+  Future<void> _islemUygula(String islem, {double? oran, double? tutar, String? onayPin, String? kalemIdler}) async {
     setState(() => _mesgul = true);
     final auth = context.read<AuthProvider>();
     try {
-      final res = await Api.adisyonIslem(auth.token!, islem: islem, adisyonId: widget.adisyonId, oran: oran, tutar: tutar, onayPin: onayPin);
+      final res = await Api.adisyonIslem(auth.token!, islem: islem, adisyonId: widget.adisyonId, oran: oran, tutar: tutar, onayPin: onayPin, kalemIdler: kalemIdler);
       if (!mounted) return;
       setState(() => _mesgul = false);
       if (res['ok'] == 1) {
@@ -460,7 +460,7 @@ class _SatisEkraniState extends State<SatisEkrani> {
         if (islem == 'iptal') { Navigator.of(context).pop(true); } else { await _yukle(); }
       } else if (res['onay_gerek'] == true) {
         final pin = await _pinSor(res['hata']?.toString() ?? 'Yetkili PIN onayı gerekli');
-        if (pin != null && pin.trim().isNotEmpty) await _islemUygula(islem, oran: oran, tutar: tutar, onayPin: pin.trim());
+        if (pin != null && pin.trim().isNotEmpty) await _islemUygula(islem, oran: oran, tutar: tutar, onayPin: pin.trim(), kalemIdler: kalemIdler);
       } else {
         _snack(res['hata']?.toString() ?? 'İşlem başarısız', _kirmizi);
       }
@@ -477,10 +477,72 @@ class _SatisEkraniState extends State<SatisEkrani> {
   }
 
   Future<void> _ikram() async {
-    final tutar = await _sayiDialog('İkram Uygula', 'Tutar (TL)', 'TL');
-    if (tutar == null || tutar <= 0) return;
-    await _onayIste(tip: 'ikram', tutar: tutar, baslik: '${widget.masaAd} · ${_tl(tutar)} ikram',
-        pinIle: (pin) => _islemUygula('ikram', tutar: tutar, onayPin: pin));
+    // İKRAM ÜRÜN BAZLI: masadaki ürünleri işaretle -> o ürünler ikram edilir (rakam girilmez)
+    final secilebilir = _kalemler.where((k) => (k['odeme_durum'] ?? 'acik') != 'odendi').toList();
+    if (secilebilir.isEmpty) {
+      _snack('İkram edilecek ürün yok.', _kirmizi);
+      return;
+    }
+    final secili = <int>{};
+    final onay = await showDialog<bool>(
+      useRootNavigator: true,
+      context: context,
+      builder: (ctx) => StatefulBuilder(builder: (ctx, setD) {
+        double toplam = 0;
+        for (final k in secilebilir) {
+          if (secili.contains(_n(k['id']).toInt())) toplam += _n(k['tutar']).toDouble();
+        }
+        return AlertDialog(
+          title: const Text('İkram — Ürün Seç'),
+          content: SizedBox(
+            width: 380,
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Flexible(
+                child: ListView(shrinkWrap: true, children: [
+                  for (final k in secilebilir)
+                    CheckboxListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      value: secili.contains(_n(k['id']).toInt()),
+                      onChanged: (v) => setD(() {
+                        final id = _n(k['id']).toInt();
+                        if (v == true) {
+                          secili.add(id);
+                        } else {
+                          secili.remove(id);
+                        }
+                      }),
+                      title: Text('${_n(k['adet']).toInt()}x ${k['ad']}'),
+                      secondary: Text(_tl(_n(k['tutar']).toDouble())),
+                    ),
+                ]),
+              ),
+              const Divider(),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                const Text('İkram Toplamı', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(_tl(toplam), style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFD97706))),
+              ]),
+            ]),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Vazgeç')),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFFD97706)),
+              onPressed: secili.isEmpty ? null : () => Navigator.pop(ctx, true),
+              child: const Text('İkram Yap'),
+            ),
+          ],
+        );
+      }),
+    );
+    if (onay != true || secili.isEmpty) return;
+    final ids = secili.join(',');
+    double toplam = 0;
+    for (final k in secilebilir) {
+      if (secili.contains(_n(k['id']).toInt())) toplam += _n(k['tutar']).toDouble();
+    }
+    await _onayIste(tip: 'ikram', tutar: toplam, kalemIdler: ids, baslik: '${widget.masaAd} · ${_tl(toplam)} ikram',
+        pinIle: (pin) => _islemUygula('ikram', tutar: toplam, kalemIdler: ids, onayPin: pin));
   }
 
   // ---- YÖNETİCİ ONAY AKIŞI (kasiyer tarafı) ----
