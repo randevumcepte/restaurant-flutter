@@ -205,6 +205,16 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
     }
   }
 
+  // Yazma işlemi hatası: 401 -> oturum kapat, diğer -> uyarı snackbar (sessiz yutma yok).
+  void _islemHata(Object e) {
+    if (e is ApiYetkiHatasi) { if (mounted) context.read<AuthProvider>().cikis(); return; }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Text('⚠ İşlem gönderilemedi — bağlantıyı kontrol edip tekrar deneyin'),
+        backgroundColor: _kirmizi, duration: const Duration(seconds: 3)));
+    }
+  }
+
   Future<void> _hazir(int adisyonId) async {
     try {
       await Api.mutfakHazir(_token, adisyonId: adisyonId);
@@ -215,7 +225,7 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
       }
       _siparisYukle(sessiz: true);
       _serviseYukle(sessiz: true);
-    } catch (_) {}
+    } catch (e) { _islemHata(e); }
   }
 
   Future<void> _basla(int adisyonId) async {
@@ -227,7 +237,7 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
           backgroundColor: _amber, duration: const Duration(seconds: 2)));
       }
       _siparisYukle(sessiz: true);
-    } catch (_) {}
+    } catch (e) { _islemHata(e); }
   }
 
   // Backend'in verdigi renk kodu (kalan sureye gore): yesil/amber/kirmizi
@@ -244,7 +254,7 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
           backgroundColor: _mavi, duration: const Duration(seconds: 2)));
       }
       _serviseYukle(sessiz: true);
-    } catch (_) {}
+    } catch (e) { _islemHata(e); }
   }
 
   Future<void> _tukendiToggle(Map u) async {
@@ -257,7 +267,7 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
         backgroundColor: res['tukendi'] == true ? _kirmizi : _yesil,
         duration: const Duration(seconds: 2),
       ));
-    } catch (_) {}
+    } catch (e) { _islemHata(e); }
   }
 
   Color _renk(int dk) {
