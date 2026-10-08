@@ -37,6 +37,7 @@ class PdfOnizlemeScreen extends StatelessWidget {
         useActions: false, // üstteki küçük aksiyon çubuğu gizli
         pdfFileName: '$baslik.pdf',
         maxPageWidth: 360, // 80mm fiş gerçek genişliğinde kalsın (ekranı kaplamasın)
+        dpi: 260, // net/keskin önizleme (düşük DPI bulanık gösteriyordu)
         scrollViewDecoration: const BoxDecoration(color: Color(0xFFEEF1F6)),
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
       ),
