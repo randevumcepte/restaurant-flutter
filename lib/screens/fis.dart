@@ -36,8 +36,9 @@ class PdfOnizlemeScreen extends StatelessWidget {
         allowSharing: false, // paylaş kaldırıldı
         useActions: false, // üstteki küçük aksiyon çubuğu gizli
         pdfFileName: '$baslik.pdf',
+        maxPageWidth: 360, // 80mm fiş gerçek genişliğinde kalsın (ekranı kaplamasın)
         scrollViewDecoration: const BoxDecoration(color: Color(0xFFEEF1F6)),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
       ),
       // Tek, büyük ve belirgin YAZDIR butonu — paylaş yok
       bottomNavigationBar: SafeArea(
