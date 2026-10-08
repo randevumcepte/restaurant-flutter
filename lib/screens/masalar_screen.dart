@@ -273,7 +273,7 @@ class _MasalarScreenState extends State<MasalarScreen> {
                         ? const SliverGridDelegateWithMaxCrossAxisExtent(
                             maxCrossAxisExtent: 210, mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: 2.15)
                         : const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2, mainAxisSpacing: 9, crossAxisSpacing: 9, childAspectRatio: 1.95),
+                            crossAxisCount: 2, mainAxisSpacing: 9, crossAxisSpacing: 9, childAspectRatio: 1.82),
                     itemCount: aktifMasalar.length,
                     itemBuilder: (context, i) => _masaHucre(aktifMasalar[i] as Map),
                   ),

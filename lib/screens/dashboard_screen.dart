@@ -1050,25 +1050,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Padding(padding: EdgeInsets.only(top: 6), child: Text('Toplam Ciro', style: TextStyle(color: Colors.white70, fontSize: 14))),
+              const Flexible(child: Padding(padding: EdgeInsets.only(top: 6, right: 6), child: Text('Toplam Ciro', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.white70, fontSize: 14)))),
               Row(mainAxisSize: MainAxisSize.min, children: [
                 if (yuzde != null) ...[
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                     decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(20)),
-                    child: Text('${up ? "▲" : "▼"} %${yuzde.abs().toStringAsFixed(1)}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                    child: Text('${up ? "▲" : "▼"} %${yuzde.abs().toStringAsFixed(1)}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12.5)),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
                 ],
                 GestureDetector(
                   onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RezervasyonScreen())),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                     decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.22), borderRadius: BorderRadius.circular(12)),
                     child: const Row(mainAxisSize: MainAxisSize.min, children: [
                       Icon(Icons.event_available, size: 15, color: Colors.white),
                       SizedBox(width: 5),
-                      Text('Rezervasyon', style: TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w600)),
+                      Text('Rezervasyon', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
                     ]),
                   ),
                 ),
