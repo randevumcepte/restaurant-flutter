@@ -25,7 +25,9 @@ class AsistanScreen extends StatefulWidget {
 
 class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProviderStateMixin {
   static const Color _mor = Color(0xFF8B5CF6);
-  TemaProvider get _t => context.watch<TemaProvider>();
+  // read (watch DEĞİL): bu getter callback/sheet builder'larda da kullanılıyor; watch orada debug assert fırlatıp
+  // paneli açmıyordu. Reaktivite için build() başında açık context.watch var.
+  TemaProvider get _t => context.read<TemaProvider>();
   Color get _bg => _t.bg;
   Color get _card => _t.card;
   Color get _card2 => _t.card2;
@@ -647,6 +649,7 @@ class _AsistanScreenState extends State<AsistanScreen> with SingleTickerProvider
   // ---------------- UI ----------------
   @override
   Widget build(BuildContext context) {
+    context.watch<TemaProvider>(); // tema değişince yeniden çiz (getter'lar read kullanıyor)
     return Scaffold(
       backgroundColor: _bg,
       appBar: AppBar(

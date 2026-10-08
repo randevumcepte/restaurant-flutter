@@ -4,14 +4,27 @@ import 'package:http/http.dart' as http;
 /// ResteOS backend (Laravel) — restoran API'si.
 class Api {
   static const String base = 'https://restaurant.webfirmam.com.tr';
+  static const Duration _zamanAsimi = Duration(seconds: 20);
+
+  // Yanıtı GÜVENLE çöz: HTML/500/boş/liste gelse bile çökme yok, tutarlı {ok:0,hata} döner.
+  static Map<String, dynamic> _coz(http.Response r) {
+    try {
+      final d = jsonDecode(r.body);
+      if (d is Map<String, dynamic>) return d;
+      if (d is Map) return Map<String, dynamic>.from(d);
+      return {'ok': 0, 'hata': 'Beklenmeyen sunucu yanıtı'};
+    } catch (_) {
+      return {'ok': 0, 'hata': 'Sunucu yanıtı okunamadı (HTTP ${r.statusCode})'};
+    }
+  }
 
   static Future<Map<String, dynamic>> login(String pin) async {
     final r = await http.post(
       Uri.parse('$base/api/login'),
       headers: {'Accept': 'application/json'},
       body: {'pin': pin},
-    );
-    return jsonDecode(r.body) as Map<String, dynamic>;
+    ).timeout(_zamanAsimi);
+    return _coz(r);
   }
 
   // ---------------- MESAI (QR + geofence) ----------------
@@ -46,11 +59,11 @@ class Api {
     final r = await http.get(
       Uri.parse('$base$path'),
       headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
-    );
+    ).timeout(_zamanAsimi);
     if (r.statusCode == 401) {
       throw ApiYetkiHatasi();
     }
-    return jsonDecode(r.body) as Map<String, dynamic>;
+    return _coz(r);
   }
 
   static Future<Map<String, dynamic>> patronOzet(String token, {String period = 'gunluk'}) =>
@@ -267,9 +280,9 @@ class Api {
 
   static Future<Map<String, dynamic>> _post(String path, String token, Map<String, String> body) async {
     final r = await http.post(Uri.parse('$base$path'),
-        headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'}, body: body);
+        headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'}, body: body).timeout(_zamanAsimi);
     if (r.statusCode == 401) throw ApiYetkiHatasi();
-    return jsonDecode(r.body) as Map<String, dynamic>;
+    return _coz(r);
   }
 
   // Masa tasima onayi (talep karti): kaynak masadaki acik hesabi hedef masaya tasir. Yetki yoksa onayPin gerekir.

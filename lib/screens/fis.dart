@@ -64,13 +64,28 @@ class PdfOnizlemeScreen extends StatelessWidget {
   }
 }
 
+// Fontlar BİR KEZ yüklenir, sonra her fişte ANINDA kullanılır. Eskiden her açılışta
+// PdfGoogleFonts ~1-2sn yüklüyordu (fiş geç açılıyordu). Açılışta fisFontlariIsit() ön-ısıtır.
+pw.Font? _fontR;
+pw.Font? _fontB;
+Future<void> _fontlariYukle() async {
+  _fontR ??= await PdfGoogleFonts.notoSansRegular();
+  _fontB ??= await PdfGoogleFonts.notoSansBold();
+}
+
+/// Uygulama açılışında çağır: fişler anında açılsın diye fontları önceden yükler.
+Future<void> fisFontlariIsit() async {
+  try { await _fontlariYukle(); } catch (_) {}
+}
+
 Future<Uint8List> _fisDoc(Map d) async {
   final f = NumberFormat.decimalPattern('tr');
   String tl(dynamic v) => '${f.format((v is num ? v : 0).round())} TL';
   num n(dynamic v) => v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0);
 
-  final font = await PdfGoogleFonts.notoSansRegular();
-  final fontB = await PdfGoogleFonts.notoSansBold();
+  await _fontlariYukle();
+  final font = _fontR!;
+  final fontB = _fontB!;
   final doc = pw.Document();
   final kalemler = (d['kalemler'] as List?) ?? [];
 
@@ -138,8 +153,9 @@ Future<Uint8List> _zRaporuDoc(Map d) async {
   final f = NumberFormat.decimalPattern('tr');
   String tl(dynamic v) => '${f.format((v is num ? v : 0).round())} TL';
   num n(dynamic v) => v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0);
-  final font = await PdfGoogleFonts.notoSansRegular();
-  final fontB = await PdfGoogleFonts.notoSansBold();
+  await _fontlariYukle();
+  final font = _fontR!;
+  final fontB = _fontB!;
   final doc = pw.Document();
 
   pw.Widget satir(String s, String v, {bool bold = false}) => pw.Padding(

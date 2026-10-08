@@ -472,7 +472,7 @@ class _SatisEkraniState extends State<SatisEkrani> {
   Future<void> _iskonto() async {
     final oran = await _sayiDialog('İskonto Uygula', 'Yüzde (%)', '%');
     if (oran == null || oran <= 0) return;
-    await _onayIste(tip: 'iskonto', oran: oran, baslik: '${widget.masaAd} · %${oran.round()} iskonto',
+    await _onayIste(tip: 'iskonto', oran: oran, bekle: false, baslik: '${widget.masaAd} · %${oran.round()} iskonto',
         pinIle: (pin) => _islemUygula('iskonto', oran: oran, onayPin: pin));
   }
 
@@ -607,7 +607,8 @@ class _SatisEkraniState extends State<SatisEkrani> {
     if (res['ok'] != 1) { _snack(res['hata']?.toString() ?? 'İstek gönderilemedi', _kirmizi); return; }
     if (!bekle) {
       // Non-blocking: talep gönderildi, garson devam edebilir. Sonuç bildirimi arka planda (OnayDinleyici) gelir.
-      _snack('İkram talebiniz ${secim['ad'] ?? 'yöneticiye'} gönderildi. Onaylanınca bilgilendirileceksiniz.', _yesil);
+      const tipAd = {'ikram': 'İkram', 'iskonto': 'İskonto', 'iptal': 'İptal', 'odeme_geri_al': 'Ödeme geri alma'};
+      _snack('${tipAd[tip] ?? 'Talep'} talebiniz ${secim['ad'] ?? 'yöneticiye'} gönderildi. Onaylanınca bilgilendirileceksiniz.', _yesil);
       return;
     }
     await _onayBekle(_n(res['istek_id']).toInt(), secim['ad']?.toString() ?? 'Yönetici', onOnaylandi ?? _yukle);
@@ -723,7 +724,7 @@ class _SatisEkraniState extends State<SatisEkrani> {
       },
     );
     if (onay == true) {
-      await _onayIste(tip: 'iptal', baslik: '${widget.masaAd} · adisyon iptal',
+      await _onayIste(tip: 'iptal', bekle: false, baslik: '${widget.masaAd} · adisyon iptal',
           pinIle: (pin) => _islemUygula('iptal', onayPin: pin),
           onOnaylandi: () async { if (mounted) Navigator.of(context).pop(true); });
     }
@@ -1199,22 +1200,33 @@ class _SatisEkraniState extends State<SatisEkrani> {
     final id = _n(k['id']).toInt();
     final adet = _n(k['adet']).toInt();
     final odendi = k['odeme_durum'] == 'odendi';
+    final iptal = (k['durum']?.toString() ?? '') == 'iptal';
+    final ikram = _n(k['ikram']).toInt() == 1;
     final secili = _secili.contains(id);
-    final secilebilir = _kalemUcuVar && !odendi;
+    final secilebilir = _kalemUcuVar && !odendi && !iptal;
+    final cizik = odendi || iptal;
+    Widget rozet(String s, Color c) => Container(
+      margin: const EdgeInsets.only(left: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(color: c.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(6)),
+      child: Text(s, style: TextStyle(color: c, fontSize: 9.5, fontWeight: FontWeight.bold, letterSpacing: 0.3)),
+    );
     return GestureDetector(
       onTap: secilebilir ? () => setState(() { secili ? _secili.remove(id) : _secili.add(id); }) : null,
       child: Opacity(
-        opacity: odendi ? 0.55 : 1,
+        opacity: cizik ? 0.6 : 1,
         child: Container(
           margin: const EdgeInsets.only(bottom: 6), padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
           decoration: BoxDecoration(
-            color: secili ? t.mor1.withValues(alpha: 0.12) : t.card2,
+            color: iptal ? _kirmizi.withValues(alpha: 0.08) : (ikram ? _turuncu.withValues(alpha: 0.09) : (secili ? t.mor1.withValues(alpha: 0.12) : t.card2)),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: secili ? t.mor1 : Colors.transparent, width: 1.4),
+            border: Border.all(color: secili ? t.mor1 : (iptal ? _kirmizi.withValues(alpha: 0.4) : (ikram ? _turuncu.withValues(alpha: 0.4) : Colors.transparent)), width: 1.4),
           ),
           child: Row(children: [
-            // Seçim kutusu / ödendi işareti (yalnızca kalem ucu deploy ise seçilebilir)
-            if (odendi)
+            // Seçim kutusu / ödendi / iptal işareti
+            if (iptal)
+              const Padding(padding: EdgeInsets.only(right: 10), child: Icon(Icons.block, color: _kirmizi, size: 20))
+            else if (odendi)
               const Padding(padding: EdgeInsets.only(right: 10), child: Icon(Icons.check_circle, color: _yesil, size: 22))
             else if (_kalemUcuVar)
               Padding(padding: const EdgeInsets.only(right: 10), child: Container(
@@ -1228,10 +1240,16 @@ class _SatisEkraniState extends State<SatisEkrani> {
               child: Text('$adet', style: TextStyle(color: t.mor1, fontSize: 12.5, fontWeight: FontWeight.bold)),
             ),
             const SizedBox(width: 10),
-            Expanded(child: Text(k['ad'].toString(), maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: t.ink, fontSize: 13.5, fontWeight: FontWeight.w500, decoration: odendi ? TextDecoration.lineThrough : null))),
+            Flexible(child: Text(k['ad'].toString(), maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: t.ink, fontSize: 13.5, fontWeight: FontWeight.w500, decoration: cizik ? TextDecoration.lineThrough : null))),
+            if (ikram) rozet('İKRAM', _turuncu),
+            if (iptal) rozet('İPTAL', _kirmizi),
+            const Spacer(),
             const SizedBox(width: 8),
-            Text(_tl(_n(k['tutar'])), style: TextStyle(color: odendi ? t.sub : t.ink, fontSize: 13.5, fontWeight: FontWeight.w700)),
+            Text(_tl(_n(k['tutar'])), style: TextStyle(
+                color: iptal ? _kirmizi : (ikram ? _turuncu : (odendi ? t.sub : t.ink)),
+                fontSize: 13.5, fontWeight: FontWeight.w700,
+                decoration: cizik ? TextDecoration.lineThrough : null)),
           ]),
         ),
       ),

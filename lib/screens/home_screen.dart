@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'yonetim_drawer.dart';
 import '../widgets/onay_dinleyici.dart';
 import 'dashboard_screen.dart';
+import 'fis.dart';
 import 'santral_kayitlar_screen.dart';
 import 'santral_ayar_screen.dart';
 import 'santral_egitim_screen.dart';
@@ -82,6 +83,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    fisFontlariIsit(); // Fiş fontlarını ön-ısıt -> Fiş butonu anında açılsın (ağ yüklemesi beklenmesin)
     anaSekme.addListener(_sekmeDinle); // Asistan gibi ekranlardan sekme degisince guncelle
     // Garson adim sayaci: giris token'iyla sensoru dinlemeye basla (izin ister)
     WidgetsBinding.instance.addPostFrameCallback((_) {
