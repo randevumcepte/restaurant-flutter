@@ -16,7 +16,7 @@ class PdfOnizlemeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF334155),
+      backgroundColor: const Color(0xFFEEF1F6),
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0.5,
@@ -32,10 +32,31 @@ class PdfOnizlemeScreen extends StatelessWidget {
         canChangePageFormat: false,
         canChangeOrientation: false,
         canDebug: false,
-        allowPrinting: true,
-        allowSharing: true,
+        allowPrinting: false, // kendi belirgin butonumuzu kullanıyoruz
+        allowSharing: false, // paylaş kaldırıldı
+        useActions: false, // üstteki küçük aksiyon çubuğu gizli
         pdfFileName: '$baslik.pdf',
-        actionBarTheme: const PdfActionBarTheme(backgroundColor: Color(0xFF4F46E5)),
+        scrollViewDecoration: const BoxDecoration(color: Color(0xFFEEF1F6)),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      ),
+      // Tek, büyük ve belirgin YAZDIR butonu — paylaş yok
+      bottomNavigationBar: SafeArea(
+        minimum: const EdgeInsets.fromLTRB(16, 6, 16, 12),
+        child: SizedBox(
+          height: 58,
+          width: double.infinity,
+          child: FilledButton.icon(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF4F46E5),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              elevation: 2,
+            ),
+            onPressed: () => Printing.layoutPdf(onLayout: (format) async => bytes(), name: baslik),
+            icon: const Icon(Icons.print, size: 26),
+            label: const Text('YAZDIR', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+          ),
+        ),
       ),
     );
   }
@@ -62,32 +83,50 @@ Future<Uint8List> _fisDoc(Map d) async {
   doc.addPage(pw.Page(
     pageFormat: PdfPageFormat.roll80,
     theme: pw.ThemeData.withFont(base: font, bold: fontB),
-    build: (ctx) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.stretch, children: [
-      pw.Center(child: pw.Text(d['isletme']?.toString() ?? 'ResteOS', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold))),
-      if ((d['adres']?.toString() ?? '').isNotEmpty) pw.Center(child: pw.Text(d['adres'].toString(), style: const pw.TextStyle(fontSize: 8))),
-      if ((d['telefon']?.toString() ?? '').isNotEmpty) pw.Center(child: pw.Text(d['telefon'].toString(), style: const pw.TextStyle(fontSize: 8))),
-      pw.Divider(),
-      satir('Masa: ${d['masa']}', 'No: ${d['adisyon_no']}', fs: 9),
-      satir('Garson: ${d['garson']}', d['tarih']?.toString() ?? '', fs: 9),
-      pw.Divider(),
-      for (final k in kalemler)
-        pw.Padding(
-          padding: const pw.EdgeInsets.symmetric(vertical: 1),
+    build: (ctx) {
+      final matrah = (n(d['toplam']) / 1.10);
+      final kdv = n(d['toplam']) - matrah;
+      return pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.stretch, children: [
+        pw.SizedBox(height: 2),
+        pw.Center(child: pw.Text(d['isletme']?.toString() ?? 'ResteOS', style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold))),
+        if ((d['adres']?.toString() ?? '').isNotEmpty) pw.Center(child: pw.Text(d['adres'].toString(), style: const pw.TextStyle(fontSize: 8))),
+        if ((d['telefon']?.toString() ?? '').isNotEmpty) pw.Center(child: pw.Text(d['telefon'].toString(), style: const pw.TextStyle(fontSize: 8))),
+        pw.SizedBox(height: 4),
+        pw.Center(child: pw.Text('HESAP FİŞİ', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, letterSpacing: 2))),
+        pw.Divider(),
+        satir('Masa: ${d['masa']}', 'Adisyon: #${d['adisyon_no']}', fs: 9),
+        satir('Garson: ${d['garson']}', d['tarih']?.toString() ?? '', fs: 9),
+        pw.Divider(),
+        for (final k in kalemler)
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(vertical: 1.5),
+            child: pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+              pw.Expanded(child: pw.Text('${n((k as Map)['adet']).toInt()}x ${k['ad']}', style: const pw.TextStyle(fontSize: 9.5))),
+              pw.Text(tl(k['tutar']), style: const pw.TextStyle(fontSize: 9.5)),
+            ]),
+          ),
+        pw.Divider(),
+        satir('Ara Toplam', tl(d['ara_toplam'])),
+        if (n(d['indirim']) > 0) satir('İskonto', '-${tl(d['indirim'])}'),
+        if (n(d['ikram']) > 0) satir('İkram', '-${tl(d['ikram'])}'),
+        satir('KDV %10 (dahil)', tl(kdv), fs: 8),
+        pw.SizedBox(height: 6),
+        // Vurgulu toplam kutusu
+        pw.Container(
+          padding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 4),
+          decoration: const pw.BoxDecoration(color: PdfColors.black),
           child: pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
-            pw.Expanded(child: pw.Text('${n((k as Map)['adet']).toInt()}x ${k['ad']}', style: const pw.TextStyle(fontSize: 9))),
-            pw.Text(tl(k['tutar']), style: const pw.TextStyle(fontSize: 9)),
+            pw.Text('TOPLAM', style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold, color: PdfColors.white)),
+            pw.Text(tl(d['toplam']), style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold, color: PdfColors.white)),
           ]),
         ),
-      pw.Divider(),
-      satir('Ara Toplam', tl(d['ara_toplam'])),
-      if (n(d['indirim']) > 0) satir('İskonto', '-${tl(d['indirim'])}'),
-      if (n(d['ikram']) > 0) satir('İkram', '-${tl(d['ikram'])}'),
-      pw.SizedBox(height: 4),
-      satir('TOPLAM', tl(d['toplam']), fs: 13, bold: true),
-      pw.SizedBox(height: 10),
-      pw.Center(child: pw.Text('Afiyet olsun · Teşekkürler', style: const pw.TextStyle(fontSize: 9))),
-      pw.SizedBox(height: 6),
-    ]),
+        pw.SizedBox(height: 10),
+        pw.Center(child: pw.Text('Afiyet olsun · Teşekkür ederiz', style: const pw.TextStyle(fontSize: 9))),
+        pw.SizedBox(height: 2),
+        pw.Center(child: pw.Text('Bu bir bilgi fişidir, mali değeri yoktur.', style: const pw.TextStyle(fontSize: 6.5, color: PdfColors.grey600))),
+        pw.SizedBox(height: 6),
+      ]);
+    },
   ));
 
   return doc.save();
