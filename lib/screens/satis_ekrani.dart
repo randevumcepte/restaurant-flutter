@@ -477,10 +477,16 @@ class _SatisEkraniState extends State<SatisEkrani> {
   }
 
   Future<void> _ikram() async {
-    // İKRAM ÜRÜN BAZLI: masadaki ürünleri işaretle -> o ürünler ikram edilir (rakam girilmez)
+    // İKRAM ÜRÜN BAZLI: masadaki ürünleri işaretle -> o ürünler ikram edilir (rakam girilmez).
+    // İkram, DB'deki kalem id'leri üzerinden çalışır -> kaydedilmemiş (YENİ) ürünleri önce kaydet.
+    if (_pending.isNotEmpty) {
+      _snack('Önce sipariş kaydediliyor…', _mor);
+      final ok = await _kaydet();
+      if (!ok || !mounted) return;
+    }
     final secilebilir = _kalemler.where((k) => (k['odeme_durum'] ?? 'acik') != 'odendi').toList();
     if (secilebilir.isEmpty) {
-      _snack('İkram edilecek ürün yok.', _kirmizi);
+      _snack('İkram edilecek ürün yok. Önce ürün ekleyin.', _kirmizi);
       return;
     }
     final secili = <int>{};
