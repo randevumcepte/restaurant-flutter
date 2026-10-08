@@ -448,11 +448,11 @@ class _SatisEkraniState extends State<SatisEkrani> {
   }
 
   // ---- İKİNCİL İŞLEMLER (iskonto/ikram/iptal) ----
-  Future<void> _islemUygula(String islem, {double? oran, double? tutar, String? onayPin, String? kalemIdler}) async {
+  Future<void> _islemUygula(String islem, {double? oran, double? tutar, String? onayPin, String? kalemIdler, String? sebep}) async {
     setState(() => _mesgul = true);
     final auth = context.read<AuthProvider>();
     try {
-      final res = await Api.adisyonIslem(auth.token!, islem: islem, adisyonId: widget.adisyonId, oran: oran, tutar: tutar, onayPin: onayPin, kalemIdler: kalemIdler);
+      final res = await Api.adisyonIslem(auth.token!, islem: islem, adisyonId: widget.adisyonId, oran: oran, tutar: tutar, onayPin: onayPin, kalemIdler: kalemIdler, sebep: sebep);
       if (!mounted) return;
       setState(() => _mesgul = false);
       if (res['ok'] == 1) {
@@ -460,7 +460,7 @@ class _SatisEkraniState extends State<SatisEkrani> {
         if (islem == 'iptal') { Navigator.of(context).pop(true); } else { await _yukle(); }
       } else if (res['onay_gerek'] == true) {
         final pin = await _pinSor(res['hata']?.toString() ?? 'Yetkili PIN onayı gerekli');
-        if (pin != null && pin.trim().isNotEmpty) await _islemUygula(islem, oran: oran, tutar: tutar, onayPin: pin.trim(), kalemIdler: kalemIdler);
+        if (pin != null && pin.trim().isNotEmpty) await _islemUygula(islem, oran: oran, tutar: tutar, onayPin: pin.trim(), kalemIdler: kalemIdler, sebep: sebep);
       } else {
         _snack(res['hata']?.toString() ?? 'İşlem başarısız', _kirmizi);
       }
@@ -484,6 +484,7 @@ class _SatisEkraniState extends State<SatisEkrani> {
       return;
     }
     final secili = <int>{};
+    final sebepCtrl = TextEditingController();
     final onay = await showDialog<bool>(
       useRootNavigator: true,
       context: context,
@@ -522,34 +523,53 @@ class _SatisEkraniState extends State<SatisEkrani> {
                 const Text('İkram Toplamı', style: TextStyle(fontWeight: FontWeight.bold)),
                 Text(_tl(toplam), style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFD97706))),
               ]),
+              const SizedBox(height: 10),
+              TextField(
+                controller: sebepCtrl,
+                minLines: 1,
+                maxLines: 2,
+                textCapitalization: TextCapitalization.sentences,
+                onChanged: (_) => setD(() {}),
+                decoration: const InputDecoration(
+                  labelText: 'İkram sebebi (zorunlu)',
+                  hintText: 'Örn. müşteri şikayeti, bekleme, doğum günü…',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+              ),
             ]),
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Vazgeç')),
             FilledButton(
               style: FilledButton.styleFrom(backgroundColor: const Color(0xFFD97706)),
-              onPressed: secili.isEmpty ? null : () => Navigator.pop(ctx, true),
-              child: const Text('İkram Yap'),
+              onPressed: (secili.isEmpty || sebepCtrl.text.trim().isEmpty) ? null : () => Navigator.pop(ctx, true),
+              child: const Text('Talebi Gönder'),
             ),
           ],
         );
       }),
     );
+    final sebep = sebepCtrl.text.trim();
+    sebepCtrl.dispose();
     if (onay != true || secili.isEmpty) return;
     final ids = secili.join(',');
     double toplam = 0;
     for (final k in secilebilir) {
       if (secili.contains(_n(k['id']).toInt())) toplam += _n(k['tutar']).toDouble();
     }
-    await _onayIste(tip: 'ikram', tutar: toplam, kalemIdler: ids, baslik: '${widget.masaAd} · ${_tl(toplam)} ikram',
-        pinIle: (pin) => _islemUygula('ikram', tutar: toplam, kalemIdler: ids, onayPin: pin));
+    // Non-blocking: talebi yolla, ekran kapansın, garson devam etsin. Sonuç bildirimi arka planda gelir.
+    await _onayIste(tip: 'ikram', tutar: toplam, kalemIdler: ids, sebep: sebep, bekle: false,
+        baslik: '${widget.masaAd} · ${_tl(toplam)} ikram${sebep.isNotEmpty ? ' · $sebep' : ''}',
+        pinIle: (pin) => _islemUygula('ikram', tutar: toplam, kalemIdler: ids, sebep: sebep, onayPin: pin));
   }
 
   // ---- YÖNETİCİ ONAY AKIŞI (kasiyer tarafı) ----
   Future<void> _onayIste({
     required String tip,
     required String baslik,
-    int? refId, double? tutar, double? oran, String? kalemIdler,
+    int? refId, double? tutar, double? oran, String? kalemIdler, String? sebep,
+    bool bekle = true, // false: talebi yolla, EKRANI BLOKLAMA (garson başka masaya bakabilir)
     Future<void> Function(String pin)? pinIle,
     Future<void> Function()? onOnaylandi,
   }) async {
@@ -574,10 +594,16 @@ class _SatisEkraniState extends State<SatisEkrani> {
       if (tutar != null) 'tutar': '$tutar',
       if (oran != null) 'oran': '$oran',
       if (kalemIdler != null && kalemIdler.isNotEmpty) 'kalem_idler': kalemIdler,
+      if (sebep != null && sebep.isNotEmpty) 'aciklama': sebep,
       'hedef_id': '${secim['id']}',
     });
     if (!mounted) return;
     if (res['ok'] != 1) { _snack(res['hata']?.toString() ?? 'İstek gönderilemedi', _kirmizi); return; }
+    if (!bekle) {
+      // Non-blocking: talep gönderildi, garson devam edebilir. Sonuç bildirimi arka planda (OnayDinleyici) gelir.
+      _snack('İkram talebiniz ${secim['ad'] ?? 'yöneticiye'} gönderildi. Onaylanınca bilgilendirileceksiniz.', _yesil);
+      return;
+    }
     await _onayBekle(_n(res['istek_id']).toInt(), secim['ad']?.toString() ?? 'Yönetici', onOnaylandi ?? _yukle);
   }
 

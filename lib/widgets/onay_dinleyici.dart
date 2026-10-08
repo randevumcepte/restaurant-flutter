@@ -18,6 +18,7 @@ class OnayDinleyici extends StatefulWidget {
 class _OnayDinleyiciState extends State<OnayDinleyici> {
   Timer? _timer;
   bool _popupAcik = false;
+  bool _sonucPopupAcik = false;
   final Set<int> _islenen = {};
 
   static const _yesil = Color(0xFF10B981);
@@ -28,7 +29,7 @@ class _OnayDinleyiciState extends State<OnayDinleyici> {
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 4), (_) => _cek());
+    _timer = Timer.periodic(const Duration(seconds: 4), (_) { _cek(); _sonucCek(); });
   }
 
   @override
@@ -45,6 +46,85 @@ class _OnayDinleyiciState extends State<OnayDinleyici> {
       final yeni = liste.where((o) => !_islenen.contains(o['id'])).toList();
       if (yeni.isNotEmpty) _popupGoster(yeni.first);
     } catch (_) {}
+  }
+
+  // İSTEYEN (garson/kasa) tarafı: kendi talebim onaylandı/reddedildi mi? -> bildirim (herkes için)
+  Future<void> _sonucCek() async {
+    if (!mounted || _sonucPopupAcik) return;
+    final auth = context.read<AuthProvider>();
+    if (auth.token == null) return;
+    try {
+      final res = await Api.onaySonuclarim(auth.token!);
+      if (!mounted) return;
+      final liste = ((res['sonuclar'] as List?) ?? []).map((e) => Map<String, dynamic>.from(e)).toList();
+      // Backend döndürdüğünde "bildirildi" işaretliyor -> hepsini sırayla göster (kaybolmasın)
+      for (final s in liste) {
+        if (!mounted) break;
+        await _sonucGoster(s);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _sonucGoster(Map<String, dynamic> s) async {
+    _sonucPopupAcik = true;
+    HapticFeedback.vibrate();
+    final onayli = s['durum'] == 'onaylandi';
+    final tipAd = {'iskonto': 'İskonto', 'ikram': 'İkram', 'iptal': 'Adisyon İptali', 'odeme_geri_al': 'Ödeme Geri Al'}[s['tip']] ?? 'Talep';
+    final renk = onayli ? _yesil : _kirmizi;
+    Timer? oto;
+    await showDialog(
+      useRootNavigator: true, context: context, barrierDismissible: true,
+      builder: (ctx) {
+        final t = ctx.read<TemaProvider>();
+        oto ??= Timer(const Duration(seconds: 6), () { if (ctx.mounted) Navigator.pop(ctx); });
+        return Dialog(
+          backgroundColor: t.card, insetPadding: const EdgeInsets.all(24),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), clipBehavior: Clip.antiAlias,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 360),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Container(
+                width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 16),
+                color: renk,
+                child: Column(children: [
+                  Icon(onayli ? Icons.check_circle : Icons.cancel, color: Colors.white, size: 40),
+                  const SizedBox(height: 6),
+                  Text(onayli ? 'Talebiniz Onaylandı' : 'Talebiniz Reddedildi',
+                      style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                ]),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+                child: Column(children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(color: renk.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
+                    child: Text(tipAd, style: TextStyle(color: renk, fontSize: 12, fontWeight: FontWeight.bold)),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(s['baslik']?.toString() ?? '', textAlign: TextAlign.center, style: TextStyle(color: t.ink, fontSize: 15, fontWeight: FontWeight.w600, height: 1.35)),
+                  if ((s['onaylayan']?.toString() ?? '').isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text('${onayli ? 'Onaylayan' : 'Reddeden'}: ${s['onaylayan']}', style: TextStyle(color: t.sub, fontSize: 12)),
+                  ],
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(backgroundColor: renk, padding: const EdgeInsets.symmetric(vertical: 12)),
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Tamam', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ]),
+              ),
+            ]),
+          ),
+        );
+      },
+    );
+    oto?.cancel();
+    _sonucPopupAcik = false;
   }
 
   Future<void> _popupGoster(Map<String, dynamic> o) async {

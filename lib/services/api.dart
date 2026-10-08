@@ -326,6 +326,7 @@ class Api {
   static Future<Map<String, dynamic>> mesaidekiYoneticiler(String token) => _get('/api/patron/mesaideki-yoneticiler', token);
   static Future<Map<String, dynamic>> onayIste(String token, Map<String, String> v) => _post('/api/patron/onay-iste', token, v);
   static Future<Map<String, dynamic>> onayDurum(String token, int id) => _get('/api/patron/onay-durum?id=$id', token);
+  static Future<Map<String, dynamic>> onaySonuclarim(String token) => _get('/api/patron/onay-benim-sonuc', token);
   static Future<Map<String, dynamic>> bekleyenOnaylar(String token) => _get('/api/patron/bekleyen-onaylar', token);
   static Future<Map<String, dynamic>> onayCevap(String token, int istekId, String cevap) =>
       _post('/api/patron/onay-cevap', token, {'istek_id': '$istekId', 'cevap': cevap});
