@@ -486,7 +486,6 @@ class _SatisEkraniState extends State<SatisEkrani> {
     final secili = <int>{};
     final sebepCtrl = TextEditingController();
     final onay = await showDialog<bool>(
-      useRootNavigator: true,
       context: context,
       builder: (ctx) => StatefulBuilder(builder: (ctx, setD) {
         double toplam = 0;
@@ -551,7 +550,8 @@ class _SatisEkraniState extends State<SatisEkrani> {
       }),
     );
     final sebep = sebepCtrl.text.trim();
-    sebepCtrl.dispose();
+    // NOT: controller dispose EDİLMİYOR (çalışan _sayiDialog ile aynı) — dialog kapanırken
+    // dispose edilince debug'da '_dependents.isEmpty' assert'i fırlıyordu.
     if (onay != true || secili.isEmpty) return;
     final ids = secili.join(',');
     double toplam = 0;
