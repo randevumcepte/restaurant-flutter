@@ -445,12 +445,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(22, 16, 22, 28),
       children: [
-        // Selam kart (Özcan) SOLDA + dönem seçici SAĞDA — aynı satır, sağdaki boşluk dolar
-        Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-          Expanded(child: _selamKart(context.read<AuthProvider>())),
-          const SizedBox(width: 16),
-          SizedBox(width: 430, child: _donemSecici()),
-        ]),
+        // Selam kart (Özcan) + dönem seçici TEK KART içinde (bütünlük)
+        _selamKart(context.read<AuthProvider>(), filtre: true),
         const SizedBox(height: 16),
         // 3 ciro karti (bugun / hafta / ay)
         IntrinsicHeight(child: _uclCiro(d)),
@@ -511,11 +507,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   // ---- Donem secici ----
-  Widget _donemSecici() {
+  Widget _donemSecici({bool kart = true}) {
     const donemler = {'gunluk': 'Günlük', 'haftalik': 'Haftalık', 'aylik': 'Aylık', 'yillik': 'Yıllık'};
     return Container(
       padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(14), boxShadow: _t.golge),
+      decoration: BoxDecoration(
+        color: kart ? _card : _t.bg,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: kart ? _t.golge : null,
+      ),
       child: Row(
         children: donemler.entries.map((e) {
           final aktif = period == e.key;
@@ -553,7 +553,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   // Selamlama karti: gunun saatine gore selam + sube + saat/QR/rezervasyon cipleri
-  Widget _selamKart(AuthProvider auth) {
+  Widget _selamKart(AuthProvider auth, {bool filtre = false}) {
     final s = DateTime.now().hour;
     final selam = s < 6 ? 'İyi geceler' : (s < 12 ? 'Günaydın' : (s < 18 ? 'İyi günler' : 'İyi akşamlar'));
     final ikon = (s < 6 || s >= 19) ? Icons.nightlight_round : Icons.wb_sunny_rounded;
@@ -571,21 +571,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Icon(ikon, color: Colors.white, size: 24),
         ),
         const SizedBox(width: 12),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-            Text('$selam${ad.isNotEmpty ? ', $ad!' : '!'}',
-                style: TextStyle(color: _ink, fontSize: 17, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
-            const SizedBox(height: 2),
-            Text(auth.sube ?? '', style: TextStyle(color: _sub, fontSize: 12.5), overflow: TextOverflow.ellipsis),
-          ]),
-        ),
-        const SizedBox(width: 8),
-        Wrap(spacing: 7, runSpacing: 6, alignment: WrapAlignment.end, children: [
-          _selamCip(Icons.access_time, _saat(), _yesil, null),
-          _selamCip(Icons.qr_code_2, 'QR Menü', _kirmizi, () => _webAc('/menu-onizle')),
-          _selamCip(Icons.event_available, 'Rezervasyon', const Color(0xFFEC4899),
-              () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RezervasyonScreen()))),
+        Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+          Text('$selam${ad.isNotEmpty ? ', $ad!' : '!'}',
+              style: TextStyle(color: _ink, fontSize: 17, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
+          const SizedBox(height: 2),
+          Text(auth.sube ?? '', style: TextStyle(color: _sub, fontSize: 12.5), overflow: TextOverflow.ellipsis),
         ]),
+        const SizedBox(width: 14),
+        _selamCip(Icons.access_time, _saat(), _yesil, null),
+        const SizedBox(width: 7),
+        _selamCip(Icons.qr_code_2, 'QR Menü', _kirmizi, () => _webAc('/menu-onizle')),
+        const SizedBox(width: 7),
+        _selamCip(Icons.event_available, 'Rezervasyon', const Color(0xFFEC4899),
+            () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RezervasyonScreen()))),
+        // Dönem seçici AYNI KART içinde, sağ boşluğu doldurur (bütünlük)
+        if (filtre) ...[
+          const SizedBox(width: 16),
+          Expanded(child: _donemSecici(kart: false)),
+        ] else
+          const Spacer(),
       ]),
     );
   }
