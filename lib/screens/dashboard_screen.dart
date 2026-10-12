@@ -680,9 +680,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final fcRenk = maliyetY >= 40 ? _kirmizi : (maliyetY >= 30 ? const Color(0xFFF59E0B) : _yesil);
     final mini = !genis; // telefon: 4 kart yan yana, kucuk
     final kartlar = [
-      _bilgiKart(Icons.savings_outlined, 'Brüt Kâr', _k(ciro - maliyet), 'food-cost sonrası', _yesil, mini: mini),
-      _bilgiKart(Icons.receipt_long_outlined, 'Ort. Adisyon', _tam(_n(d['adisyonOrt'])), 'adisyon başı', _mavi, mini: mini),
-      _bilgiKart(Icons.local_fire_department_outlined, 'Food-Cost', '%$maliyetY', _k(maliyet), fcRenk, mini: mini),
+      _bilgiKart(Icons.savings_outlined, 'Brüt Kâr', _k(ciro - maliyet), 'food-cost sonrası', _yesil, mini: mini, sayi: ciro - maliyet, bicim: _k),
+      _bilgiKart(Icons.receipt_long_outlined, 'Ort. Adisyon', _tam(_n(d['adisyonOrt'])), 'adisyon başı', _mavi, mini: mini, sayi: _n(d['adisyonOrt']), bicim: _tam),
+      _bilgiKart(Icons.local_fire_department_outlined, 'Food-Cost', '%$maliyetY', _k(maliyet), fcRenk, mini: mini, sayi: maliyetY, bicim: (v) => '%${v.round()}'),
       _bilgiKart(Icons.star_outline, 'En Çok Satan',
           enCok?['ad']?.toString() ?? '—', enCok != null ? '${_n(enCok['adet']).toInt()}× · ${_k(_n(enCok['satis']))}' : 'satış yok', _mor1, tekSatir: true, mini: mini),
     ];
@@ -692,7 +692,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ]));
   }
 
-  Widget _bilgiKart(IconData ik, String baslik, String deger, String alt, Color renk, {bool tekSatir = false, bool mini = false}) {
+  Widget _bilgiKart(IconData ik, String baslik, String deger, String alt, Color renk, {bool tekSatir = false, bool mini = false, num? sayi, String Function(num)? bicim}) {
+    final degerStil = TextStyle(color: mini ? renk : _ink, fontSize: mini ? (tekSatir ? 12 : 15) : (tekSatir ? 17 : 22), fontWeight: FontWeight.bold);
     return Container(
       padding: EdgeInsets.all(mini ? 9 : 13),
       decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(mini ? 12 : 15), boxShadow: _t.golge),
@@ -708,7 +709,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ]),
         SizedBox(height: mini ? 6 : 9),
         FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft,
-            child: Text(deger, maxLines: 1, style: TextStyle(color: mini ? renk : _ink, fontSize: mini ? (tekSatir ? 12 : 15) : (tekSatir ? 17 : 22), fontWeight: FontWeight.bold))),
+            child: sayi != null
+                ? _sayiAnim(sayi, degerStil, bicim: bicim)
+                : Text(deger, maxLines: 1, style: degerStil)),
         if (!mini) ...[
           const SizedBox(height: 3),
           Text(alt, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: _sub, fontSize: 11)),
