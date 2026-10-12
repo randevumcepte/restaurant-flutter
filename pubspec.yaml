@@ -52,6 +52,8 @@ dependencies:
   geolocator: ^13.0.2        # mesai geofence konum
   audioplayers: ^6.1.0       # AI Santral cagri kayitlari + TTS deneme ses oynatma
   file_picker: ^8.1.2        # AI Santral egitim: menu PDF'inden kalip cikarma
+  flutter_map: ^7.0.2        # paket canli kurye takibi (uygulama ici OSM haritasi, dis tarayici YOK)
+  latlong2: ^0.9.1           # harita koordinat + mesafe
 
 dev_dependencies:
   flutter_test:

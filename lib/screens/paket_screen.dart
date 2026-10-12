@@ -7,6 +7,7 @@ import '../responsive.dart';
 import '../ana_sekme.dart';
 import '../services/api.dart';
 import 'fis.dart';
+import 'kurye_takip_screen.dart';
 
 class PaketScreen extends StatefulWidget {
   const PaketScreen({super.key});
@@ -801,6 +802,46 @@ class _PaketDetayScreenState extends State<PaketDetayScreen> {
                         ],
                       ),
                     ),
+
+                    // CANLI KURYE TAKİBİ — yoldaki/hazır siparişte uygulama içi harita açar
+                    if (['yolda', 'hazir'].contains((d?['teslimat_durumu'] ?? '').toString()))
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                            builder: (_) => KuryeTakipScreen(
+                              adisyonId: widget.id,
+                              baslik: d?['musteri']?.toString(),
+                            ),
+                          )),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(colors: [Color(0xFF7C3AED), Color(0xFF4F46E5)]),
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [BoxShadow(color: const Color(0xFF7C3AED).withValues(alpha: 0.35), blurRadius: 14, offset: const Offset(0, 6))],
+                            ),
+                            child: Row(children: [
+                              Container(
+                                width: 46, height: 46,
+                                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(13)),
+                                child: const Icon(Icons.map_outlined, color: Colors.white, size: 26),
+                              ),
+                              const SizedBox(width: 14),
+                              const Expanded(
+                                child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                                  Text('Kuryeyi Canlı Takip Et', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                                  SizedBox(height: 2),
+                                  Text('Haritada konum • kalan yol • tahmini varış', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                                ]),
+                              ),
+                              const Icon(Icons.chevron_right, color: Colors.white, size: 26),
+                            ]),
+                          ),
+                        ),
+                      ),
 
                     // Ürünler
                     _kart(
