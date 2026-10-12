@@ -445,14 +445,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(22, 16, 22, 28),
       children: [
-        // Donem secici (sola yasli, dar)
-        Align(
-          alignment: Alignment.centerLeft,
-          child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 520), child: _donemSecici()),
-        ),
-        const SizedBox(height: 16),
-        // MODERN OZET: selam kart (tam genislik)
-        _selamKart(context.read<AuthProvider>()),
+        // Selam kart (Özcan) SOLDA + dönem seçici SAĞDA — aynı satır, sağdaki boşluk dolar
+        Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+          Expanded(child: _selamKart(context.read<AuthProvider>())),
+          const SizedBox(width: 16),
+          SizedBox(width: 430, child: _donemSecici()),
+        ]),
         const SizedBox(height: 16),
         // 3 ciro karti (bugun / hafta / ay)
         IntrinsicHeight(child: _uclCiro(d)),
