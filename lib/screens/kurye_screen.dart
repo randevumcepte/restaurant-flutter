@@ -350,9 +350,10 @@ class _KuryeScreenState extends State<KuryeScreen> {
         Row(children: [
           Expanded(
             child: OutlinedButton.icon(
-              onPressed: () => _ac(Uri.parse('https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(adres)}')),
+              // Dogrudan sesli navigasyon baslat (harita uygulamasinda) — kurye surerken yol tarifi
+              onPressed: () => _ac(Uri.parse('https://www.google.com/maps/dir/?api=1&destination=${Uri.encodeComponent(adres)}&travelmode=driving&dir_action=navigate')),
               style: OutlinedButton.styleFrom(side: const BorderSide(color: _line), foregroundColor: const Color(0xFFC7D2FE), padding: const EdgeInsets.symmetric(vertical: 12)),
-              icon: const Icon(Icons.map_outlined, size: 18),
+              icon: const Icon(Icons.navigation_outlined, size: 18),
               label: const Text('Yol Tarifi'),
             ),
           ),
