@@ -16,6 +16,7 @@ import 'cari_hesaplar_screen.dart';
 import 'sebep_yonetimi_screen.dart';
 import 'menu_yonetimi_screen.dart';
 import 'masa_atama_screen.dart';
+import 'masa_yonetim_screen.dart';
 import 'garson_performans_screen.dart';
 import 'salon_sema_screen.dart';
 import 'mesai_qr_screen.dart';
@@ -219,7 +220,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               oge(Icons.event_available_outlined, 'Rezervasyonlar', () => git(const RezervasyonScreen())),
               if (patron) oge(Icons.map_outlined, 'Canlı Kurye Haritası', () { Navigator.of(context).pop(); _webAc('/kurye-canli'); }, renk: const Color(0xFF10B981)),
               if (patron) oge(Icons.phone_in_talk_outlined, 'Gelen Çağrı Ekranı', () { Navigator.of(context).pop(); _webAc('/cagri-ekran'); }),
-              if (patron) oge(Icons.qr_code_2, 'Masa QR Afişleri (yazdır)', () { Navigator.of(context).pop(); _webAc('/masa-afisler'); }, renk: const Color(0xFFF6CE63)),
+              if (patron) oge(Icons.qr_code_2, 'Masa & QR Yönetimi', () => git(const MasaYonetimScreen()), renk: const Color(0xFFF6CE63)),
               if (patron) oge(Icons.badge_outlined, 'Personel & Maaş', () => git(const PersonelScreen())),
               if (patron) oge(Icons.table_restaurant_outlined, 'Masa & Bölge Atama', () => git(const MasaAtamaScreen())),
               if (patron) oge(Icons.emoji_events_outlined, 'Garson Performansı', () => git(const GarsonPerformansScreen()), renk: const Color(0xFF10B981)),

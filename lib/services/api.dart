@@ -538,6 +538,23 @@ class Api {
       _post('/api/patron/kasa-kapat', token, {'sayilan': '$sayilan', 'not': not});
 
   static Future<Map<String, dynamic>> masalar(String token) => _get('/api/masalar', token);
+  // --- Masa & QR yonetimi (kalici qr_token + arsiv) ---
+  static Future<Map<String, dynamic>> masaYonetim(String token) => _get('/api/patron/masa-yonetim', token);
+  static Future<Map<String, dynamic>> masaEkle(String token, {String? ad, int kapasite = 4, int? bolgeId}) =>
+      _post('/api/patron/masa-ekle', token, {
+        if (ad != null && ad.isNotEmpty) 'ad': ad,
+        'kapasite': '$kapasite',
+        if (bolgeId != null) 'bolge_id': '$bolgeId',
+      });
+  static Future<Map<String, dynamic>> masaSil(String token, int id) => _post('/api/patron/masa-sil', token, {'id': '$id'});
+  static Future<Map<String, dynamic>> masaGeri(String token, int id) => _post('/api/patron/masa-geri', token, {'id': '$id'});
+  static Future<Map<String, dynamic>> masaGuncelle(String token, int id, {String? ad, int? kapasite, int? bolgeId}) =>
+      _post('/api/patron/masa-guncelle', token, {
+        'id': '$id',
+        if (ad != null) 'ad': ad,
+        if (kapasite != null) 'kapasite': '$kapasite',
+        if (bolgeId != null) 'bolge_id': '$bolgeId',
+      });
 
   // ---- PERSONEL MASA/BOLGE ATAMA ----
   static Future<Map<String, dynamic>> atamaVeri(String token) => _get('/api/patron/atama-veri', token);
