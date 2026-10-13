@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'config/app_config.dart';
 import 'providers/auth_provider.dart';
 import 'providers/tema_provider.dart';
+import 'services/notification_service.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Push altyapısı (Firebase yoksa sessizce kapalı kalır, app normal açılır).
+  await NotificationService().baslat();
   runApp(
     MultiProvider(
       providers: [
@@ -24,7 +29,7 @@ class RestoOsApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final koyu = context.watch<TemaProvider>().koyu;
     return MaterialApp(
-      title: 'ResteOS Patron',
+      title: AppConfig.markaAd,
       debugShowCheckedModeBanner: false,
       themeMode: koyu ? ThemeMode.dark : ThemeMode.light,
       theme: ThemeData(

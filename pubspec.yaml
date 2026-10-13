@@ -48,12 +48,22 @@ dependencies:
   permission_handler: ^11.3.1 # ACTIVITY_RECOGNITION izni
   crypto: ^3.0.5             # mesai QR: HMAC-SHA256 (TOTP)
   qr_flutter: ^4.1.0         # kasa donen QR
-  mobile_scanner: ^5.2.3     # personel QR tarayici
+  mobile_scanner: ^7.4.2     # personel QR tarayici
   geolocator: ^13.0.2        # mesai geofence konum
   audioplayers: ^6.1.0       # AI Santral cagri kayitlari + TTS deneme ses oynatma
   file_picker: ^8.1.2        # AI Santral egitim: menu PDF'inden kalip cikarma
   flutter_map: ^7.0.2        # paket canli kurye takibi (uygulama ici OSM haritasi, dis tarayici YOK)
   latlong2: ^0.9.1           # harita koordinat + mesafe
+  firebase_core: ^3.6.0      # FCM push temeli
+  firebase_messaging: ^15.1.3 # push bildirim (yeni siparis/garson cagrisi/masa tasima)
+  flutter_local_notifications: ^18.0.1 # on-planda (app acikken) bildirim banner'i goster
+  change_app_package_name: ^1.5.0
+  flutter_launcher_icons: ^0.14.4
+  path_provider: ^2.1.6
+  path: ^1.9.1
+  sqflite: ^2.4.2+1
+  sqflite_common_ffi: ^2.4.0+3
+  connectivity_plus: ^7.3.1
 
 dev_dependencies:
   flutter_test:
@@ -65,6 +75,34 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_native_splash: ^2.4.4
+
+# ---------------------------------------------------------------------------
+# AÇILIŞ EKRANI (Enjula Experience) — flutter_native_splash
+# Üretmek için: dart run flutter_native_splash:create
+# ---------------------------------------------------------------------------
+flutter_native_splash:
+  color: "#EEE3D0"                      # krem zemin (logonun arka planı)
+  image: assets/icon/enjula_fg.png      # ortada ENJULA wordmark (şeffaf)
+  android: true
+  ios: true
+  web: false
+  android_12:                           # Android 12+ ayrı splash API'si
+    color: "#EEE3D0"
+    image: assets/icon/enjula_fg.png
+
+# ---------------------------------------------------------------------------
+# UYGULAMA İKONU (Enjula Experience) — flutter_launcher_icons
+# Üretmek için: dart run flutter_launcher_icons
+# ---------------------------------------------------------------------------
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/enjula_1024.png"   # iOS + legacy Android (opak krem, alfa yok)
+  remove_alpha_ios: true
+  min_sdk_android: 21
+  adaptive_icon_background: "#EEE3D0"           # Android adaptive arka plan (krem)
+  adaptive_icon_foreground: "assets/icon/enjula_fg.png"  # wordmark (şeffaf, güvenli alana sığdırıldı)
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

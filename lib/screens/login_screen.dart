@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../config/app_config.dart';
 import '../providers/auth_provider.dart';
 import 'kurye_screen.dart';
 
@@ -38,8 +39,13 @@ class _LoginScreenState extends State<LoginScreen> {
             children: [
               const Text('🍔', style: TextStyle(fontSize: 56)),
               const SizedBox(height: 8),
-              const Text('ResteOS Patron',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+              Text(AppConfig.markaAd,
+                  style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : const Color(0xFF0F172A))),
               const Text('Yönetici girişi', style: TextStyle(color: Color(0xFF64748B))),
               const SizedBox(height: 28),
               TextField(
@@ -80,9 +86,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       : const Text('Giriş', style: TextStyle(fontSize: 16)),
                 ),
               ),
-              const SizedBox(height: 16),
-              const Text('Demo PIN: 1001 (Sahip) · 1002 (Müdür)',
-                  style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
               const SizedBox(height: 18),
               const Divider(height: 1),
               const SizedBox(height: 10),

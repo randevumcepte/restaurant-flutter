@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../config/app_config.dart';
 
 /// ResteOS backend (Laravel) — restoran API'si.
 class Api {
-  static const String base = 'https://restaurant.webfirmam.com.tr';
+  // WHITE-LABEL: base URL artık AppConfig üzerinden (--dart-define ile marka başına override).
+  static String get base => AppConfig.baseUrl;
   static const Duration _zamanAsimi = Duration(seconds: 20);
 
   // Yanıtı GÜVENLE çöz: HTML/500/boş/liste gelse bile çökme yok, tutarlı {ok:0,hata} döner.
@@ -22,10 +24,24 @@ class Api {
     final r = await http.post(
       Uri.parse('$base/api/login'),
       headers: {'Accept': 'application/json'},
-      body: {'pin': pin},
+      // WHITE-LABEL: hangi markalı uygulamadan girildiğini backend'e bildir.
+      body: {'pin': pin, 'appBundle': AppConfig.appBundle},
     ).timeout(_zamanAsimi);
     return _coz(r);
   }
+
+  // ---------------- PUSH BILDIRIM (FCM push token kaydı) ----------------
+  static Future<Map<String, dynamic>> pushTokenKaydet(String token, String fcmToken,
+          {String platform = ''}) =>
+      _post('/api/bildirim/cihaz-kaydet', token, {
+        'token': fcmToken,
+        'platform': platform,
+        'appBundle': AppConfig.appBundle,
+      });
+  static Future<Map<String, dynamic>> pushTokenSil(String token, {String fcmToken = ''}) =>
+      _post('/api/bildirim/cihaz-sil', token, {if (fcmToken.isNotEmpty) 'token': fcmToken});
+  static Future<Map<String, dynamic>> bildirimTest(String token) =>
+      _post('/api/bildirim/test', token, {});
 
   // ---------------- MESAI (QR + geofence) ----------------
   static Future<Map<String, dynamic>> mesaiDurum(String token) => _get('/api/mesai/durum', token);

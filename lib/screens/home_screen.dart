@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../config/app_config.dart';
 import '../providers/auth_provider.dart';
 import '../providers/tema_provider.dart';
 import '../ana_sekme.dart';
@@ -474,7 +475,8 @@ class _YanMenuState extends State<_YanMenu> {
         borderRadius: BorderRadius.circular(9),
       ),
       child: acik
-          ? const Text('ResteOS', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold))
+          ? Text(AppConfig.markaAd, overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold))
           : const Icon(Icons.restaurant_menu, color: Colors.white, size: 20),
     );
     if (!acik) {
