@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_config.dart';
 
 /// ResteOS backend (Laravel) — restoran API'si.
@@ -174,18 +175,48 @@ class Api {
   static const Duration _menuCacheOmru = Duration(minutes: 5);
 
   /// Menü. [taze]=true önbelleği atlar (ör. manuel yenileme).
+  static const String _menuKaliciKey = 'menu_kalici_v1';
+
+  /// LOCAL-FIRST menü: çevrimiçiyken ağdan taze çek + kalıcı önbelleğe yaz;
+  /// çevrimdışı/ağ hatasında son kalıcı menüyü döndür (menü offline çalışır).
   static Future<Map<String, dynamic>> menu(String token, {bool taze = false}) async {
+    // 1) RAM önbelleği (hız) — 5 dk
     if (!taze && _menuCache != null && _menuCacheZaman != null &&
         DateTime.now().difference(_menuCacheZaman!) < _menuCacheOmru) {
       return _menuCache!;
     }
-    final m = await _get('/api/menu', token);
-    _menuCache = m;
-    _menuCacheZaman = DateTime.now();
-    return m;
+    // 2) Çevrimiçi: ağdan taze çek + kalıcı önbelleğe yaz
+    try {
+      final m = await _get('/api/menu', token);
+      if (m['ok'] == 1) {
+        _menuCache = m;
+        _menuCacheZaman = DateTime.now();
+        try {
+          final sp = await SharedPreferences.getInstance();
+          await sp.setString(_menuKaliciKey, jsonEncode(m));
+        } catch (_) {}
+      }
+      return m;
+    } on ApiYetkiHatasi {
+      rethrow; // 401 -> önbelleğe düşme, oturum sorunu
+    } catch (_) {
+      // 3) Çevrimdışı / ağ hatası: son kalıcı menüyü döndür
+      try {
+        final sp = await SharedPreferences.getInstance();
+        final kayit = sp.getString(_menuKaliciKey);
+        if (kayit != null) {
+          final m = jsonDecode(kayit) as Map<String, dynamic>;
+          _menuCache = m;
+          _menuCacheZaman = DateTime.now();
+          return m;
+        }
+      } catch (_) {}
+      rethrow; // kalıcı önbellek de yoksa hatayı yükselt
+    }
   }
 
   /// Menü değişince (ürün/kategori ekle-düzenle-sil, fiyat, foto) önbelleği düşür.
+  /// (Kalıcı önbellek sonraki çevrimiçi çekişte otomatik tazelenir.)
   static void menuCacheTemizle() {
     _menuCache = null;
     _menuCacheZaman = null;
