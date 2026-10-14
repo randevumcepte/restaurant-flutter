@@ -393,7 +393,32 @@ class Api {
   static Future<Map<String, dynamic>> zRaporu(String token, {String? tarih}) => _get('/api/patron/z-raporu${tarih != null ? '?tarih=$tarih' : ''}', token);
 
   // ---- MENU YONETIMI (sahip/mudur) ----
-  static Future<Map<String, dynamic>> menuYonetim(String token) => _get('/api/patron/menu-yonetim', token);
+  /// LOCAL-FIRST GET: çevrimiçi -> çek + kalıcı önbelleğe yaz; çevrimdışı -> son önbelleği döndür.
+  /// 401'de önbelleğe düşmez (oturum sorunu). Offline-uyumlu ekranlar bunu kullanır.
+  static Future<Map<String, dynamic>> _getKaliciOnbellekli(String path, String token, String key) async {
+    try {
+      final m = await _get(path, token);
+      if (m['ok'] == 1) {
+        try {
+          final sp = await SharedPreferences.getInstance();
+          await sp.setString(key, jsonEncode(m));
+        } catch (_) {}
+      }
+      return m;
+    } on ApiYetkiHatasi {
+      rethrow;
+    } catch (_) {
+      try {
+        final sp = await SharedPreferences.getInstance();
+        final kayit = sp.getString(key);
+        if (kayit != null) return jsonDecode(kayit) as Map<String, dynamic>;
+      } catch (_) {}
+      rethrow;
+    }
+  }
+
+  static Future<Map<String, dynamic>> menuYonetim(String token) =>
+      _getKaliciOnbellekli('/api/patron/menu-yonetim', token, 'menu_yonetim_kalici_v1');
 
   // QR menu renk temasi (kartela)
   static Future<Map<String, dynamic>> temaGetir(String token) => _get('/api/patron/tema', token);
