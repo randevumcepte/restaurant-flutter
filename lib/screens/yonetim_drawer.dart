@@ -17,6 +17,7 @@ import 'rezervasyon_screen.dart';
 import 'personel_screen.dart';
 import 'masa_atama_screen.dart';
 import 'masa_yonetim_screen.dart';
+import 'lan_ayar_screen.dart';
 import 'garson_performans_screen.dart';
 import 'salon_sema_screen.dart';
 import 'gider_screen.dart';
@@ -88,6 +89,7 @@ class YonetimDrawer extends StatelessWidget {
               if (patron) web(Icons.map_outlined, 'Canlı Kurye Haritası', '/kurye-canli', renk: const Color(0xFF10B981)),
               if (patron) web(Icons.phone_in_talk_outlined, 'Gelen Çağrı Ekranı', '/cagri-ekran'),
               if (patron) git(Icons.qr_code_2, 'Masa & QR Yönetimi', const MasaYonetimScreen(), renk: const Color(0xFFF6CE63)),
+              if (patron) git(Icons.lan_outlined, 'LAN / Kasa Sunucu', const LanAyarScreen(), renk: const Color(0xFF6366F1)),
               if (patron) git(Icons.badge_outlined, 'Personel & Maaş', const PersonelScreen()),
               if (patron) git(Icons.table_restaurant_outlined, 'Masa & Bölge Atama', const MasaAtamaScreen()),
               if (patron) git(Icons.emoji_events_outlined, 'Garson Performansı', const GarsonPerformansScreen(), renk: const Color(0xFF10B981)),

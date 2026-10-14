@@ -8,6 +8,8 @@
 		<string>$(DEVELOPMENT_LANGUAGE)</string>
 		<key>CFBundleDisplayName</key>
 		<string>Enjula Experience</string>
+		<key>NSLocalNetworkUsageDescription</key>
+		<string>Terminaller ile kasa arasında yerel ağ (LAN) üzerinden sipariş senkronu için kullanılır.</string>
 		<key>CFBundleExecutable</key>
 		<string>$(EXECUTABLE_NAME)</string>
 		<key>CFBundleIdentifier</key>

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'config/app_config.dart';
+import 'local/cihaz_rol.dart';
+import 'local/kasa_sunucu.dart';
 import 'providers/auth_provider.dart';
 import 'providers/tema_provider.dart';
 import 'services/notification_service.dart';
@@ -9,6 +11,11 @@ import 'screens/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Cihaz rolu (LAN): kasa ise gomulu yerel sunucuyu baslat (terminaller buna baglanir).
+  await CihazRol.yukle();
+  if (CihazRol.rol == Rol.kasa) {
+    try { await KasaSunucu.instance.baslat(); } catch (_) {}
+  }
   // Push altyapısı (Firebase yoksa sessizce kapalı kalır, app normal açılır).
   await NotificationService().baslat();
   runApp(
