@@ -36,6 +36,7 @@ import 'uretim_riski_screen.dart';
 import 'sayim_screen.dart';
 import 'musteri_detay_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../widgets/sync_durum_rozeti.dart';
 
 /// Patron ana paneli — Kerzz BOSS yogunlugunda: tek ekranda her sey.
 /// Donem secici + karsilastirma + kayip radari + food-cost + odeme/servis dagilimi + 10 gunluk grafik.
@@ -285,6 +286,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
         actions: [
+          const Padding(padding: EdgeInsets.only(right: 4), child: Center(child: SyncDurumRozeti())),
           IconButton(
             tooltip: _t.koyu ? 'Açık moda geç' : 'Koyu moda geç',
             onPressed: () => context.read<TemaProvider>().cevir(),
