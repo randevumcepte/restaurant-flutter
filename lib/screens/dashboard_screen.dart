@@ -271,20 +271,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         elevation: 0,
         iconTheme: IconThemeData(color: _sub),
         automaticallyImplyLeading: false,
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [_mor1, _mavi]),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Text('ResteOS', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
-            ),
-            const SizedBox(width: 8),
-            Text(auth.sube ?? '', style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.bold)),
-          ],
-        ),
+        titleSpacing: 12,
+        title: Text(auth.sube ?? '', maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: _ink, fontSize: 16, fontWeight: FontWeight.bold)),
         actions: [
           const Padding(padding: EdgeInsets.only(right: 4), child: Center(child: SyncDurumRozeti())),
           IconButton(
