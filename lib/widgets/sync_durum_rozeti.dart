@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../local/cihaz_rol.dart';
 import '../local/sync_service.dart';
 
 /// Senkron durum rozeti (app bar): cevrimici/cevrimdisi + bekleyen islem + son senkron.
@@ -18,6 +19,23 @@ class SyncDurumRozeti extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // TERMINAL: senkron etmez (veriyi kasadan ceker) -> senkron durumu yaniltici olur.
+    // Bunun yerine sade "Terminal" rozeti goster.
+    if (CihazRol.rol == Rol.terminal) {
+      return Container(
+        margin: const EdgeInsets.only(right: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFF6366F1).withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: const Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(Icons.lan_outlined, size: 15, color: Color(0xFF6366F1)),
+          SizedBox(width: 6),
+          Text('Terminal', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF6366F1))),
+        ]),
+      );
+    }
     final s = SyncService.instance;
     return ListenableBuilder(
       listenable: s,
