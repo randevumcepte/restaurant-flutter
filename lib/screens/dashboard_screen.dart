@@ -37,6 +37,7 @@ import 'sayim_screen.dart';
 import 'musteri_detay_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../widgets/sync_durum_rozeti.dart';
+import 'lan_ayar_screen.dart';
 
 /// Patron ana paneli — Kerzz BOSS yogunlugunda: tek ekranda her sey.
 /// Donem secici + karsilastirma + kayip radari + food-cost + odeme/servis dagilimi + 10 gunluk grafik.
@@ -207,6 +208,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 6),
           Expanded(
             child: ListView(padding: EdgeInsets.zero, children: [
+              oge(Icons.lan_outlined, 'LAN / Kasa Sunucu', () => git(const LanAyarScreen()), renk: const Color(0xFF6366F1)),
               if (patron) oge(Icons.point_of_sale, 'Kasa (Vardiya)', () => git(const KasaScreen())),
               if (patron) oge(Icons.analytics_outlined, 'Finans / Kâr-Zarar', () => git(const FinansScreen())),
               if (patron) oge(Icons.inventory_2_outlined, 'Stok & Satın Alma', () => git(const IsletmeHubScreen())),
