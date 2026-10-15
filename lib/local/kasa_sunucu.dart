@@ -84,8 +84,103 @@ class KasaSunucu {
     if (m == 'GET' && yol == '/api/menu') return _yerelMenu();
     if (m == 'POST' && yol == '/api/patron/masa-ac') return _yerelMasaAc(govde);
     if (m == 'POST' && yol == '/api/patron/adisyon-urun-ekle') return _yerelSiparisEkle(govde);
+    if (m == 'GET' && yol == '/api/patron/fis') return _yerelFis(int.tryParse(req.requestedUri.queryParameters['adisyon_id'] ?? '') ?? 0);
+    if (m == 'GET' && yol == '/api/patron/adisyon-kalemleri') return _yerelKalemler(int.tryParse(req.requestedUri.queryParameters['adisyon_id'] ?? '') ?? 0);
+    if (m == 'POST' && yol == '/api/patron/adisyon-islem') return _yerelIslem(govde);
     // Diger uclar offline'da henuz desteklenmiyor (sonraki asamalar).
     return _json({'ok': 0, 'offline': 1, 'hata': 'Çevrimdışı — bu işlem şu an desteklenmiyor'}, 503);
+  }
+
+  Future<Map<String, Object?>?> _adisyonRowid(int rowid) async {
+    final d = await LocalDb.instance.db;
+    final a = await d.rawQuery('SELECT rowid, * FROM adisyonlar WHERE rowid = ? AND deleted = 0 LIMIT 1', [rowid]);
+    return a.isEmpty ? null : a.first;
+  }
+
+  String _tarih() {
+    final n = DateTime.now();
+    String i2(int x) => x.toString().padLeft(2, '0');
+    return '${i2(n.day)}.${i2(n.month)}.${n.year} ${i2(n.hour)}:${i2(n.minute)}';
+  }
+
+  // OFFLINE: hesap fisi (adisyon + kalemler + odemeler) yerelden.
+  Future<Response> _yerelFis(int rowid) async {
+    final d = await LocalDb.instance.db;
+    final ad = await _adisyonRowid(rowid);
+    if (ad == null) return _json({'ok': 0, 'hata': 'Adisyon bulunamadı (offline)'});
+    final uuid = ad['uuid'] as String;
+    final kalemler = await d.rawQuery(
+        "SELECT urun_adi, adet, birim_fiyat, tutar FROM adisyon_kalemleri WHERE adisyon_uuid = ? AND durum != 'iptal' AND deleted = 0 ORDER BY updated_at",
+        [uuid]);
+    final odemeler = await d.rawQuery(
+        'SELECT tip, tutar FROM odemeler WHERE adisyon_uuid = ? AND deleted = 0', [uuid]);
+    String? masaAd;
+    if (ad['masa_uuid'] != null) {
+      final mm = await d.query('masalar', columns: ['ad'], where: 'uuid = ?', whereArgs: [ad['masa_uuid']], limit: 1);
+      if (mm.isNotEmpty) masaAd = mm.first['ad'] as String?;
+    }
+    return _json({
+      'ok': 1, 'offline': 1,
+      'isletme': '', 'adres': '', 'telefon': '',
+      'masa': masaAd ?? (ad['kanal'] ?? 'Masa'), 'garson': '-',
+      'tarih': _tarih(), 'adisyon_no': rowid,
+      'kalemler': kalemler.map((k) => {
+            'ad': k['urun_adi'], 'adet': (k['adet'] as num?)?.toDouble() ?? 0,
+            'birim_fiyat': (k['birim_fiyat'] as num?)?.toDouble() ?? 0, 'tutar': (k['tutar'] as num?)?.toDouble() ?? 0,
+          }).toList(),
+      'birlesik_masalar': [],
+      'ara_toplam': ad['ara_toplam'], 'indirim': ad['indirim'], 'ikram': ad['ikram'], 'toplam': ad['toplam'],
+      'odemeler': odemeler.map((o) => {'tip': o['tip'], 'tutar': (o['tutar'] as num?)?.toDouble() ?? 0}).toList(),
+    });
+  }
+
+  // OFFLINE: adisyon kalemleri (satis ekrani kalem listesi).
+  Future<Response> _yerelKalemler(int rowid) async {
+    final d = await LocalDb.instance.db;
+    final ad = await _adisyonRowid(rowid);
+    if (ad == null) return _json({'ok': 0, 'hata': 'Adisyon bulunamadı (offline)'});
+    final uuid = ad['uuid'] as String;
+    final kalemler = await d.rawQuery(
+        'SELECT rowid AS id, urun_adi, adet, tutar, durum FROM adisyon_kalemleri WHERE adisyon_uuid = ? AND deleted = 0 ORDER BY updated_at',
+        [uuid]);
+    final gecerli = kalemler.where((k) => k['durum'] != 'iptal');
+    final toplam = gecerli.fold<double>(0, (t, k) => t + ((k['tutar'] as num?)?.toDouble() ?? 0));
+    final odemeler = await d.rawQuery('SELECT tutar FROM odemeler WHERE adisyon_uuid = ? AND deleted = 0', [uuid]);
+    final odenen = odemeler.fold<double>(0, (t, o) => t + ((o['tutar'] as num?)?.toDouble() ?? 0));
+    return _json({
+      'ok': 1, 'offline': 1,
+      'kalemler': kalemler.map((k) => {
+            'id': k['id'], 'ad': k['urun_adi'], 'adet': (k['adet'] as num?)?.round() ?? 0,
+            'tutar': (k['tutar'] as num?)?.toDouble() ?? 0, 'odeme_durum': 'acik',
+            'durum': k['durum'] ?? 'gonderildi', 'ikram': 0,
+          }).toList(),
+      'toplam': toplam, 'kalan': (toplam - odenen).clamp(0, double.infinity),
+    });
+  }
+
+  // OFFLINE: odeme/kapat. Iskonto/ikram/void offline desteklenmiyor (503).
+  Future<Response> _yerelIslem(String govde) async {
+    final b = Uri.splitQueryString(govde);
+    final islem = b['islem'] ?? '';
+    final rowid = int.tryParse(b['adisyon_id'] ?? '') ?? 0;
+    final ad = await _adisyonRowid(rowid);
+    if (ad == null) return _json({'ok': 0, 'hata': 'Adisyon bulunamadı (offline)'});
+    if (ad['durum'] != 'acik') return _json({'ok': 0, 'hata': 'Bu adisyon zaten kapanmış.'});
+
+    if (islem == 'ode' || islem == 'kapat') {
+      final uuid = ad['uuid'] as String;
+      final toplam = (ad['toplam'] as num?)?.toDouble() ?? 0;
+      final tipGecerli = ['nakit', 'kredi', 'yemek_karti'];
+      final tip = tipGecerli.contains(b['odeme_tip']) ? b['odeme_tip']! : 'nakit';
+      final d = await LocalDb.instance.db;
+      final odemeler = await d.rawQuery('SELECT tutar FROM odemeler WHERE adisyon_uuid = ? AND deleted = 0', [uuid]);
+      final odenen = odemeler.fold<double>(0, (t, o) => t + ((o['tutar'] as num?)?.toDouble() ?? 0));
+      final double kalan = (toplam - odenen).clamp(0, double.infinity).toDouble();
+      final double tutar = islem == 'kapat' ? kalan : (double.tryParse(b['tutar'] ?? '') ?? kalan);
+      await AdisyonRepo.instance.odemeEkle(adisyonUuid: uuid, tip: tip, tutar: tutar); // tam odenince adisyon kapanir + masa bosalir
+      return _json({'ok': 1, 'offline': 1, 'mesaj': 'Ödeme alındı (çevrimdışı)'});
+    }
+    return _json({'ok': 0, 'offline': 1, 'hata': 'Bu işlem çevrimdışı desteklenmiyor (sadece ödeme/kapat).'}, 503);
   }
 
   // OFFLINE: adisyona kalem ekle + mutfaga dus (durum=gonderildi). Donus toplam.
