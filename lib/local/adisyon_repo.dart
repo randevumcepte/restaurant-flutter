@@ -45,6 +45,7 @@ class AdisyonRepo {
     required double birimFiyat,
     int? personelId,
     String? not,
+    String durum = 'yeni', // 'gonderildi' -> mutfaga dus (KDS gorur)
   }) async {
     final uuid = await _r.yaz('adisyon_kalemleri', {
       'adisyon_uuid': adisyonUuid,
@@ -53,9 +54,10 @@ class AdisyonRepo {
       'adet': adet,
       'birim_fiyat': birimFiyat,
       'tutar': adet * birimFiyat,
-      'durum': 'yeni',
+      'durum': durum,
       'not_metni': not,
       'personel_id': personelId,
+      if (durum == 'gonderildi') 'gonderim_zamani': DateTime.now().millisecondsSinceEpoch,
     }, op: 'insert');
     await _toplamYenile(adisyonUuid);
     return uuid;

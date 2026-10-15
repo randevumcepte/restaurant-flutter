@@ -83,8 +83,40 @@ class KasaSunucu {
     if (m == 'GET' && yol == '/api/masalar') return _yerelMasalar();
     if (m == 'GET' && yol == '/api/menu') return _yerelMenu();
     if (m == 'POST' && yol == '/api/patron/masa-ac') return _yerelMasaAc(govde);
+    if (m == 'POST' && yol == '/api/patron/adisyon-urun-ekle') return _yerelSiparisEkle(govde);
     // Diger uclar offline'da henuz desteklenmiyor (sonraki asamalar).
     return _json({'ok': 0, 'offline': 1, 'hata': 'Çevrimdışı — bu işlem şu an desteklenmiyor'}, 503);
+  }
+
+  // OFFLINE: adisyona kalem ekle + mutfaga dus (durum=gonderildi). Donus toplam.
+  Future<Response> _yerelSiparisEkle(String govde) async {
+    final b = Uri.splitQueryString(govde);
+    final rowid = int.tryParse(b['adisyon_id'] ?? '') ?? 0;
+    final List kalemler = jsonDecode(b['kalemler'] ?? '[]') as List;
+    final d = await LocalDb.instance.db;
+    final adi = await d.rawQuery('SELECT uuid FROM adisyonlar WHERE rowid = ? AND deleted = 0', [rowid]);
+    if (adi.isEmpty) return _json({'ok': 0, 'hata': 'Adisyon bulunamadı (offline)'});
+    final adisyonUuid = adi.first['uuid'] as String;
+
+    int eklenen = 0;
+    for (final k in kalemler) {
+      final urunSid = (k['urun_id'] as num?)?.toInt();
+      final adet = (k['adet'] as num?)?.toDouble() ?? 1;
+      if (urunSid == null || adet <= 0) continue;
+      final u = await d.query('urunler', where: 'server_id = ? AND deleted = 0', whereArgs: [urunSid], limit: 1);
+      if (u.isEmpty) continue;
+      await AdisyonRepo.instance.kalemEkle(
+        adisyonUuid: adisyonUuid,
+        urunSid: urunSid,
+        urunAdi: (u.first['ad'] as String?) ?? '',
+        adet: adet,
+        birimFiyat: (u.first['fiyat'] as num?)?.toDouble() ?? 0,
+        durum: 'gonderildi', // mutfaga dus
+      );
+      eklenen++;
+    }
+    final ad = await d.query('adisyonlar', columns: ['toplam'], where: 'uuid = ?', whereArgs: [adisyonUuid], limit: 1);
+    return _json({'ok': 1, 'offline': 1, 'eklenen': eklenen, 'toplam': ad.isNotEmpty ? ad.first['toplam'] : 0, 'mesaj': 'Sipariş eklendi (çevrimdışı)'});
   }
 
   // OFFLINE: masa ac -> yerel adisyon (adisyon_repo + outbox). Donus: adisyon_id = rowid.
