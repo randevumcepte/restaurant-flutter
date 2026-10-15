@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/widgets.dart';
+import 'cihaz_rol.dart';
 import 'local_db.dart';
 import 'sync_worker.dart';
 
@@ -33,6 +34,8 @@ class SyncService extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> basla() async {
     if (_basladi) return;
+    // TERMINAL: yerel otorite degil (her seyi kasadan ceker) -> bulut senkronu CALISTIRMA.
+    if (CihazRol.rol == Rol.terminal) return;
     _basladi = true;
     WidgetsBinding.instance.addObserver(this);
 
