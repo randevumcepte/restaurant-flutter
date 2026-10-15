@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
 import '../config/app_config.dart';
+import 'adisyon_repo.dart';
 import 'local_db.dart';
 
 /// KASA YEREL SUNUCUSU (LAN otorite).
@@ -78,10 +79,39 @@ class KasaSunucu {
   // --- YEREL (offline cekirdek) ---
   Future<Response> _yerel(Request req, String govde) async {
     final yol = req.requestedUri.path;
-    if (req.method == 'GET' && yol == '/api/masalar') return _yerelMasalar();
-    if (req.method == 'GET' && yol == '/api/menu') return _yerelMenu();
-    // Diger uclar offline'da henuz desteklenmiyor (yazma uclari sonraki asama).
+    final m = req.method;
+    if (m == 'GET' && yol == '/api/masalar') return _yerelMasalar();
+    if (m == 'GET' && yol == '/api/menu') return _yerelMenu();
+    if (m == 'POST' && yol == '/api/patron/masa-ac') return _yerelMasaAc(govde);
+    // Diger uclar offline'da henuz desteklenmiyor (sonraki asamalar).
     return _json({'ok': 0, 'offline': 1, 'hata': 'Çevrimdışı — bu işlem şu an desteklenmiyor'}, 503);
+  }
+
+  // OFFLINE: masa ac -> yerel adisyon (adisyon_repo + outbox). Donus: adisyon_id = rowid.
+  Future<Response> _yerelMasaAc(String govde) async {
+    final b = Uri.splitQueryString(govde);
+    final masaSid = int.tryParse(b['masa_id'] ?? '') ?? 0; // terminalin gonderdigi = bulut masa id (server_id)
+    final misafir = int.tryParse(b['misafir'] ?? '1') ?? 1;
+    final d = await LocalDb.instance.db;
+    final masaRows = await d.query('masalar',
+        where: 'server_id = ? AND deleted = 0', whereArgs: [masaSid], limit: 1);
+    if (masaRows.isEmpty) return _json({'ok': 0, 'hata': 'Masa bulunamadı (offline)'});
+    final masa = masaRows.first;
+    final masaUuid = masa['uuid'] as String;
+    final subeId = (masa['sube_id'] as int?) ?? 0;
+
+    // Zaten acik adisyon varsa onu don (cift acilma olmasin).
+    final acik = await d.rawQuery(
+        "SELECT rowid FROM adisyonlar WHERE masa_uuid = ? AND durum='acik' AND deleted=0 LIMIT 1",
+        [masaUuid]);
+    if (acik.isNotEmpty) {
+      return _json({'ok': 1, 'adisyon_id': acik.first['rowid'], 'mesaj': '${masa['ad']} zaten açık.', 'offline': 1});
+    }
+
+    final uuid = await AdisyonRepo.instance.masaAc(masaUuid: masaUuid, subeId: subeId, masaSid: masaSid);
+    final yeni = await d.rawQuery('SELECT rowid FROM adisyonlar WHERE uuid = ?', [uuid]);
+    final rowid = yeni.isNotEmpty ? yeni.first['rowid'] : null;
+    return _json({'ok': 1, 'adisyon_id': rowid, 'mesaj': '${masa['ad']} açıldı ($misafir kişi).', 'offline': 1});
   }
 
   Future<Response> _yerelMasalar() async {
@@ -94,7 +124,7 @@ class KasaSunucu {
           "SELECT rowid, toplam FROM adisyonlar WHERE masa_uuid = ? AND durum='acik' AND deleted=0 LIMIT 1",
           [m['uuid']]);
       liste.add({
-        'id': m['uuid'], // terminal icin kimlik (offline: uuid)
+        'id': m['server_id'], // terminal icin kimlik = bulut masa id (online/offline tutarli)
         'ad': m['ad'],
         'durum': acik.isNotEmpty ? 'dolu' : (m['durum'] ?? 'bos'),
         'adisyon_id': acik.isNotEmpty ? acik.first['rowid'] : null,
