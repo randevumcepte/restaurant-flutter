@@ -2,11 +2,18 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_config.dart';
+import '../local/cihaz_rol.dart';
 
 /// ResteOS backend (Laravel) — restoran API'si.
 class Api {
-  // WHITE-LABEL: base URL artık AppConfig üzerinden (--dart-define ile marka başına override).
-  static String get base => AppConfig.baseUrl;
+  // WHITE-LABEL: base URL AppConfig üzerinden (--dart-define ile marka başına override).
+  // LAN: cihaz TERMINAL rolündeyse istekler buluta değil KASAYA gider (kasa proxy/offline sunar).
+  static String get base {
+    if (CihazRol.rol == Rol.terminal && CihazRol.kasaUrl.isNotEmpty) {
+      return CihazRol.kasaUrl.replaceAll(RegExp(r'/+$'), '');
+    }
+    return AppConfig.baseUrl;
+  }
   static const Duration _zamanAsimi = Duration(seconds: 20);
 
   // Yanıtı GÜVENLE çöz: HTML/500/boş/liste gelse bile çökme yok, tutarlı {ok:0,hata} döner.
