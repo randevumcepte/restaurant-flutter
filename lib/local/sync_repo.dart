@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:sqflite/sqflite.dart';
 import 'local_db.dart';
 
 /// Local-first yazma motoru.
@@ -24,29 +23,33 @@ class SyncRepo {
     final uuid = (row['uuid'] as String?) ?? LocalDb.yeniUuid();
 
     return d.transaction<String>((txn) async {
-      // Mevcut rev'i al (update/delete icin) -> idempotency + cakisma tespiti
-      int rev = 0;
-      final mevcut = await txn.query(entity,
-          columns: ['rev'], where: 'uuid = ?', whereArgs: [uuid], limit: 1);
-      if (mevcut.isNotEmpty) rev = (mevcut.first['rev'] as int? ?? 0) + 1;
+      final mevcut = await txn.query(entity, where: 'uuid = ?', whereArgs: [uuid], limit: 1);
+      final varMi = mevcut.isNotEmpty;
+      final rev = varMi ? ((mevcut.first['rev'] as int? ?? 0) + 1) : 0;
 
-      final tam = <String, Object?>{
+      final yazilacak = <String, Object?>{
         ...row,
         'uuid': uuid,
         'updated_at': _now,
         'dirty': 1,
-        'deleted': op == 'delete' ? 1 : (row['deleted'] ?? 0),
+        'deleted': op == 'delete' ? 1 : (row['deleted'] ?? (varMi ? mevcut.first['deleted'] : 0)),
         'rev': rev,
       };
 
-      await txn.insert(entity, tam,
-          conflictAlgorithm: ConflictAlgorithm.replace);
+      if (varMi) {
+        // KISMI GUNCELLEME: sadece verilen alanlar degisir (REPLACE diger kolonlari silmesin).
+        await txn.update(entity, yazilacak, where: 'uuid = ?', whereArgs: [uuid]);
+      } else {
+        await txn.insert(entity, yazilacak);
+      }
 
+      // Outbox'a BIRLESMIS tam satir gider -> bulut eksiksiz alir (insert/update ayni sekilde).
+      final tamRow = (await txn.query(entity, where: 'uuid = ?', whereArgs: [uuid], limit: 1)).first;
       await txn.insert('outbox', {
         'entity': entity,
         'op': op,
         'row_uuid': uuid,
-        'payload': jsonEncode(tam),
+        'payload': jsonEncode(tamRow),
         'idem_key': '$entity:$uuid:$rev', // her degisim tekil
         'created_at': _now,
         'tries': 0,

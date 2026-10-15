@@ -6,6 +6,7 @@ import 'package:shelf/shelf_io.dart' as shelf_io;
 import '../config/app_config.dart';
 import 'adisyon_repo.dart';
 import 'local_db.dart';
+import 'sync_repo.dart';
 
 /// KASA YEREL SUNUCUSU (LAN otorite).
 ///
@@ -87,8 +88,46 @@ class KasaSunucu {
     if (m == 'GET' && yol == '/api/patron/fis') return _yerelFis(int.tryParse(req.requestedUri.queryParameters['adisyon_id'] ?? '') ?? 0);
     if (m == 'GET' && yol == '/api/patron/adisyon-kalemleri') return _yerelKalemler(int.tryParse(req.requestedUri.queryParameters['adisyon_id'] ?? '') ?? 0);
     if (m == 'POST' && yol == '/api/patron/adisyon-islem') return _yerelIslem(govde);
+    if (m == 'GET' && yol == '/api/mutfak') return _yerelMutfak();
+    if (m == 'POST' && yol == '/api/mutfak/basla') return _yerelMutfakDurum(govde, 'hazirlaniyor', ['gonderildi']);
+    if (m == 'POST' && yol == '/api/mutfak/hazir') return _yerelMutfakDurum(govde, 'hazir', ['gonderildi', 'hazirlaniyor']);
+    if (m == 'POST' && yol == '/api/mutfak/servis') return _yerelMutfakDurum(govde, 'servis', ['hazir']);
     // Diger uclar offline'da henuz desteklenmiyor (sonraki asamalar).
     return _json({'ok': 0, 'offline': 1, 'hata': 'Çevrimdışı — bu işlem şu an desteklenmiyor'}, 503);
+  }
+
+  // OFFLINE: mutfak (KDS) — gonderilmis/hazirlanan kalemler, acik adisyonlardan.
+  Future<Response> _yerelMutfak() async {
+    final d = await LocalDb.instance.db;
+    final rows = await d.rawQuery('''
+      SELECT k.rowid AS id, k.urun_adi, k.adet, k.not_metni AS not, k.kur, k.gonderim_zamani, k.durum,
+             a.rowid AS adisyon_id, m.ad AS masa, a.kanal
+      FROM adisyon_kalemleri k
+      JOIN adisyonlar a ON k.adisyon_uuid = a.uuid AND a.deleted = 0
+      LEFT JOIN masalar m ON a.masa_uuid = m.uuid
+      WHERE a.durum = 'acik' AND k.deleted = 0 AND k.durum IN ('gonderildi','hazirlaniyor')
+      ORDER BY k.gonderim_zamani, k.rowid
+    ''');
+    final kalemler = rows.map((r) => {...r, 'hedef': 15}).toList();
+    return _json({'ok': 1, 'offline': 1, 'kalemler': kalemler});
+  }
+
+  // OFFLINE: mutfak durum gecisi (basla/hazir/servis) — adisyonun uygun kalemlerini gunceller.
+  Future<Response> _yerelMutfakDurum(String govde, String yeni, List<String> kaynak) async {
+    final b = Uri.splitQueryString(govde);
+    final rowid = int.tryParse(b['adisyon_id'] ?? '') ?? 0;
+    final ad = await _adisyonRowid(rowid);
+    if (ad == null) return _json({'ok': 0, 'hata': 'Adisyon bulunamadı (offline)'});
+    final uuid = ad['uuid'] as String;
+    final d = await LocalDb.instance.db;
+    final yer = kaynak.map((_) => '?').join(',');
+    final kalemler = await d.rawQuery(
+        'SELECT uuid FROM adisyon_kalemleri WHERE adisyon_uuid = ? AND deleted = 0 AND durum IN ($yer)',
+        [uuid, ...kaynak]);
+    for (final k in kalemler) {
+      await SyncRepo.instance.yaz('adisyon_kalemleri', {'uuid': k['uuid'], 'durum': yeni}, op: 'update');
+    }
+    return _json({'ok': 1, 'offline': 1, 'guncellenen': kalemler.length});
   }
 
   Future<Map<String, Object?>?> _adisyonRowid(int rowid) async {
