@@ -44,6 +44,11 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# İMZA ANAHTARLARI — asla commit etme (secret)
+**/key.properties
+**/*.jks
+**/*.keystore
+
 # Derlenmis installer ciktisi (kaynak installer/*.iss commit edilir, exe edilmez)
 *.exe
 ResteOS-Kurulum.exe
