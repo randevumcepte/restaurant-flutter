@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
@@ -30,32 +31,57 @@ class KasaSunucu {
     final handler = const Pipeline().addMiddleware(_cors()).addHandler(_handle);
     _server = await shelf_io.serve(handler, InternetAddress.anyIPv4, port);
     _server!.autoCompress = true;
+    _onlineYoklaBaslat(); // internet durumunu arka planda izle (offline'da hizli yerel)
   }
 
   Future<void> durdur() async {
+    _probeTimer?.cancel();
+    _probeTimer = null;
     await _server?.close(force: true);
     _server = null;
+  }
+
+  // Internet durumunu periyodik yokla: boylece OFFLINE istegi buluta gondermeyiz
+  // (yoksa her istek 8sn timeout bekler, outage'da restoran donar).
+  Timer? _probeTimer;
+  void _onlineYoklaBaslat() {
+    _probeTimer?.cancel();
+    _onlineYokla();
+    _probeTimer = Timer.periodic(const Duration(seconds: 8), (_) => _onlineYokla());
+  }
+
+  Future<void> _onlineYokla() async {
+    try {
+      final r = await http.head(Uri.parse(AppConfig.baseUrl)).timeout(const Duration(seconds: 5));
+      _cevrimici = r.statusCode > 0; // herhangi bir yanit = internet+sunucu erisilir
+    } catch (_) {
+      _cevrimici = false; // baglanti yok/timeout = offline
+    }
   }
 
   // Tek giris: health yerel; gerisi once bulut (proxy), bulut yoksa yerel.
   Future<Response> _handle(Request req) async {
     final yol = req.requestedUri.path;
     if (yol == '/api/health') {
-      return _json({'ok': 1, 'rol': 'kasa', 'online': _sonProxyBasarili, 'zaman': DateTime.now().millisecondsSinceEpoch});
+      return _json({'ok': 1, 'rol': 'kasa', 'online': _cevrimici, 'zaman': DateTime.now().millisecondsSinceEpoch});
     }
     // Govde bir kez okunur (hem proxy hem yerel icin).
     final govde = (req.method == 'GET' || req.method == 'HEAD') ? '' : await req.readAsString();
+    // OFFLINE kisa devre: internet yoksa buluta HIC gitme -> aninda yerel (12sn donma olmaz).
+    if (!_cevrimici) {
+      return await _yerel(req, govde);
+    }
     try {
       final r = await _buluta(req, govde);
-      _sonProxyBasarili = true;
+      _cevrimici = true;
       return r;
     } catch (_) {
-      _sonProxyBasarili = false;
+      _cevrimici = false; // sonraki istekler aninda yerele gitsin (bu istek yerele duser)
       return await _yerel(req, govde); // offline -> yerel cekirdek
     }
   }
 
-  bool _sonProxyBasarili = true;
+  bool _cevrimici = true;
 
   // --- PROXY: istegi buluta ilet ---
   Future<Response> _buluta(Request req, String govde) async {
@@ -71,7 +97,7 @@ class KasaSunucu {
     if (ct != null) ireq.headers['Content-Type'] = ct;
     if (govde.isNotEmpty) ireq.body = govde;
 
-    final streamed = await ireq.send().timeout(const Duration(seconds: 12));
+    final streamed = await ireq.send().timeout(const Duration(seconds: 8));
     final bytes = await streamed.stream.toBytes();
     final respCt = streamed.headers['content-type'] ?? 'application/json; charset=utf-8';
     return Response(streamed.statusCode, body: bytes, headers: {'Content-Type': respCt});
