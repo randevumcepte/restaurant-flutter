@@ -1,19 +1,28 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_config.dart';
 import '../local/cihaz_rol.dart';
+import '../local/kasa_bulucu.dart';
 
 /// ResteOS backend (Laravel) — restoran API'si.
 class Api {
   // WHITE-LABEL: base URL AppConfig üzerinden (--dart-define ile marka başına override).
   // LAN: cihaz TERMINAL rolündeyse istekler buluta değil KASAYA gider (kasa proxy/offline sunar).
+  // BULUT YEDEGI: kasa LAN'da erisilemezse (ve internet varsa) buluta duser -> terminal tikanmaz.
   static String get base {
-    if (CihazRol.rol == Rol.terminal && CihazRol.kasaUrl.isNotEmpty) {
+    if (CihazRol.rol == Rol.terminal && CihazRol.kasaUrl.isNotEmpty && KasaBulucu.kasaErisilir) {
       return CihazRol.kasaUrl.replaceAll(RegExp(r'/+$'), '');
     }
     return AppConfig.baseUrl;
   }
+
+  static bool _baglantiHatasiMi(Object e) =>
+      e is SocketException || e is TimeoutException || e is http.ClientException;
+  // Istek bu base ile kasaya mi gitti? (bulut degilse kasaya)
+  static bool _kasayaGitti(String b) => b != AppConfig.baseUrl;
   static const Duration _zamanAsimi = Duration(seconds: 20);
 
   // Yanıtı GÜVENLE çöz: HTML/500/boş/liste gelse bile çökme yok, tutarlı {ok:0,hata} döner.
@@ -80,14 +89,23 @@ class Api {
       _post('/api/barkod/ic-uret', token, {'tur': tur, 'hedef_id': '$hedefId'});
 
   static Future<Map<String, dynamic>> _get(String path, String token) async {
-    final r = await http.get(
-      Uri.parse('$base$path'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
-    ).timeout(_zamanAsimi);
-    if (r.statusCode == 401) {
-      throw ApiYetkiHatasi();
+    final b = base;
+    try {
+      final r = await http.get(Uri.parse('$b$path'),
+          headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'}).timeout(_zamanAsimi);
+      if (r.statusCode == 401) throw ApiYetkiHatasi();
+      return _coz(r);
+    } catch (e) {
+      // Kasaya gitti ve baglanti koptu -> yeniden kesif + buluta retry (internet varsa tikanma yok).
+      if (_kasayaGitti(b) && _baglantiHatasiMi(e)) {
+        KasaBulucu.baglantiHatasi();
+        final r = await http.get(Uri.parse('${AppConfig.baseUrl}$path'),
+            headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'}).timeout(_zamanAsimi);
+        if (r.statusCode == 401) throw ApiYetkiHatasi();
+        return _coz(r);
+      }
+      rethrow;
     }
-    return _coz(r);
   }
 
   static Future<Map<String, dynamic>> patronOzet(String token, {String period = 'gunluk'}) =>
@@ -333,10 +351,22 @@ class Api {
       _get('/api/patron/sebepler${tur != null ? '?tur=$tur' : ''}', token);
 
   static Future<Map<String, dynamic>> _post(String path, String token, Map<String, String> body) async {
-    final r = await http.post(Uri.parse('$base$path'),
-        headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'}, body: body).timeout(_zamanAsimi);
-    if (r.statusCode == 401) throw ApiYetkiHatasi();
-    return _coz(r);
+    final b = base;
+    try {
+      final r = await http.post(Uri.parse('$b$path'),
+          headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'}, body: body).timeout(_zamanAsimi);
+      if (r.statusCode == 401) throw ApiYetkiHatasi();
+      return _coz(r);
+    } catch (e) {
+      if (_kasayaGitti(b) && _baglantiHatasiMi(e)) {
+        KasaBulucu.baglantiHatasi();
+        final r = await http.post(Uri.parse('${AppConfig.baseUrl}$path'),
+            headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'}, body: body).timeout(_zamanAsimi);
+        if (r.statusCode == 401) throw ApiYetkiHatasi();
+        return _coz(r);
+      }
+      rethrow;
+    }
   }
 
   // Masa tasima onayi (talep karti): kaynak masadaki acik hesabi hedef masaya tasir. Yetki yoksa onayPin gerekir.

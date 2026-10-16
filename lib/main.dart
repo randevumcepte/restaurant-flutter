@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'config/app_config.dart';
 import 'local/cihaz_rol.dart';
+import 'local/kasa_bulucu.dart';
 import 'local/kasa_sunucu.dart';
 import 'providers/auth_provider.dart';
 import 'providers/tema_provider.dart';
@@ -15,6 +16,8 @@ void main() async {
   await CihazRol.yukle();
   if (CihazRol.rol == Rol.kasa) {
     try { await KasaSunucu.instance.baslat(); } catch (_) {}
+  } else if (CihazRol.rol == Rol.terminal) {
+    KasaBulucu.baslat(); // kasayi otomatik bul + IP degisse yeniden kesfet (periyodik)
   }
   // Push altyapısı (Firebase yoksa sessizce kapalı kalır, app normal açılır).
   await NotificationService().baslat();
