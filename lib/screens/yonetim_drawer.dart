@@ -27,6 +27,7 @@ import 'hareketler_screen.dart';
 import 'yazici_ayarlari_screen.dart';
 import 'sebep_yonetimi_screen.dart';
 import 'asistan_screen.dart';
+import 'odul_dogrula_screen.dart';
 
 /// Yönetim menüsü (drawer) — HER SAYFADAN erişilebilsin diye paylaşımlı bileşen.
 /// Navigasyon kararını çağırana bırakır: [onGit] ekran açar, [onWeb] tarayıcı linki açar.
@@ -74,6 +75,8 @@ class YonetimDrawer extends StatelessWidget {
           const SizedBox(height: 6),
           Expanded(
             child: ListView(padding: EdgeInsets.zero, children: [
+              // Ödül Doğrula — hem kasa hem garson (müşteri ödül QR kodunu okut/onayla)
+              git(Icons.qr_code_scanner, 'Ödül Doğrula', const OdulDogrulaScreen(), renk: const Color(0xFF22C55E)),
               if (patron) git(Icons.point_of_sale, 'Kasa (Vardiya)', const KasaScreen()),
               if (patron) git(Icons.analytics_outlined, 'Finans / Kâr-Zarar', const FinansScreen()),
               if (patron) git(Icons.inventory_2_outlined, 'Stok & Satın Alma', const IsletmeHubScreen()),

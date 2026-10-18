@@ -84,6 +84,12 @@ class Api {
   static Future<Map<String, dynamic>> barkodListe(String token, String tur, int hedefId) => _get('/api/barkod/liste?tur=$tur&hedef_id=$hedefId', token);
   static Future<Map<String, dynamic>> barkodEkle(String token, String barkod, String tur, int hedefId) =>
       _post('/api/barkod/ekle', token, {'barkod': barkod, 'tur': tur, 'hedef_id': '$hedefId'});
+
+  // ---------------- ÖDÜL DOĞRULA (kasa + garson: müşteri ödül QR kodu) ----------------
+  static Future<Map<String, dynamic>> odulDogrula(String token, String kod) =>
+      _post('/api/patron/odul-dogrula', token, {'kod': kod});
+  static Future<Map<String, dynamic>> odulOnayla(String token, String kod, {int? adisyonId}) =>
+      _post('/api/patron/odul-onayla', token, {'kod': kod, if (adisyonId != null) 'adisyon_id': '$adisyonId'});
   static Future<Map<String, dynamic>> barkodSil(String token, int id) => _post('/api/barkod/sil', token, {'id': '$id'});
   static Future<Map<String, dynamic>> barkodIcUret(String token, String tur, int hedefId) =>
       _post('/api/barkod/ic-uret', token, {'tur': tur, 'hedef_id': '$hedefId'});
