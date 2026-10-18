@@ -30,6 +30,7 @@ import 'tema_secim_screen.dart';
 import 'indirimler_screen.dart';
 import 'odeme_modu_screen.dart';
 import 'cari_hesaplar_screen.dart';
+import 'odul_dogrula_screen.dart';
 import 'rezervasyon_screen.dart';
 import 'personel_screen.dart';
 import 'gider_screen.dart';
@@ -403,6 +404,8 @@ class _YanMenuState extends State<_YanMenu> {
                       Divider(height: 1, color: t.line, indent: 14, endIndent: 14),
                       const SizedBox(height: 8),
                       _baslik(t, 'YÖNETİM', acik),
+                      // Ödül Doğrula — hem kasa hem garson (müşteri ödül QR kodunu okut/onayla)
+                      _link(t, Icons.qr_code_scanner, 'Ödül Doğrula', () => git(const OdulDogrulaScreen()), renk: const Color(0xFF22C55E)),
                       if (patron) _link(t, Icons.point_of_sale, 'Kasa (Vardiya)', () => git(const KasaScreen())),
                       if (patron) _link(t, Icons.analytics_outlined, 'Finans / Kâr-Zarar', () => git(const FinansScreen())),
                       if (patron) _link(t, Icons.inventory_2_outlined, 'Stok & Satın Alma', () => git(const IsletmeHubScreen())),
