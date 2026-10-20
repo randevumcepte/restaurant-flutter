@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'menu_hamburger.dart';
 import '../providers/auth_provider.dart';
 import '../providers/tema_provider.dart';
@@ -256,75 +257,38 @@ class _TemaSecimScreenState extends State<TemaSecimScreen> {
     };
   }
 
+  // Canlı önizleme kartı kaldırıldı — tek belirgin buton, müşterinin gördüğü QR menüyü açar.
   Widget _onizleme() {
-    final p = _onizlikPalet();
-    final ana = p['ana']!, ana2 = p['ana2']!, ana3 = p['ana3']!, ink = p['ink']!, detay = p['detay']!;
-    final grad = LinearGradient(colors: [ana, ana2, ana3], begin: Alignment.topLeft, end: Alignment.bottomRight);
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [
-        Icon(Icons.visibility_outlined, color: _sub, size: 18), const SizedBox(width: 7),
-        Text('Canlı Önizleme', style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.w800)),
-        const SizedBox(width: 8),
-        Flexible(child: Text('(müşterinin gördüğü menü)', style: TextStyle(color: _sub2, fontSize: 11.5), overflow: TextOverflow.ellipsis)),
-      ]),
-      const SizedBox(height: 10),
-      Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: const Color(0xFF130F15),
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: detay.withValues(alpha: 0.28)),
+    final detay = _onizlikPalet()['detay']!;
+    return SizedBox(
+      width: double.infinity,
+      height: 58,
+      child: FilledButton(
+        style: FilledButton.styleFrom(
+          backgroundColor: detay,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          elevation: 4,
         ),
-        child: Column(children: [
-          // Ürün kartı
-          ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: Stack(children: [
-              SizedBox(height: 150, width: double.infinity, child: Image.network(
-                'https://images.unsplash.com/photo-1600891964092-4316c288032e?auto=format&fit=crop&w=600&q=72',
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(color: const Color(0xFF231A26),
-                    child: const Center(child: Text('🍽️', style: TextStyle(fontSize: 40)))),
-              )),
-              Positioned.fill(child: DecoratedBox(decoration: const BoxDecoration(gradient: LinearGradient(
-                  begin: Alignment.topCenter, end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, Color(0xD9000000)], stops: [0.4, 1])))),
-              Positioned(left: 12, right: 12, bottom: 10, child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                  const Text('Izgara Antrikot', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
-                  Text('650 TL', style: TextStyle(color: detay, fontSize: 13, fontWeight: FontWeight.w800)),
-                ])),
-                Container(width: 34, height: 34, decoration: BoxDecoration(gradient: grad, borderRadius: BorderRadius.circular(11)),
-                    child: Icon(Icons.add, color: ink, size: 20)),
-              ])),
-            ]),
-          ),
-          const SizedBox(height: 14),
-          // Arama satırı
-          Row(children: [
-            Expanded(child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
-              decoration: BoxDecoration(color: const Color(0x4D000000), borderRadius: BorderRadius.circular(13),
-                  border: Border.all(color: detay.withValues(alpha: 0.2))),
-              child: const Text('Ne yemek istersiniz?', style: TextStyle(color: Color(0xFF9A8A9C), fontSize: 13)),
-            )),
-            const SizedBox(width: 9),
-            Container(width: 46, height: 44, decoration: BoxDecoration(gradient: grad, borderRadius: BorderRadius.circular(13)),
-                child: Icon(Icons.search, color: ink, size: 19)),
-          ]),
-          const SizedBox(height: 14),
-          // Tüm Menüler çipi
-          Align(alignment: Alignment.centerLeft, child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-            decoration: BoxDecoration(gradient: grad, borderRadius: BorderRadius.circular(14)),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(Icons.restaurant_menu, color: ink, size: 16), const SizedBox(width: 6),
-              Text('Tüm Menüler', style: TextStyle(color: ink, fontSize: 12.5, fontWeight: FontWeight.w800)),
-            ]),
-          )),
+        onPressed: _menuOnizle,
+        child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Icon(Icons.visibility, color: Colors.black87, size: 21),
+          SizedBox(width: 9),
+          Text('Menüyü Önizle', style: TextStyle(color: Colors.black87, fontSize: 16.5, fontWeight: FontWeight.w900, letterSpacing: .3)),
+          SizedBox(width: 6),
+          Icon(Icons.arrow_forward, color: Colors.black87, size: 19),
         ]),
       ),
-    ]);
+    );
+  }
+
+  Future<void> _menuOnizle() async {
+    final sid = context.read<AuthProvider>().subeId;
+    final url = '${Api.base}/menu-onizle${sid != null ? '?sube=$sid' : ''}';
+    try {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Önizleme açılamadı')));
+    }
   }
 }
 
