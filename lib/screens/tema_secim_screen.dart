@@ -1,6 +1,8 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:image_picker/image_picker.dart';
 import 'menu_hamburger.dart';
 import '../providers/auth_provider.dart';
 import '../providers/tema_provider.dart';
@@ -116,6 +118,60 @@ class _TemaSecimScreenState extends State<TemaSecimScreen> {
     _kaydet('ozel', renk: _str(ozelAna), renk2: detayAyri ? _str(ozelDetay) : '');
   }
 
+  // Logo yükle → baskın (doygun) rengi otomatik al. Web (tema.blade) ile AYNI algoritma, cihazda (AI yok).
+  bool _logoCalisiyor = false;
+  Future<void> _logodanRenk() async {
+    if (!duzenleyebilir) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bu ayarı yalnızca Sahip/Müdür değiştirebilir.')));
+      return;
+    }
+    try {
+      final x = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 256, maxHeight: 256);
+      if (x == null || !mounted) return;
+      setState(() => _logoCalisiyor = true);
+      final bytes = await x.readAsBytes();
+      // 48x48'e indir ve ham RGBA pikselleri oku
+      final codec = await ui.instantiateImageCodec(bytes, targetWidth: 48, targetHeight: 48);
+      final frame = await codec.getNextFrame();
+      final bd = await frame.image.toByteData(format: ui.ImageByteFormat.rawRgba);
+      final renk = (bd == null) ? null : _baskinRenk(bd.buffer.asUint8List());
+      if (!mounted) return;
+      setState(() => _logoCalisiyor = false);
+      if (renk == null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Logodan belirgin bir renk bulunamadı. Rengi elle seçebilirsin.')));
+        return;
+      }
+      setState(() { ozelAna = renk; }); // ana rengi logodan al; detay ayarı korunur
+      _kaydet('ozel', renk: _str(ozelAna), renk2: detayAyri ? _str(ozelDetay) : '');
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Logodan renk alındı: ${_str(ozelAna)}')));
+    } catch (e) {
+      if (mounted) setState(() => _logoCalisiyor = false);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Logo okunamadı.')));
+    }
+  }
+
+  // Ham RGBA'dan baskın doygun rengi bul (beyaz/siyah/gri elenir, doygunluk skoru en yüksek kova)
+  Color? _baskinRenk(List<int> d) {
+    final bk = <String, List<double>>{}; // key -> [n, r, g, b, sc]
+    for (int i = 0; i + 3 < d.length; i += 4) {
+      final r = d[i], g = d[i + 1], b = d[i + 2], a = d[i + 3];
+      if (a < 128) continue;
+      final mx = [r, g, b].reduce((p, q) => p > q ? p : q);
+      final mn = [r, g, b].reduce((p, q) => p < q ? p : q);
+      final sat = mx == 0 ? 0.0 : (mx - mn) / mx;
+      final lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255.0;
+      if (lum > 0.92 || lum < 0.08 || sat < 0.18) continue; // beyaz/siyah/gri ele
+      final key = '${r >> 4}-${g >> 4}-${b >> 4}';
+      final o = bk.putIfAbsent(key, () => [0, 0, 0, 0, 0]);
+      o[0]++; o[1] += r; o[2] += g; o[3] += b; o[4] += sat;
+    }
+    List<double>? best;
+    for (final o in bk.values) { if (best == null || o[4] > best[4]) best = o; }
+    if (best == null) return null;
+    final n = best[0];
+    return Color.fromARGB(255, (best[1] / n).round(), (best[2] / n).round(), (best[3] / n).round());
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -140,6 +196,8 @@ class _TemaSecimScreenState extends State<TemaSecimScreen> {
                   Text('Kendi Rengin', style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.w800)),
                   const SizedBox(height: 8),
                   _ozelKart(),
+                  const SizedBox(height: 10),
+                  _logoButonu(),
 
                   const SizedBox(height: 22),
                   Text('Hazır Lüks Paletler', style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.w800)),
@@ -153,6 +211,29 @@ class _TemaSecimScreenState extends State<TemaSecimScreen> {
                   const SizedBox(height: 26),
                   _onizleme(),
                 ]),
+    );
+  }
+
+  Widget _logoButonu() {
+    return GestureDetector(
+      onTap: _logoCalisiyor ? null : _logodanRenk,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        decoration: BoxDecoration(
+          color: _card, borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: _line),
+        ),
+        child: Row(children: [
+          if (_logoCalisiyor) const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.2, color: _gold))
+          else const Icon(Icons.image_search, color: _gold, size: 20),
+          const SizedBox(width: 11),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Logo ile otomatik renk', style: TextStyle(color: _ink, fontSize: 14.5, fontWeight: FontWeight.w800)),
+            Text('Logonu yükle, baskın rengi kendisi bulsun', style: TextStyle(color: _sub, fontSize: 11.5)),
+          ])),
+          Icon(Icons.chevron_right, color: _sub),
+        ]),
+      ),
     );
   }
 
