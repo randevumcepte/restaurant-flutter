@@ -592,7 +592,7 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
     _gecmisKaydet();
     final nk = noktalar[i];
     final cur = _n(nk['boy']) <= 0 ? 58.0 : _n(nk['boy']).toDouble();
-    setState(() => nk['boy'] = (cur * f).clamp(28, 220));
+    setState(() => nk['boy'] = (cur * f).clamp(28, 900)); // üst sınır 220->900: mutfak/bar büyüyebilsin (web ile birebir)
   }
 
   void _tumMasalariKaldir() { _gecmisKaydet(); setState(() { masaYer.clear(); secili = null; }); }
