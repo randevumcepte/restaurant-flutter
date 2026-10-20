@@ -148,6 +148,9 @@ class _TemaSecimScreenState extends State<TemaSecimScreen> {
                     crossAxisCount: 2, crossAxisSpacing: 14, mainAxisSpacing: 14, childAspectRatio: .92,
                     children: temalar.map(_kart).toList(),
                   ),
+
+                  const SizedBox(height: 26),
+                  _onizleme(),
                 ]),
     );
   }
@@ -220,6 +223,108 @@ class _TemaSecimScreenState extends State<TemaSecimScreen> {
         ]),
       ),
     );
+  }
+
+  // ── Canlı Önizleme: seçili renge bürünmüş örnek QR menü (web /tema ile aynı mantık) ──
+  int _ch(Color c, int sh) => (c.toARGB32() >> sh) & 0xFF;
+  Color _karistir(Color a, Color b, double t) {
+    int m(int sh) { final x = _ch(a, sh), y = _ch(b, sh); return (x + (y - x) * t).round(); }
+    return Color.fromARGB(255, m(16), m(8), m(0));
+  }
+  double _lum(Color c) => (0.299 * _ch(c, 16) + 0.587 * _ch(c, 8) + 0.114 * _ch(c, 0)) / 255;
+
+  Map<String, Color> _onizlikPalet() {
+    if (secili == 'ozel') {
+      final ana = ozelAna;
+      return {
+        'ana': ana,
+        'ana2': _karistir(ana, Colors.white, 0.22),
+        'ana3': _karistir(ana, Colors.black, 0.26),
+        'ink': _lum(ana) > 0.62 ? const Color(0xFF3A2600) : Colors.white,
+        'detay': detayAyri ? ozelDetay : ozelAna,
+      };
+    }
+    final t = temalar.firstWhere((e) => e['key']?.toString() == secili,
+        orElse: () => temalar.isNotEmpty ? temalar.first : <String, dynamic>{});
+    final ana = _hex(t['ana']?.toString());
+    return {
+      'ana': ana,
+      'ana2': _hex((t['ana2'] ?? t['ana'])?.toString()),
+      'ana3': _hex(t['ana3']?.toString()),
+      'ink': _hex(t['ink']?.toString()),
+      'detay': const Color(0xFFE9C46A),
+    };
+  }
+
+  Widget _onizleme() {
+    final p = _onizlikPalet();
+    final ana = p['ana']!, ana2 = p['ana2']!, ana3 = p['ana3']!, ink = p['ink']!, detay = p['detay']!;
+    final grad = LinearGradient(colors: [ana, ana2, ana3], begin: Alignment.topLeft, end: Alignment.bottomRight);
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        Icon(Icons.visibility_outlined, color: _sub, size: 18), const SizedBox(width: 7),
+        Text('Canlı Önizleme', style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.w800)),
+        const SizedBox(width: 8),
+        Flexible(child: Text('(müşterinin gördüğü menü)', style: TextStyle(color: _sub2, fontSize: 11.5), overflow: TextOverflow.ellipsis)),
+      ]),
+      const SizedBox(height: 10),
+      Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFF130F15),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: detay.withValues(alpha: 0.28)),
+        ),
+        child: Column(children: [
+          // Ürün kartı
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Stack(children: [
+              SizedBox(height: 150, width: double.infinity, child: Image.network(
+                'https://images.unsplash.com/photo-1600891964092-4316c288032e?auto=format&fit=crop&w=600&q=72',
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(color: const Color(0xFF231A26),
+                    child: const Center(child: Text('🍽️', style: TextStyle(fontSize: 40)))),
+              )),
+              Positioned.fill(child: DecoratedBox(decoration: const BoxDecoration(gradient: LinearGradient(
+                  begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                  colors: [Colors.transparent, Color(0xD9000000)], stops: [0.4, 1])))),
+              Positioned(left: 12, right: 12, bottom: 10, child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                  const Text('Izgara Antrikot', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
+                  Text('650 TL', style: TextStyle(color: detay, fontSize: 13, fontWeight: FontWeight.w800)),
+                ])),
+                Container(width: 34, height: 34, decoration: BoxDecoration(gradient: grad, borderRadius: BorderRadius.circular(11)),
+                    child: Icon(Icons.add, color: ink, size: 20)),
+              ])),
+            ]),
+          ),
+          const SizedBox(height: 14),
+          // Arama satırı
+          Row(children: [
+            Expanded(child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
+              decoration: BoxDecoration(color: const Color(0x4D000000), borderRadius: BorderRadius.circular(13),
+                  border: Border.all(color: detay.withValues(alpha: 0.2))),
+              child: const Text('Ne yemek istersiniz?', style: TextStyle(color: Color(0xFF9A8A9C), fontSize: 13)),
+            )),
+            const SizedBox(width: 9),
+            Container(width: 46, height: 44, decoration: BoxDecoration(gradient: grad, borderRadius: BorderRadius.circular(13)),
+                child: Icon(Icons.search, color: ink, size: 19)),
+          ]),
+          const SizedBox(height: 14),
+          // Tüm Menüler çipi
+          Align(alignment: Alignment.centerLeft, child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            decoration: BoxDecoration(gradient: grad, borderRadius: BorderRadius.circular(14)),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(Icons.restaurant_menu, color: ink, size: 16), const SizedBox(width: 6),
+              Text('Tüm Menüler', style: TextStyle(color: ink, fontSize: 12.5, fontWeight: FontWeight.w800)),
+            ]),
+          )),
+        ]),
+      ),
+    ]);
   }
 }
 
