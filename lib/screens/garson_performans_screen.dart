@@ -615,8 +615,8 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
       masaYer.forEach((id, yer) {
         final a = agir[id] ?? 0;
         final o = maxA > 0 ? a / maxA : 0.0;
-        final boyV = _n(yer['boy']) <= 0 ? 150.0 : _n(yer['boy']).toDouble();
-        final size = sx(boyV).clamp(32.0, 88.0);
+        final boyV = _n(yer['boy']) <= 0 ? 170.0 : _n(yer['boy']).toDouble();
+        final size = math.max(28.0, sx(boyV).toDouble()); // editörle birebir: sx(boy), 88 kırpma YOK
         tablolar.add(_Masa(int.tryParse(id) ?? 0, Offset(sx(_n(yer['x'])), sy(_n(yer['y'])).toDouble()), size, o.toDouble(),
             _sicaklik(o.toDouble()), (_sekil[id] ?? 'kare') == 'yuvarlak', adMap[id] ?? '', _kapasite[id] ?? 4));
       });
@@ -632,7 +632,7 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
             masaOlcek: _masaOlcek,
             noktalar: noktalar.map((nk) => _Nokta(
                 Offset(sx(_n(nk['x'])), sy(_n(nk['y'])).toDouble()), nk['tip']?.toString() ?? 'diger',
-                _n(nk['boy']) <= 0 ? 66.0 : _n(nk['boy']).toDouble())).toList(),
+                sx(_n(nk['boy']) <= 0 ? 58.0 : _n(nk['boy'])).toDouble())).toList(), // sx(boy): editör+web ile birebir
             rota: ((isi['rota'] as List?) ?? []).map((e) => Map<String, dynamic>.from(e)).toList(),
           ))),
           for (final b in zones)
@@ -653,7 +653,7 @@ class _GarsonPerformansScreenState extends State<GarsonPerformansScreen> {
     final tip = nk['tip']?.toString() ?? 'diger';
     final def = _tip[tip] ?? _tip['diger']!;
     // Kütüphanede assets/sema/<tip>.png varsa gerçek görseli, yoksa ikon rozeti. Boyut şemadan.
-    final kutu = _n(nk['boy']) <= 0 ? 66.0 : _n(nk['boy']).toDouble();
+    final kutu = sx(_n(nk['boy']) <= 0 ? 58.0 : _n(nk['boy'])).toDouble(); // sx(boy): editör+web ile birebir
     final gorsel = Image.asset('assets/sema/$tip.png', width: kutu, fit: BoxFit.contain,
         errorBuilder: (_, _, _) => Container(
             padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: def[1] as Color, borderRadius: BorderRadius.circular(9)),

@@ -334,7 +334,7 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
     final nk = noktalar[i];
     final def = _tipler[nk['tip']?.toString() ?? 'diger'] ?? _tipler['diger']!;
     final sc = _sec('nokta', i);
-    final nbo = _n(nk['boy']) <= 0 ? 58.0 : _n(nk['boy']).toDouble();
+    final nbo = sx(_n(nk['boy']) <= 0 ? 58.0 : _n(nk['boy'])).toDouble(); // sx(boy): ısı haritası + web ile birebir
     return Positioned(
       left: sx(_n(nk['x'])) - nbo / 2, top: sy(_n(nk['y'])) - nbo / 2,
       child: GestureDetector(
