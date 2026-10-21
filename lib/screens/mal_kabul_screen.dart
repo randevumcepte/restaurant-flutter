@@ -64,11 +64,8 @@ class _MalKabulScreenState extends State<MalKabulScreen> {
       baslik: 'Mal Kabul',
       ikon: Icons.inventory_outlined,
       geri: true,
-      altBaslik: 'İrsaliye · gelen/kabul/red · lot/SKT',
-      araclar: [
-        MButon('Yeni Mal Kabul', _mavi, _yeni, ikon: Icons.add),
-        MButon('Yenile', _mor, _yukle, dolu: false, ikon: Icons.refresh),
-      ],
+      altBaslik: 'İrsaliye · gelen/kabul/red',
+      araclar: [MButon('Yeni', _mavi, _yeni, ikon: Icons.add)],
       govde: loading
           ? const Center(child: CircularProgressIndicator())
           : kabuller.isEmpty

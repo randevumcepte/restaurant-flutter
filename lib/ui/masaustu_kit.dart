@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/tema_provider.dart';
+import '../responsive.dart';
 
 /// ResteOS masaüstü (PC/tablet) ekranları için ORTAK, TEMA-DUYARLI (gece/gündüz)
 /// bileşen kütüphanesi. SepetTakip tarzı: aydınlık/yoğun, tablo + kart ızgara +
@@ -35,7 +36,7 @@ class MasaustuSayfa extends StatelessWidget {
       backgroundColor: t.bg,
       body: Column(children: [
         Container(
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
+          padding: genisMi(context) ? const EdgeInsets.fromLTRB(20, 14, 20, 14) : const EdgeInsets.fromLTRB(4, 10, 8, 10),
           decoration: BoxDecoration(
             color: t.card,
             border: Border(bottom: BorderSide(color: t.line)),
@@ -46,21 +47,27 @@ class MasaustuSayfa extends StatelessWidget {
                 onPressed: () => Navigator.of(context).maybePop(),
                 icon: Icon(Icons.arrow_back, color: t.sub2, size: 22),
                 tooltip: 'Geri',
+                visualDensity: VisualDensity.compact,
               ),
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [t.mor1, t.mavi]),
-                borderRadius: BorderRadius.circular(11),
+            // Dekoratif ikon kutusu sadece geniş ekranda (mobilde başlığa yer açılır)
+            if (genisMi(context)) ...[
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: [t.mor1, t.mavi]),
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: Icon(ikon, color: Colors.white, size: 21),
               ),
-              child: Icon(ikon, color: Colors.white, size: 21),
+              const SizedBox(width: 12),
+            ],
+            Flexible(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                Text(baslik, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.ink, fontSize: 19, fontWeight: FontWeight.bold)),
+                if (altBaslik != null) Text(altBaslik!, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.sub, fontSize: 12)),
+              ]),
             ),
-            const SizedBox(width: 12),
-            Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-              Text(baslik, style: TextStyle(color: t.ink, fontSize: 19, fontWeight: FontWeight.bold)),
-              if (altBaslik != null) Text(altBaslik!, style: TextStyle(color: t.sub, fontSize: 12)),
-            ]),
             const Spacer(),
             ...araclar,
             // Gece/gündüz her sayfada ulaşılabilir olsun
