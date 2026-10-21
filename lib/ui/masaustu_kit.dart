@@ -34,7 +34,9 @@ class MasaustuSayfa extends StatelessWidget {
     final t = context.watch<TemaProvider>();
     return Scaffold(
       backgroundColor: t.bg,
-      body: Column(children: [
+      body: SafeArea(
+        bottom: false,
+        child: Column(children: [
         Container(
           padding: genisMi(context) ? const EdgeInsets.fromLTRB(20, 14, 20, 14) : const EdgeInsets.fromLTRB(4, 10, 8, 10),
           decoration: BoxDecoration(
@@ -77,6 +79,7 @@ class MasaustuSayfa extends StatelessWidget {
         ),
         Expanded(child: govde),
       ]),
+      ),
     );
   }
 }
