@@ -340,6 +340,12 @@ class _YeniMalKabulScreenState extends State<_YeniMalKabulScreen> {
         for (final k in (r['katalog'] as List? ?? [])) {
           _katalog[_n((k as Map)['malzeme_id']).toInt()] = {'fiyat': _n(k['fiyat']), 'birim_id': _n(k['birim_id']).toInt()};
         }
+        // Satici (tedarikci) bilgilerini doldur (bossa)
+        final td = r['tedarikci'] as Map?;
+        if (td != null) {
+          void dl(TextEditingController c, dynamic v) { if (c.text.trim().isEmpty && v != null && '$v'.isNotEmpty) c.text = '$v'; }
+          dl(_saticiAd, td['ad']); dl(_saticiVkn, td['vkn']); dl(_saticiVd, td['vergi_dairesi']); dl(_saticiAdres, td['adres']);
+        }
         for (final k in kalemler) { _katalogUygula(k); }
         setState(() {});
         final n = _katalog.length;
