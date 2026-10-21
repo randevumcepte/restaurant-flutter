@@ -14,6 +14,7 @@ import 'satinalma_asistan_screen.dart';
 import 'satinalma_siparis_screen.dart';
 import 'siparis_onerisi_screen.dart';
 import 'fatura_eslestir_screen.dart';
+import 'mal_kabul_screen.dart';
 import '../responsive.dart';
 import '../ui/masaustu_kit.dart';
 import '../providers/tema_provider.dart';
@@ -35,6 +36,7 @@ class IsletmeHubScreen extends StatelessWidget {
       _Hub('Alış Faturaları', 'Stok girişi · fiyat uyarısı', Icons.receipt_long_outlined, const Color(0xFFD97706), const AlisFaturaScreen()),
       _Hub('Sipariş Önerisi', 'Neyi · ne kadar al', Icons.auto_awesome, const Color(0xFF7C3AED), const SiparisOnerisiScreen()),
       _Hub('Satınalma Siparişi', 'Sipariş ver · PO', Icons.shopping_cart_checkout, const Color(0xFF4F46E5), const SatinalmaSiparisScreen()),
+      _Hub('Mal Kabul', 'İrsaliye · gelen/kabul/red · lot', Icons.inventory_outlined, const Color(0xFF0EA5E9), const MalKabulScreen()),
       _Hub('Fatura Eşleştir', 'Sipariş↔irsaliye↔fatura', Icons.fact_check_outlined, const Color(0xFFF59E0B), const FaturaEslestirScreen()),
       _Hub('Tedarikçiler', 'Cari · toplam alış', Icons.local_shipping_outlined, const Color(0xFF0EA5E9), const TedarikciScreen()),
       _Hub('Giderler', 'Kira · fatura · maaş', Icons.account_balance_wallet_outlined, const Color(0xFFF43F5E), const GiderScreen()),
@@ -87,6 +89,7 @@ class IsletmeHubScreen extends StatelessWidget {
       _Hub('Alış Faturaları', 'Stok girişi · fiyat uyarısı', Icons.receipt_long_outlined, const Color(0xFFD97706), const AlisFaturaScreen()),
       _Hub('Sipariş Önerisi', 'Neyi · ne kadar al', Icons.auto_awesome, const Color(0xFF7C3AED), const SiparisOnerisiScreen()),
       _Hub('Satınalma Siparişi', 'Sipariş ver · PO', Icons.shopping_cart_checkout, const Color(0xFF4F46E5), const SatinalmaSiparisScreen()),
+      _Hub('Mal Kabul', 'İrsaliye · gelen/kabul/red · lot', Icons.inventory_outlined, const Color(0xFF0EA5E9), const MalKabulScreen()),
       _Hub('Fatura Eşleştir', 'Sipariş↔irsaliye↔fatura', Icons.fact_check_outlined, const Color(0xFFF59E0B), const FaturaEslestirScreen()),
       _Hub('Tedarikçiler', 'Cari · toplam alış', Icons.local_shipping_outlined, const Color(0xFF0EA5E9), const TedarikciScreen()),
       _Hub('Giderler', 'Kira · fatura · maaş', Icons.account_balance_wallet_outlined, const Color(0xFFF43F5E), const GiderScreen()),

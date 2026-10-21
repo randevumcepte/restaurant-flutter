@@ -615,6 +615,12 @@ class Api {
   static Future<Map<String, dynamic>> tedarikciOdeme(String token, {required int tedarikciId, required double tutar, String odemeSekli = 'nakit'}) =>
       _post('/api/patron/tedarikci-odeme', token, {'tedarikci_id': '$tedarikciId', 'tutar': '$tutar', 'odeme_sekli': odemeSekli});
 
+  // ---- MAL KABUL (GRN) ----
+  static Future<Map<String, dynamic>> malKabulListe(String token, {int? siparisId}) => _get('/api/patron/mal-kabul-liste${siparisId != null ? '?siparis_id=$siparisId' : ''}', token);
+  static Future<Map<String, dynamic>> malKabulDetay(String token, int id) => _get('/api/patron/mal-kabul-detay?id=$id', token);
+  static Future<Map<String, dynamic>> malKabulBarkod(String token, String kod) => _get('/api/patron/mal-kabul-barkod?kod=${Uri.encodeComponent(kod)}', token);
+  static Future<Map<String, dynamic>> malKabulOlustur(String token, Map<String, String> body) => _post('/api/patron/mal-kabul-olustur', token, body);
+
   // ---- ALIS FATURALARI ----
   static Future<Map<String, dynamic>> alisFaturalari(String token, {String? ay}) => _get('/api/patron/alis-faturalari${ay != null ? '?ay=$ay' : ''}', token);
   static Future<Map<String, dynamic>> alisFaturaDetay(String token, int id) => _get('/api/patron/alis-fatura-detay?id=$id', token);
