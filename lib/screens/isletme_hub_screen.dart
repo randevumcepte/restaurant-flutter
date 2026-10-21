@@ -7,6 +7,8 @@ import 'alis_fatura_screen.dart';
 import 'tedarikci_screen.dart';
 import 'gider_screen.dart';
 import 'fiyat_radari_screen.dart';
+import 'satinalma_analiz_screen.dart';
+import 'parti_takip_screen.dart';
 import '../responsive.dart';
 import '../ui/masaustu_kit.dart';
 import '../providers/tema_provider.dart';
@@ -29,6 +31,8 @@ class IsletmeHubScreen extends StatelessWidget {
       _Hub('Tedarikçiler', 'Cari · toplam alış', Icons.local_shipping_outlined, const Color(0xFF0EA5E9), const TedarikciScreen()),
       _Hub('Giderler', 'Kira · fatura · maaş', Icons.account_balance_wallet_outlined, const Color(0xFFF43F5E), const GiderScreen()),
       _Hub('Fiyat Radarı', 'Gizli zam · ucuz tedarikçi', Icons.radar, const Color(0xFFEC4899), const FiyatRadariScreen()),
+      _Hub('Satınalma Analizi', 'Tedarikçi karne · harcama', Icons.leaderboard_outlined, const Color(0xFF4F46E5), const SatinalmaAnalizScreen()),
+      _Hub('Parti / SKT Takip', 'FEFO · son kullanma', Icons.event_busy_outlined, const Color(0xFFF43F5E), const PartiTakipScreen()),
     ];
     return Scaffold(
       backgroundColor: _bg,
@@ -74,6 +78,8 @@ class IsletmeHubScreen extends StatelessWidget {
       _Hub('Tedarikçiler', 'Cari · toplam alış', Icons.local_shipping_outlined, const Color(0xFF0EA5E9), const TedarikciScreen()),
       _Hub('Giderler', 'Kira · fatura · maaş', Icons.account_balance_wallet_outlined, const Color(0xFFF43F5E), const GiderScreen()),
       _Hub('Fiyat Radarı', 'Gizli zam · ucuz tedarikçi', Icons.radar, const Color(0xFFEC4899), const FiyatRadariScreen()),
+      _Hub('Satınalma Analizi', 'Tedarikçi karne · harcama', Icons.leaderboard_outlined, const Color(0xFF4F46E5), const SatinalmaAnalizScreen()),
+      _Hub('Parti / SKT Takip', 'FEFO · son kullanma', Icons.event_busy_outlined, const Color(0xFFF43F5E), const PartiTakipScreen()),
     ];
     return MasaustuSayfa(
       baslik: 'Stok & Satın Alma',
