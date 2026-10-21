@@ -11,6 +11,8 @@
     <!-- Mesai geofence: QR okuturken/ping'de konum (uzaktan girisi engellemek icin) -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <!-- FCM push bildirimleri (Android 13+ runtime izin ister; NotificationService requestPermission cagirir) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
         android:label="Enjula Experience"
         android:name="${applicationName}"
@@ -43,6 +45,10 @@
         <meta-data
             android:name="io.flutter.embedding.android.EnableImpeller"
             android:value="false" />
+        <!-- FCM: app kapaliyken gelen bildirimler bu kanala dusar (kod da ayni id ile kanal kurar) -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="resteos_siparis" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

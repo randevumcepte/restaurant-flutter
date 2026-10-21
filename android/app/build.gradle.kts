@@ -73,3 +73,9 @@ dependencies {
     // Core library desugaring (flutter_local_notifications zorunlulugu)
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
+
+// FCM push: google-services.json android/app/ altina konunca eklenti OTOMATIK devreye girer.
+// Dosya yoksa build normal gecer (push kapali kalir) -> mevcut sistem bozulmaz.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
