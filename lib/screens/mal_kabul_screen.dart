@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:image_picker/image_picker.dart';
 import '../providers/auth_provider.dart';
 import '../providers/tema_provider.dart';
 import '../services/api.dart';
@@ -247,13 +248,19 @@ class _Kalem {
 }
 
 class _YeniMalKabulScreenState extends State<_YeniMalKabulScreen> {
-  bool loading = true, kaydediliyor = false;
+  bool loading = true, kaydediliyor = false, fotoOkunuyor = false, faturaAcik = false;
   List acikSiparisler = [], malzemeler = [], birimler = [], tedarikciler = [];
   int? siparisId, tedarikciId;
   final _irsaliye = TextEditingController();
   final _notlar = TextEditingController();
   String _tarih = DateFormat('yyyy-MM-dd').format(DateTime.now());
   final List<_Kalem> kalemler = [];
+  // İrsaliye / Fatura Bilgileri (foto-OCR ile dolar, elle düzeltilir)
+  final _seri = TextEditingController(), _sira = TextEditingController(), _sevkTarihi = TextEditingController(), _saat = TextEditingController();
+  final _saticiAd = TextEditingController(), _saticiVkn = TextEditingController(), _saticiVd = TextEditingController(), _saticiAdres = TextEditingController();
+  final _aliciAd = TextEditingController(), _aliciVkn = TextEditingController(), _aliciVd = TextEditingController(), _aliciAdres = TextEditingController();
+  final _teslimEden = TextEditingController();
+  final _araToplam = TextEditingController(), _kdvTutar = TextEditingController(), _genelToplam = TextEditingController();
 
   @override
   void initState() {
@@ -328,6 +335,106 @@ class _YeniMalKabulScreenState extends State<_YeniMalKabulScreen> {
     }
   }
 
+  // İrsaliye/fatura FOTOĞRAFI -> AI okur -> tüm alanları doldurur (web ile birebir).
+  Future<void> _foto() async {
+    final t = context.read<TemaProvider>();
+    final kaynak = await showModalBottomSheet<ImageSource>(
+      useRootNavigator: true,
+      context: context,
+      backgroundColor: t.card,
+      builder: (ctx) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(leading: Icon(Icons.photo_camera, color: t.ink), title: Text('Kamera', style: TextStyle(color: t.ink)), onTap: () => Navigator.pop(ctx, ImageSource.camera)),
+          ListTile(leading: Icon(Icons.photo_library, color: t.ink), title: Text('Galeri', style: TextStyle(color: t.ink)), onTap: () => Navigator.pop(ctx, ImageSource.gallery)),
+        ]),
+      ),
+    );
+    if (kaynak == null || !mounted) return;
+    final auth = context.read<AuthProvider>();
+    try {
+      final x = await ImagePicker().pickImage(source: kaynak, maxWidth: 1600, imageQuality: 82);
+      if (x == null || !mounted) return;
+      setState(() => fotoOkunuyor = true);
+      final bytes = await x.readAsBytes();
+      final b64 = base64Encode(bytes);
+      final mime = x.path.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
+      final r = await Api.malKabulFotoOku(auth.token!, resim: b64, mime: mime);
+      if (!mounted) return;
+      setState(() => fotoOkunuyor = false);
+      if (r['ok'] != 1) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${r['hata'] ?? 'Okunamadı'}')));
+        return;
+      }
+      _ocrDoldur(r);
+      final say = ((r['kalemler'] as List?) ?? []).length;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Foto okundu: $say kalem geldi. Kontrol et.')));
+    } catch (e) {
+      if (mounted) {
+        setState(() => fotoOkunuyor = false);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Fotoğraf işlenemedi / zaman aşımı.')));
+      }
+    }
+  }
+
+  void _ocrDoldur(Map r) {
+    String s(dynamic v) => (v == null) ? '' : v.toString();
+    final satici = (r['satici'] as Map?) ?? {};
+    final alici = (r['alici'] as Map?) ?? {};
+    setState(() {
+      faturaAcik = true;
+      // Tedarikçi eşleştiyse seç
+      final tid = r['tedarikci_id'];
+      if (tid != null && tedarikciler.any((x) => _n((x as Map)['id']).toInt() == _n(tid).toInt())) {
+        tedarikciId = _n(tid).toInt();
+        siparisId = null;
+      }
+      if (s(r['irsaliye_no']).isNotEmpty) _irsaliye.text = s(r['irsaliye_no']);
+      if (s(r['tarih']).isNotEmpty) _tarih = s(r['tarih']);
+      _seri.text = s(r['seri']);
+      _sira.text = s(r['sira_no']);
+      _sevkTarihi.text = s(r['sevk_tarihi']);
+      _saat.text = s(r['saat']);
+      _saticiAd.text = s(satici['ad']);
+      _saticiVkn.text = s(satici['vkn']);
+      _saticiVd.text = s(satici['vergi_dairesi']);
+      _saticiAdres.text = s(satici['adres']);
+      _aliciAd.text = s(alici['ad']);
+      _aliciVkn.text = s(alici['vkn']);
+      _aliciVd.text = s(alici['vergi_dairesi']);
+      _aliciAdres.text = s(alici['adres']);
+      _teslimEden.text = s(r['teslim_eden']);
+      if (r['ara_toplam'] != null) _araToplam.text = '${r['ara_toplam']}';
+      if (r['kdv_tutar'] != null) _kdvTutar.text = '${r['kdv_tutar']}';
+      if (r['genel_toplam'] != null) _genelToplam.text = '${r['genel_toplam']}';
+      // Kalemler: eşleşen malzemeleri ekle (eşleşmeyenler uyarıyla atlanır)
+      final kal = (r['kalemler'] as List?) ?? [];
+      int atlanan = 0;
+      for (final k in kal) {
+        final mid = k['malzeme_id'];
+        if (mid == null || !malzemeler.any((m) => _n((m as Map)['id']).toInt() == _n(mid).toInt())) {
+          atlanan++;
+          continue;
+        }
+        final id = _n(mid).toInt();
+        final bid = (k['birim_id'] != null)
+            ? _n(k['birim_id']).toInt()
+            : _n((malzemeler.cast<Map>().firstWhere((x) => _n(x['id']).toInt() == id))['birim_id']).toInt();
+        final kalem = _Kalem(id, bid);
+        if (k['miktar'] != null) {
+          kalem.gelen.text = _mik(k['miktar']);
+          kalem.kabul.text = _mik(k['miktar']);
+        }
+        if (k['birim_fiyat'] != null) kalem.fiyat.text = '${k['birim_fiyat']}';
+        kalemler.add(kalem);
+      }
+      if (atlanan > 0) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$atlanan kalem stokta bulunamadı, atlandı (Stok\'tan ekleyip tekrar deneyebilirsin).')));
+        });
+      }
+    });
+  }
+
   double get _toplam {
     double t = 0;
     for (final k in kalemler) {
@@ -378,6 +485,23 @@ class _YeniMalKabulScreenState extends State<_YeniMalKabulScreen> {
         'tarih': _tarih,
         'notlar': _notlar.text.trim(),
         'kalemler': jsonEncode(liste),
+        // İrsaliye / Fatura Bilgileri (web ile birebir alan adları)
+        'fb_seri': _seri.text.trim(),
+        'fb_sira': _sira.text.trim(),
+        'fb_sevk_tarihi': _sevkTarihi.text.trim(),
+        'fb_saat': _saat.text.trim(),
+        'fb_satici_ad': _saticiAd.text.trim(),
+        'fb_satici_vkn': _saticiVkn.text.trim(),
+        'fb_satici_vd': _saticiVd.text.trim(),
+        'fb_satici_adres': _saticiAdres.text.trim(),
+        'fb_alici_ad': _aliciAd.text.trim(),
+        'fb_alici_vkn': _aliciVkn.text.trim(),
+        'fb_alici_vd': _aliciVd.text.trim(),
+        'fb_alici_adres': _aliciAdres.text.trim(),
+        'fb_teslim_eden': _teslimEden.text.trim(),
+        'ara_toplam': _araToplam.text.trim(),
+        'kdv_tutar': _kdvTutar.text.trim(),
+        'genel_toplam': _genelToplam.text.trim(),
       });
       if (!mounted) return;
       setState(() => kaydediliyor = false);
@@ -402,6 +526,9 @@ class _YeniMalKabulScreenState extends State<_YeniMalKabulScreen> {
     }
     _irsaliye.dispose();
     _notlar.dispose();
+    for (final c in [_seri, _sira, _sevkTarihi, _saat, _saticiAd, _saticiVkn, _saticiVd, _saticiAdres, _aliciAd, _aliciVkn, _aliciVd, _aliciAdres, _teslimEden, _araToplam, _kdvTutar, _genelToplam]) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -413,12 +540,48 @@ class _YeniMalKabulScreenState extends State<_YeniMalKabulScreen> {
       ikon: Icons.add_box_outlined,
       geri: true,
       altBaslik: 'İrsaliye gir · gelen/kabul/red',
-      araclar: [MButon('Barkod', _mor, _barkod, dolu: false, ikon: Icons.qr_code_scanner)],
       govde: loading
           ? const Center(child: CircularProgressIndicator())
           : Column(children: [
               Expanded(
                 child: ListView(padding: const EdgeInsets.all(14), children: [
+                  // Hızlı doldur: Foto (AI) + Barkod
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: _mor.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: _mor.withValues(alpha: 0.3)),
+                    ),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Row(children: [
+                        const Icon(Icons.bolt, color: _mor, size: 18),
+                        const SizedBox(width: 6),
+                        Expanded(child: Text('Hızlı doldur', style: TextStyle(color: t.ink, fontSize: 13.5, fontWeight: FontWeight.bold))),
+                      ]),
+                      const SizedBox(height: 3),
+                      Text('İrsaliye/fatura fotoğrafını çek → AI okur, alanları doldurur. Barkod bedava/sınırsız.', style: TextStyle(color: t.sub2, fontSize: 11)),
+                      const SizedBox(height: 10),
+                      Row(children: [
+                        Expanded(
+                          child: fotoOkunuyor
+                              ? Container(
+                                  height: 42,
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), border: Border.all(color: _mor.withValues(alpha: 0.4))),
+                                  child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                                    SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: _mor)),
+                                    SizedBox(width: 8), Text('AI okuyor…', style: TextStyle(color: _mor, fontSize: 12.5, fontWeight: FontWeight.w600)),
+                                  ]),
+                                )
+                              : _hizliBtn(t, Icons.photo_camera, 'Fotoğraf Oku', _mor, _foto),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(child: _hizliBtn(t, Icons.qr_code_scanner, 'Barkod Okut', _mavi, _barkod)),
+                      ]),
+                    ]),
+                  ),
+                  const SizedBox(height: 12),
                   // Açık sipariş seç
                   if (acikSiparisler.isNotEmpty) ...[
                     _etiket(t, 'Açık Siparişten Doldur (opsiyonel)'),
@@ -484,6 +647,9 @@ class _YeniMalKabulScreenState extends State<_YeniMalKabulScreen> {
                       ),
                     ),
                   ]),
+                  const SizedBox(height: 12),
+                  // İrsaliye / Fatura Bilgileri (katlanır) — foto-OCR doldurur, yasal veri
+                  _faturaBolumu(t),
                   const SizedBox(height: 14),
                   Row(children: [
                     Text('Kalemler (${kalemler.length})', style: TextStyle(color: t.ink, fontSize: 15, fontWeight: FontWeight.bold)),
@@ -513,6 +679,97 @@ class _YeniMalKabulScreenState extends State<_YeniMalKabulScreen> {
   }
 
   Widget _etiket(TemaProvider t, String s) => Padding(padding: const EdgeInsets.only(bottom: 6), child: Text(s, style: TextStyle(color: t.sub, fontSize: 12, fontWeight: FontWeight.w600)));
+
+  Widget _hizliBtn(TemaProvider t, IconData ikon, String yazi, Color renk, VoidCallback onTap) => InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          height: 42,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(color: renk.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(10), border: Border.all(color: renk.withValues(alpha: 0.4))),
+          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Icon(ikon, color: renk, size: 17),
+            const SizedBox(width: 6),
+            Flexible(child: Text(yazi, overflow: TextOverflow.ellipsis, style: TextStyle(color: renk, fontSize: 12.5, fontWeight: FontWeight.w600))),
+          ]),
+        ),
+      );
+
+  Widget _faturaBolumu(TemaProvider t) {
+    final dolu = [_seri, _sira, _sevkTarihi, _saat, _saticiAd, _saticiVkn, _aliciAd, _teslimEden, _genelToplam].any((c) => c.text.trim().isNotEmpty);
+    return Container(
+      decoration: BoxDecoration(color: t.card, borderRadius: BorderRadius.circular(12), border: Border.all(color: t.line)),
+      child: Column(children: [
+        InkWell(
+          onTap: () => setState(() => faturaAcik = !faturaAcik),
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(children: [
+              Icon(Icons.receipt_long_outlined, size: 18, color: t.sub),
+              const SizedBox(width: 8),
+              Expanded(child: Text('İrsaliye / Fatura Bilgileri', style: TextStyle(color: t.ink, fontSize: 13.5, fontWeight: FontWeight.w600))),
+              if (dolu && !faturaAcik) const Padding(padding: EdgeInsets.only(right: 6), child: MRozet('dolu', _yesil)),
+              Icon(faturaAcik ? Icons.expand_less : Icons.expand_more, color: t.sub),
+            ]),
+          ),
+        ),
+        if (faturaAcik)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            child: Column(children: [
+              Row(children: [
+                Expanded(child: _alan(t, _seri, 'Seri')),
+                const SizedBox(width: 8),
+                Expanded(child: _alan(t, _sira, 'Sıra No')),
+              ]),
+              const SizedBox(height: 8),
+              Row(children: [
+                Expanded(child: _alan(t, _sevkTarihi, 'Sevk Tarihi (YYYY-AA-GG)')),
+                const SizedBox(width: 8),
+                Expanded(child: _alan(t, _saat, 'Saat')),
+              ]),
+              const SizedBox(height: 12),
+              Align(alignment: Alignment.centerLeft, child: Text('Satıcı (Tedarikçi)', style: TextStyle(color: t.sub, fontSize: 11.5, fontWeight: FontWeight.w600))),
+              const SizedBox(height: 6),
+              _alan(t, _saticiAd, 'Ünvan / Ad Soyad'),
+              const SizedBox(height: 8),
+              Row(children: [
+                Expanded(child: _alan(t, _saticiVkn, 'VKN / TCKN')),
+                const SizedBox(width: 8),
+                Expanded(child: _alan(t, _saticiVd, 'Vergi Dairesi')),
+              ]),
+              const SizedBox(height: 8),
+              _alan(t, _saticiAdres, 'Adres'),
+              const SizedBox(height: 12),
+              Align(alignment: Alignment.centerLeft, child: Text('Alıcı (İşletme)', style: TextStyle(color: t.sub, fontSize: 11.5, fontWeight: FontWeight.w600))),
+              const SizedBox(height: 6),
+              _alan(t, _aliciAd, 'Ünvan / Ad Soyad'),
+              const SizedBox(height: 8),
+              Row(children: [
+                Expanded(child: _alan(t, _aliciVkn, 'VKN / TCKN')),
+                const SizedBox(width: 8),
+                Expanded(child: _alan(t, _aliciVd, 'Vergi Dairesi')),
+              ]),
+              const SizedBox(height: 8),
+              _alan(t, _aliciAdres, 'Adres'),
+              const SizedBox(height: 8),
+              _alan(t, _teslimEden, 'Malı Teslim Eden (Ad Soyad)'),
+              const SizedBox(height: 12),
+              Align(alignment: Alignment.centerLeft, child: Text('Tutarlar', style: TextStyle(color: t.sub, fontSize: 11.5, fontWeight: FontWeight.w600))),
+              const SizedBox(height: 6),
+              Row(children: [
+                Expanded(child: _alan(t, _araToplam, 'Ara Toplam')),
+                const SizedBox(width: 8),
+                Expanded(child: _alan(t, _kdvTutar, 'KDV')),
+                const SizedBox(width: 8),
+                Expanded(child: _alan(t, _genelToplam, 'Genel Toplam')),
+              ]),
+            ]),
+          ),
+      ]),
+    );
+  }
 
   Widget _kutu(TemaProvider t, Widget child) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),

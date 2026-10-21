@@ -620,6 +620,14 @@ class Api {
   static Future<Map<String, dynamic>> malKabulDetay(String token, int id) => _get('/api/patron/mal-kabul-detay?id=$id', token);
   static Future<Map<String, dynamic>> malKabulBarkod(String token, String kod) => _get('/api/patron/mal-kabul-barkod?kod=${Uri.encodeComponent(kod)}', token);
   static Future<Map<String, dynamic>> malKabulOlustur(String token, Map<String, String> body) => _post('/api/patron/mal-kabul-olustur', token, body);
+  // Foto-OCR: sunucuda AI vision ~60sn surebilir -> uzun timeout (ozel).
+  static Future<Map<String, dynamic>> malKabulFotoOku(String token, {required String resim, String mime = 'image/jpeg'}) async {
+    final r = await http.post(Uri.parse('$base/api/patron/mal-kabul-foto-oku'),
+        headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+        body: {'resim': resim, 'mime': mime}).timeout(const Duration(seconds: 90));
+    if (r.statusCode == 401) throw ApiYetkiHatasi();
+    return _coz(r);
+  }
 
   // ---- ALIS FATURALARI ----
   static Future<Map<String, dynamic>> alisFaturalari(String token, {String? ay}) => _get('/api/patron/alis-faturalari${ay != null ? '?ay=$ay' : ''}', token);
