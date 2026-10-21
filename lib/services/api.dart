@@ -611,6 +611,9 @@ class Api {
     return _post('/api/patron/tedarikci-kaydet', token, body);
   }
   static Future<Map<String, dynamic>> tedarikciSil(String token, int id) => _post('/api/patron/tedarikci-sil', token, {'id': '$id'});
+  static Future<Map<String, dynamic>> tedarikciDetay(String token, int id) => _get('/api/patron/tedarikci-detay?id=$id', token);
+  static Future<Map<String, dynamic>> tedarikciOdeme(String token, {required int tedarikciId, required double tutar, String odemeSekli = 'nakit'}) =>
+      _post('/api/patron/tedarikci-odeme', token, {'tedarikci_id': '$tedarikciId', 'tutar': '$tutar', 'odeme_sekli': odemeSekli});
 
   // ---- ALIS FATURALARI ----
   static Future<Map<String, dynamic>> alisFaturalari(String token, {String? ay}) => _get('/api/patron/alis-faturalari${ay != null ? '?ay=$ay' : ''}', token);

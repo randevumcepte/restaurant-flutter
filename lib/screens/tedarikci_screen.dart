@@ -6,6 +6,7 @@ import '../providers/tema_provider.dart';
 import '../services/api.dart';
 import '../responsive.dart';
 import '../ui/masaustu_kit.dart';
+import 'tedarikci_detay_screen.dart';
 
 /// Tedarikçiler — cari bilgi + toplam alış. Ekle/düzenle/sil = sahip.
 class TedarikciScreen extends StatefulWidget {
@@ -184,7 +185,11 @@ class _TedarikciScreenState extends State<TedarikciScreen> {
     if (onay == true) await _sil(e);
   }
 
-  Widget _kart(Map t) => Container(
+  void _detay(Map t) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => TedarikciDetayScreen(id: _n(t['id']).toInt(), ad: t['ad'].toString())));
+
+  Widget _kart(Map t) => GestureDetector(
+        onTap: () => _detay(t),
+        child: Container(
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFF232B42))),
@@ -210,7 +215,7 @@ class _TedarikciScreenState extends State<TedarikciScreen> {
               ],
             ),
         ]),
-      );
+      ));
 
   Future<void> _sil(Map t) async {
     final auth = context.read<AuthProvider>();
