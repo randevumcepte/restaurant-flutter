@@ -46,7 +46,7 @@ class IsletmeHubScreen extends StatelessWidget {
         crossAxisCount: 2,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
-        childAspectRatio: 1.05,
+        childAspectRatio: 0.98,
         children: [for (final o in ogeler) _kart(context, o)],
       ),
     );
@@ -65,9 +65,9 @@ class IsletmeHubScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(o.baslik, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+              Text(o.baslik, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
               const SizedBox(height: 3),
-              Text(o.alt, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
+              Text(o.alt, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
             ]),
           ]),
         ),
