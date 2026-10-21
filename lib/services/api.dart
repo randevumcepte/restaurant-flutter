@@ -79,6 +79,9 @@ class Api {
   static Future<Map<String, dynamic>> mesaiKonumAyarla(String token, double lat, double lng, {int yaricap = 150}) =>
       _post('/api/mesai/konum-ayarla', token, {'lat': '$lat', 'lng': '$lng', 'yaricap': '$yaricap'});
 
+  // ---------------- SATINALMA / STOK (profesyonel) ----------------
+  static Future<Map<String, dynamic>> fiyatRadari(String token) => _get('/api/patron/fiyat-radari', token);
+
   // ---------------- BARKOD ----------------
   static Future<Map<String, dynamic>> barkodCoz(String token, String kod) => _get('/api/barkod/coz?kod=${Uri.encodeComponent(kod)}', token);
   static Future<Map<String, dynamic>> barkodListe(String token, String tur, int hedefId) => _get('/api/barkod/liste?tur=$tur&hedef_id=$hedefId', token);
@@ -697,6 +700,15 @@ class Api {
       _post('/api/paket/durum', token, {'id': '$id', 'aksiyon': aksiyon, if (kuryeId != null) 'kurye_id': '$kuryeId'});
   static Future<Map<String, dynamic>> kuryeler(String token) => _get('/api/kuryeler', token);
   static Future<Map<String, dynamic>> raporlar(String token) => _get('/api/raporlar', token);
+
+  // ---- ÇARKIFELEK (sadakat çarkı yönetimi) ----
+  static Future<Map<String, dynamic>> carkGetir(String token) => _get('/api/patron/cark', token);
+  static Future<Map<String, dynamic>> carkKaydet(String token,
+          {required bool aktif, required int aralik, required int gecerlilik, required String kurallar, required List<Map<String, dynamic>> dilimler}) =>
+      _post('/api/patron/cark-kaydet', token, {
+        'aktif': aktif ? '1' : '0', 'aralik': '$aralik', 'gecerlilik': '$gecerlilik',
+        'kurallar': kurallar, 'dilimler': jsonEncode(dilimler),
+      });
 }
 
 class ApiYetkiHatasi implements Exception {}
