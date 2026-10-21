@@ -251,6 +251,7 @@ class _YeniMalKabulScreenState extends State<_YeniMalKabulScreen> {
   bool loading = true, kaydediliyor = false, fotoOkunuyor = false, faturaAcik = false;
   List acikSiparisler = [], malzemeler = [], birimler = [], tedarikciler = [];
   int? siparisId, tedarikciId;
+  final Map<int, Map> _katalog = {}; // malzeme_id -> {fiyat, birim_id} (secili tedarikciden)
   final _irsaliye = TextEditingController();
   final _notlar = TextEditingController();
   String _tarih = DateFormat('yyyy-MM-dd').format(DateTime.now());
@@ -314,7 +315,38 @@ class _YeniMalKabulScreenState extends State<_YeniMalKabulScreen> {
     }
     final id = malzemeId ?? _n((malzemeler.first as Map)['id']).toInt();
     final bid = _n((malzemeler.cast<Map>().firstWhere((x) => _n(x['id']).toInt() == id, orElse: () => malzemeler.first as Map))['birim_id']).toInt();
-    setState(() => kalemler.add(_Kalem(id, bid)));
+    final k = _Kalem(id, bid);
+    _katalogUygula(k);
+    setState(() => kalemler.add(k));
+  }
+
+  // Secili tedarikcinin bilinen fiyatini bir kaleme uygula (fiyat bossa doldur, alis birimini getir).
+  void _katalogUygula(_Kalem k) {
+    final c = _katalog[k.malzemeId];
+    if (c == null) return;
+    if (k.fiyat.text.trim().isEmpty && _n(c['fiyat']) > 0) k.fiyat.text = '${_n(c['fiyat'])}';
+    final bid = _n(c['birim_id']).toInt();
+    if (bid > 0) k.birimId = bid;
+  }
+
+  // Tedarikci secilince o tedarikcinin bilinen malzeme fiyatlarini cek.
+  Future<void> _katalogCek(int? tid) async {
+    _katalog.clear();
+    if (tid == null || tid == 0) return;
+    try {
+      final r = await Api.tedarikciKatalog(context.read<AuthProvider>().token!, tid);
+      if (!mounted) return;
+      if (r['ok'] == 1) {
+        for (final k in (r['katalog'] as List? ?? [])) {
+          _katalog[_n((k as Map)['malzeme_id']).toInt()] = {'fiyat': _n(k['fiyat']), 'birim_id': _n(k['birim_id']).toInt()};
+        }
+        for (final k in kalemler) { _katalogUygula(k); }
+        setState(() {});
+        final n = _katalog.length;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(
+          n > 0 ? 'Bu tedarikçiden $n ürün biliniyor — malzeme seçince fiyat otomatik gelir.' : 'Bu tedarikçiden henüz alış kaydı yok; fiyatları elle gir.')));
+      }
+    } catch (_) {}
   }
 
   Future<void> _barkod() async {
@@ -330,8 +362,49 @@ class _YeniMalKabulScreenState extends State<_YeniMalKabulScreen> {
         return;
       }
       _kalemEkle(malzemeId: id);
+    } else if (_n(r['bulundu']).toInt() == 0 && r['barkod'] != null) {
+      _barkodBagla('${r['barkod']}'); // tanimsiz -> oracikta malzemeye bagla
     } else {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${r['hata'] ?? 'Barkod tanımlı değil'}')));
+    }
+  }
+
+  // Bilinmeyen barkodu malzemeye bagla (ekran degistirmeden) -> bir kez bagla, hep taninir.
+  Future<void> _barkodBagla(String kod) async {
+    if (malzemeler.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Önce Stok ekranından malzeme ekleyin.')));
+      return;
+    }
+    final t = context.read<TemaProvider>();
+    int sec = _n((malzemeler.first as Map)['id']).toInt();
+    final onay = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(builder: (ctx, setD) => AlertDialog(
+        backgroundColor: t.card,
+        title: Text('Barkod tanımlı değil', style: TextStyle(color: t.ink, fontSize: 16)),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          Text('"$kod" — bu hangi malzeme? Bir kez bağla, bundan sonra hep otomatik tanınır.', style: TextStyle(color: t.sub, fontSize: 12.5)),
+          const SizedBox(height: 12),
+          DropdownButton<int>(
+            value: sec, isExpanded: true, dropdownColor: t.card, style: TextStyle(color: t.ink, fontSize: 13.5),
+            items: [for (final m in malzemeler) DropdownMenuItem(value: _n(m['id']).toInt(), child: Text('${m['ad']}', overflow: TextOverflow.ellipsis))],
+            onChanged: (v) { if (v != null) setD(() => sec = v); },
+          ),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('İptal', style: TextStyle(color: t.sub))),
+          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Bağla ve Ekle')),
+        ],
+      )),
+    );
+    if (onay != true || !mounted) return;
+    final r = await Api.malKabulBarkodBagla(context.read<AuthProvider>().token!, kod, sec);
+    if (!mounted) return;
+    if (r['ok'] == 1) {
+      _kalemEkle(malzemeId: _n(r['id']).toInt());
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Bağlandı: ${r['ad']} — bundan sonra hep tanınır.')));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${r['hata'] ?? 'Bağlanamadı'}')));
     }
   }
 
@@ -445,10 +518,37 @@ class _YeniMalKabulScreenState extends State<_YeniMalKabulScreen> {
     return t;
   }
 
+  // VKN (10 hane) / TCKN (11 hane) checksum — web ile ayni.
+  bool _vknGecerli(String v) {
+    v = v.replaceAll(RegExp(r'\D'), '');
+    if (v.length == 10) {
+      int son = int.parse(v[9]), top = 0;
+      for (int i = 0; i < 9; i++) { int d = int.parse(v[i]); int tt = (d + (9 - i)) % 10; top += (tt == 9) ? tt : (tt * (1 << (9 - i))) % 9; }
+      return ((10 - (top % 10)) % 10) == son;
+    }
+    if (v.length == 11) {
+      if (v[0] == '0') return false;
+      final d = v.split('').map(int.parse).toList();
+      final tek = d[0] + d[2] + d[4] + d[6] + d[8], cift = d[1] + d[3] + d[5] + d[7];
+      final h10 = ((tek * 7) - cift + 100) % 10;
+      final h11 = (d.sublist(0, 10).reduce((a, b) => a + b)) % 10;
+      return h10 == d[9] && h11 == d[10];
+    }
+    return false;
+  }
+
   Future<void> _kaydet() async {
     if (kalemler.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('En az bir kalem ekleyin.')));
       return;
+    }
+    // Yasal veri: VKN girilmisse ve gecersizse kaydettirme (en ufak hata olmasin).
+    for (final e in {'Satıcı': _saticiVkn.text, 'Alıcı': _aliciVkn.text}.entries) {
+      final v = e.value.trim();
+      if (v.isNotEmpty && !_vknGecerli(v)) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${e.key} VKN/TCKN geçersiz — düzeltmeden kaydedemezsin.'), backgroundColor: _kirmizi));
+        return;
+      }
     }
     final liste = <Map<String, dynamic>>[];
     for (final k in kalemler) {
@@ -625,7 +725,7 @@ class _YeniMalKabulScreenState extends State<_YeniMalKabulScreen> {
                           DropdownMenuItem(value: null, child: Text('— Seçilmedi —', style: TextStyle(color: t.sub))),
                           for (final s in tedarikciler) DropdownMenuItem(value: _n(s['id']).toInt(), child: Text('${s['ad']}', overflow: TextOverflow.ellipsis)),
                         ],
-                        onChanged: (v) => setState(() => tedarikciId = v),
+                        onChanged: (v) { setState(() => tedarikciId = v); _katalogCek(v); },
                       ),
                     )),
                     const SizedBox(height: 10),
@@ -812,6 +912,7 @@ class _YeniMalKabulScreenState extends State<_YeniMalKabulScreen> {
                   setState(() {
                     k.malzemeId = v;
                     k.birimId = _n((malzemeler.cast<Map>().firstWhere((x) => _n(x['id']).toInt() == v))['birim_id']).toInt();
+                    _katalogUygula(k); // secili tedarikci fiyatini otomatik getir
                   });
                 },
               ),

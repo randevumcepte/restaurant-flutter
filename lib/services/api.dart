@@ -619,6 +619,10 @@ class Api {
   static Future<Map<String, dynamic>> malKabulListe(String token, {int? siparisId}) => _get('/api/patron/mal-kabul-liste${siparisId != null ? '?siparis_id=$siparisId' : ''}', token);
   static Future<Map<String, dynamic>> malKabulDetay(String token, int id) => _get('/api/patron/mal-kabul-detay?id=$id', token);
   static Future<Map<String, dynamic>> malKabulBarkod(String token, String kod) => _get('/api/patron/mal-kabul-barkod?kod=${Uri.encodeComponent(kod)}', token);
+  // Bilinmeyen barkodu malzemeye bagla (mal kabul sirasinda, ekran degistirmeden)
+  static Future<Map<String, dynamic>> malKabulBarkodBagla(String token, String kod, int malzemeId) => _post('/api/patron/mal-kabul-barkod-bagla', token, {'kod': kod, 'malzeme_id': '$malzemeId'});
+  // Secili tedarikcinin bilinen malzeme fiyat katalogu (malzeme secince fiyat otomatik)
+  static Future<Map<String, dynamic>> tedarikciKatalog(String token, int tedarikciId) => _get('/api/patron/tedarikci-katalog?tedarikci_id=$tedarikciId', token);
   static Future<Map<String, dynamic>> malKabulOlustur(String token, Map<String, String> body) => _post('/api/patron/mal-kabul-olustur', token, body);
   // Foto-OCR: sunucuda AI vision ~60sn surebilir -> uzun timeout (ozel).
   static Future<Map<String, dynamic>> malKabulFotoOku(String token, {required String resim, String mime = 'image/jpeg'}) async {
