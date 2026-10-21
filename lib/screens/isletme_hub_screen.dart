@@ -11,6 +11,7 @@ import 'satinalma_analiz_screen.dart';
 import 'parti_takip_screen.dart';
 import 'hal_fiyatlari_screen.dart';
 import 'satinalma_asistan_screen.dart';
+import 'satinalma_siparis_screen.dart';
 import '../responsive.dart';
 import '../ui/masaustu_kit.dart';
 import '../providers/tema_provider.dart';
@@ -30,6 +31,7 @@ class IsletmeHubScreen extends StatelessWidget {
       _Hub('Stok / Malzeme', 'Mevcut stok · kritik · fire', Icons.inventory_2_outlined, const Color(0xFF4F46E5), const StokScreen()),
       _Hub('Reçeteler', 'Ürün maliyeti · food-cost', Icons.menu_book_outlined, const Color(0xFF7C3AED), const ReceteScreen()),
       _Hub('Alış Faturaları', 'Stok girişi · fiyat uyarısı', Icons.receipt_long_outlined, const Color(0xFFD97706), const AlisFaturaScreen()),
+      _Hub('Satınalma Siparişi', 'Sipariş ver · PO', Icons.shopping_cart_checkout, const Color(0xFF4F46E5), const SatinalmaSiparisScreen()),
       _Hub('Tedarikçiler', 'Cari · toplam alış', Icons.local_shipping_outlined, const Color(0xFF0EA5E9), const TedarikciScreen()),
       _Hub('Giderler', 'Kira · fatura · maaş', Icons.account_balance_wallet_outlined, const Color(0xFFF43F5E), const GiderScreen()),
       _Hub('Fiyat Radarı', 'Gizli zam · ucuz tedarikçi', Icons.radar, const Color(0xFFEC4899), const FiyatRadariScreen()),
@@ -79,6 +81,7 @@ class IsletmeHubScreen extends StatelessWidget {
       _Hub('Stok / Malzeme', 'Mevcut stok · kritik · fire', Icons.inventory_2_outlined, const Color(0xFF4F46E5), const StokScreen()),
       _Hub('Reçeteler', 'Ürün maliyeti · food-cost', Icons.menu_book_outlined, const Color(0xFF7C3AED), const ReceteScreen()),
       _Hub('Alış Faturaları', 'Stok girişi · fiyat uyarısı', Icons.receipt_long_outlined, const Color(0xFFD97706), const AlisFaturaScreen()),
+      _Hub('Satınalma Siparişi', 'Sipariş ver · PO', Icons.shopping_cart_checkout, const Color(0xFF4F46E5), const SatinalmaSiparisScreen()),
       _Hub('Tedarikçiler', 'Cari · toplam alış', Icons.local_shipping_outlined, const Color(0xFF0EA5E9), const TedarikciScreen()),
       _Hub('Giderler', 'Kira · fatura · maaş', Icons.account_balance_wallet_outlined, const Color(0xFFF43F5E), const GiderScreen()),
       _Hub('Fiyat Radarı', 'Gizli zam · ucuz tedarikçi', Icons.radar, const Color(0xFFEC4899), const FiyatRadariScreen()),
