@@ -83,6 +83,8 @@ class Api {
   static Future<Map<String, dynamic>> fiyatRadari(String token) => _get('/api/patron/fiyat-radari', token);
   static Future<Map<String, dynamic>> satinalmaAnaliz(String token) => _get('/api/patron/satinalma-analiz', token);
   static Future<Map<String, dynamic>> partiTakip(String token) => _get('/api/patron/parti-takip', token);
+  static Future<Map<String, dynamic>> halFiyatlari(String token) => _get('/api/patron/hal-fiyatlari', token);
+  static Future<Map<String, dynamic>> satinalmaAsistan(String token, String soru) => _post('/api/patron/satinalma-asistan', token, {'soru': soru});
 
   // ---------------- BARKOD ----------------
   static Future<Map<String, dynamic>> barkodCoz(String token, String kod) => _get('/api/barkod/coz?kod=${Uri.encodeComponent(kod)}', token);
