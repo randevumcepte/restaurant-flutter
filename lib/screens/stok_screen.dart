@@ -45,11 +45,40 @@ class _StokScreenState extends State<StokScreen> {
   List birimler = [];
   List kategoriler = [];
   String _ara = '';
+  List<String> _urunAdlari = [];        // sistem katalogu (malzeme adı önerisi)
+  final Map<String, String> _urunKat = {}; // ad_lower -> kategori
 
   @override
   void initState() {
     super.initState();
     _yukle();
+    _katalogYukle();
+  }
+
+  Future<void> _katalogYukle() async {
+    try {
+      final auth = context.read<AuthProvider>();
+      final r = await Api.urunKatalog(auth.token!);
+      if (!mounted || r['ok'] != 1) return;
+      final liste = <String>[];
+      _urunKat.clear();
+      for (final u in (r['urunler'] as List? ?? [])) {
+        final ad = '${(u as Map)['ad'] ?? ''}'.trim();
+        if (ad.isEmpty) continue;
+        liste.add(ad);
+        _urunKat[ad.toLowerCase()] = '${u['kategori'] ?? ''}';
+      }
+      setState(() => _urunAdlari = liste);
+    } catch (_) {}
+  }
+
+  int? _kategoriIdByAd(String ad) {
+    final q = ad.trim().toLowerCase();
+    if (q.isEmpty) return null;
+    for (final k in kategoriler) {
+      if ('${(k as Map)['ad'] ?? ''}'.toLowerCase() == q) return _n(k['id']).toInt();
+    }
+    return null;
   }
 
   Future<void> _yukle() async {
@@ -467,7 +496,40 @@ class _StokScreenState extends State<StokScreen> {
           Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 14), alignment: Alignment.center, decoration: BoxDecoration(color: const Color(0xFF2D3752), borderRadius: BorderRadius.circular(2))),
           Text(yeni ? 'Yeni Malzeme' : 'Malzeme Düzenle', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 14),
-          TextField(controller: adC, style: const TextStyle(color: Colors.white), decoration: _dec('Malzeme adı')),
+          Autocomplete<String>(
+            initialValue: TextEditingValue(text: adC.text),
+            optionsBuilder: (v) {
+              final q = v.text.trim().toLowerCase();
+              if (q.isEmpty) return const Iterable<String>.empty();
+              return _urunAdlari.where((a) => a.toLowerCase().contains(q)).take(25);
+            },
+            onSelected: (s) {
+              adC.text = s;
+              final kat = _urunKat[s.toLowerCase()];
+              if (kat != null && kat.isNotEmpty) { final id = _kategoriIdByAd(kat); if (id != null) setS(() => kategoriId = id); }
+            },
+            fieldViewBuilder: (ctx, controller, focus, _) => TextField(
+              controller: controller, focusNode: focus,
+              style: const TextStyle(color: Colors.white),
+              decoration: _dec('Malzeme adı (listeden seç ya da yaz)'),
+              onChanged: (vv) => adC.text = vv,
+            ),
+            optionsViewBuilder: (ctx, onSel, options) => Align(
+              alignment: Alignment.topLeft,
+              child: Material(
+                color: const Color(0xFF1B2335), elevation: 6, borderRadius: BorderRadius.circular(10),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 240, maxWidth: 360),
+                  child: ListView(padding: EdgeInsets.zero, shrinkWrap: true, children: [
+                    for (final o in options)
+                      InkWell(onTap: () => onSel(o), child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                        child: Text(o, style: const TextStyle(color: Colors.white, fontSize: 13.5)))),
+                  ]),
+                ),
+              ),
+            ),
+          ),
           const SizedBox(height: 10),
           Row(children: [
             Expanded(child: _drop('Kategori', kategoriId, {for (final k in kategoriler) _n((k as Map)['id']).toInt(): k['ad'].toString()}, (v) => setS(() => kategoriId = v))),

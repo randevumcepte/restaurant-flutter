@@ -605,6 +605,8 @@ class Api {
   // ---- STOK / MALZEME ----
   static Future<Map<String, dynamic>> stokMeta(String token) => _get('/api/patron/stok-meta', token);
   static Future<Map<String, dynamic>> malzemeler(String token) => _get('/api/patron/malzemeler', token);
+  // Sistem geneli hazir urun adi katalogu (malzeme eklerken oneri)
+  static Future<Map<String, dynamic>> urunKatalog(String token) => _get('/api/patron/urun-katalog', token);
   static Future<Map<String, dynamic>> malzemeDetay(String token, int id) => _get('/api/patron/malzeme-detay?id=$id', token);
   static Future<Map<String, dynamic>> malzemeKaydet(String token, {
     int? id, required String ad, int kategoriId = 0, required int temelBirimId, double kritikStok = 0, bool stokTakipli = true, double guncelMaliyet = 0,
