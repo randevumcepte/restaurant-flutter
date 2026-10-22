@@ -15,6 +15,7 @@ import 'satinalma_siparis_screen.dart';
 import 'siparis_onerisi_screen.dart';
 import 'fatura_eslestir_screen.dart';
 import 'mal_kabul_screen.dart';
+import 'satinalma_talep_screen.dart';
 import '../responsive.dart';
 import '../ui/masaustu_kit.dart';
 import '../providers/tema_provider.dart';
@@ -31,6 +32,7 @@ class IsletmeHubScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     if (genisMi(context)) return _masaustu(context);
     final ogeler = <_Hub>[
+      _Hub('Satın Alma Talebi', 'Departman talep · teklif · onay', Icons.assignment_outlined, const Color(0xFF7C3AED), const SatinalmaTalepScreen()),
       _Hub('Stok / Malzeme', 'Mevcut stok · kritik · fire', Icons.inventory_2_outlined, const Color(0xFF4F46E5), const StokScreen()),
       _Hub('Reçeteler', 'Ürün maliyeti · food-cost', Icons.menu_book_outlined, const Color(0xFF7C3AED), const ReceteScreen()),
       _Hub('Alış Faturaları', 'Stok girişi · fiyat uyarısı', Icons.receipt_long_outlined, const Color(0xFFD97706), const AlisFaturaScreen()),
@@ -84,6 +86,7 @@ class IsletmeHubScreen extends StatelessWidget {
   // ---- MASAÜSTÜ (PC/tablet) görünüm ----
   Widget _masaustu(BuildContext context) {
     final ogeler = <_Hub>[
+      _Hub('Satın Alma Talebi', 'Departman talep · teklif · onay', Icons.assignment_outlined, const Color(0xFF7C3AED), const SatinalmaTalepScreen()),
       _Hub('Stok / Malzeme', 'Mevcut stok · kritik · fire', Icons.inventory_2_outlined, const Color(0xFF4F46E5), const StokScreen()),
       _Hub('Reçeteler', 'Ürün maliyeti · food-cost', Icons.menu_book_outlined, const Color(0xFF7C3AED), const ReceteScreen()),
       _Hub('Alış Faturaları', 'Stok girişi · fiyat uyarısı', Icons.receipt_long_outlined, const Color(0xFFD97706), const AlisFaturaScreen()),
