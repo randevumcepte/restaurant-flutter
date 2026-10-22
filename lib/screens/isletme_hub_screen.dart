@@ -66,18 +66,22 @@ class IsletmeHubScreen extends StatelessWidget {
         onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => o.ekran)),
         child: Container(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFF232B42))),
+          decoration: BoxDecoration(
+            color: Color.alphaBlend(o.renk.withValues(alpha: 0.17), _card),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: o.renk.withValues(alpha: 0.45), width: 1.3),
+          ),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
             Container(
               padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: o.renk.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(14)),
+              decoration: BoxDecoration(color: o.renk.withValues(alpha: 0.22), borderRadius: BorderRadius.circular(14)),
               child: Icon(o.ikon, color: o.renk, size: 26),
             ),
             const SizedBox(height: 12),
             Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(o.baslik, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
               const SizedBox(height: 3),
-              Text(o.alt, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
+              Text(o.alt, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 11)),
             ]),
           ]),
         ),
@@ -107,11 +111,11 @@ class IsletmeHubScreen extends StatelessWidget {
       ikon: Icons.inventory_2_outlined,
       altBaslik: 'Stok, reçete, alış ve gider yönetimi',
       govde: GridView.count(
-        padding: const EdgeInsets.all(24),
-        crossAxisCount: 3,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-        childAspectRatio: 1.6,
+        padding: const EdgeInsets.all(18),
+        crossAxisCount: 5,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 1.32,
         children: [for (final o in ogeler) _masaustuKart(context, o)],
       ),
     );
@@ -119,24 +123,39 @@ class IsletmeHubScreen extends StatelessWidget {
 
   Widget _masaustuKart(BuildContext context, _Hub o) {
     final t = context.watch<TemaProvider>();
-    return MKart(
-      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => o.ekran)),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(color: o.renk.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(16)),
-          child: Icon(o.ikon, color: o.renk, size: 30),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-            Text(o.baslik, style: TextStyle(color: t.ink, fontSize: 16, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 4),
-            Text(o.alt, style: TextStyle(color: t.sub, fontSize: 12)),
+    final dolgu = Color.alphaBlend(o.renk.withValues(alpha: t.koyu ? 0.16 : 0.09), t.card);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => o.ekran)),
+        child: Container(
+          padding: const EdgeInsets.all(13),
+          decoration: BoxDecoration(
+            color: dolgu,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: o.renk.withValues(alpha: 0.45), width: 1.3),
+            boxShadow: t.golge,
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            Row(children: [
+              Container(
+                padding: const EdgeInsets.all(9),
+                decoration: BoxDecoration(color: o.renk.withValues(alpha: 0.20), borderRadius: BorderRadius.circular(12)),
+                child: Icon(o.ikon, color: o.renk, size: 22),
+              ),
+              const Spacer(),
+              Icon(Icons.chevron_right, color: o.renk.withValues(alpha: 0.7), size: 20),
+            ]),
+            const SizedBox(height: 10),
+            Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+              Text(o.baslik, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.ink, fontSize: 14, fontWeight: FontWeight.bold, height: 1.15)),
+              const SizedBox(height: 3),
+              Text(o.alt, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.sub, fontSize: 11, height: 1.2)),
+            ]),
           ]),
         ),
-        Icon(Icons.chevron_right, color: t.sub, size: 22),
-      ]),
+      ),
     );
   }
 }

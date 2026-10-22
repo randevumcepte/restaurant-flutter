@@ -32,11 +32,12 @@ Color _rolRenk(String rol) {
     case 'mudur': return _mavi;
     case 'kasa': return _turuncu;
     case 'garson': return _yesil;
+    case 'satinalmaci': return const Color(0xFF0D9488);
     default: return const Color(0xFF64748B);
   }
 }
 
-String _rolAd(String rol) => {'sahip': 'Sahip', 'mudur': 'Müdür', 'kasa': 'Kasa', 'garson': 'Garson', 'mutfak': 'Mutfak'}[rol] ?? rol;
+String _rolAd(String rol) => {'sahip': 'Sahip', 'mudur': 'Müdür', 'satinalmaci': 'Satın Almacı', 'kasa': 'Kasa', 'garson': 'Garson', 'mutfak': 'Mutfak'}[rol] ?? rol;
 
 final _fmt = NumberFormat.decimalPattern('tr');
 num _n(dynamic v) => v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0);
@@ -174,8 +175,9 @@ class _PersonelScreenState extends State<PersonelScreen> {
     'mutfak': 'Mutfak / Ustalar',
     'usta': 'Mutfak / Ustalar',
     'kasa': 'Kasiyerler',
+    'satinalmaci': 'Satın Alma',
   };
-  static const List<String> _grupSira = ['Yöneticiler', 'Garsonlar', 'Mutfak / Ustalar', 'Kasiyerler', 'Diğer'];
+  static const List<String> _grupSira = ['Yöneticiler', 'Garsonlar', 'Mutfak / Ustalar', 'Kasiyerler', 'Satın Alma', 'Diğer'];
 
   String _grupAd(String rol) => _rolGrup[rol] ?? 'Diğer';
 
@@ -185,6 +187,7 @@ class _PersonelScreenState extends State<PersonelScreen> {
       case 'Garsonlar': return _yesil;
       case 'Mutfak / Ustalar': return _turuncu;
       case 'Kasiyerler': return _mavi;
+      case 'Satın Alma': return const Color(0xFF0D9488);
       default: return const Color(0xFF64748B);
     }
   }
@@ -740,7 +743,7 @@ class _PersonelDetayScreenState extends State<PersonelDetayScreen> {
                 Expanded(child: TextField(controller: pinC, keyboardType: TextInputType.number, style: TextStyle(color: _ink), decoration: _dec('PIN'))),
               ]),
               const SizedBox(height: 10),
-              _dropdown('Rol', rol, const {'sahip': 'Sahip', 'mudur': 'Müdür', 'kasa': 'Kasa', 'garson': 'Garson', 'mutfak': 'Mutfak'}, (v) => setS(() => rol = v)),
+              _dropdown('Rol', rol, const {'sahip': 'Sahip', 'mudur': 'Müdür', 'satinalmaci': 'Satın Almacı', 'kasa': 'Kasa', 'garson': 'Garson', 'mutfak': 'Mutfak'}, (v) => setS(() => rol = v)),
               const SizedBox(height: 10),
               Row(children: [
                 Expanded(flex: 2, child: TextField(controller: maasC, keyboardType: const TextInputType.numberWithOptions(decimal: true), style: TextStyle(color: _ink), decoration: _dec('Maaş (TL)'))),

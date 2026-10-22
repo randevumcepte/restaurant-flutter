@@ -146,7 +146,8 @@ class _TedarikciScreenState extends State<TedarikciScreen> {
           child: Text(ad.isNotEmpty ? ad.characters.first.toUpperCase() : '?', style: TextStyle(color: t.mor1, fontWeight: FontWeight.bold, fontSize: 13)),
         ),
         const SizedBox(width: 10),
-        Expanded(child: Text(ad, style: TextStyle(color: t.ink, fontSize: 13.5, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
+        Flexible(child: Text(ad, style: TextStyle(color: t.ink, fontSize: 13.5, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
+        if (_n(e['anlasmali']).toInt() == 1) ...[const SizedBox(width: 6), _anlasmaliRozet()],
       ]),
       // Telefon
       Text(tel.isNotEmpty ? tel : '—', style: TextStyle(color: tel.isNotEmpty ? t.sub2 : t.sub, fontSize: 13)),
@@ -187,6 +188,21 @@ class _TedarikciScreenState extends State<TedarikciScreen> {
 
   void _detay(Map t) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => TedarikciDetayScreen(id: _n(t['id']).toInt(), ad: t['ad'].toString())));
 
+  // Yeşil "Anlaşmalı" rozeti
+  static Widget _anlasmaliRozet() => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+        decoration: BoxDecoration(
+          color: const Color(0xFF22C55E).withValues(alpha: 0.16),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFF22C55E).withValues(alpha: 0.45)),
+        ),
+        child: const Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(Icons.verified, color: Color(0xFF22C55E), size: 12),
+          SizedBox(width: 3),
+          Text('Anlaşmalı', style: TextStyle(color: Color(0xFF22C55E), fontSize: 10.5, fontWeight: FontWeight.w700)),
+        ]),
+      );
+
   Widget _kart(Map t) => GestureDetector(
         onTap: () => _detay(t),
         child: Container(
@@ -197,7 +213,10 @@ class _TedarikciScreenState extends State<TedarikciScreen> {
           CircleAvatar(radius: 20, backgroundColor: _mor1.withValues(alpha: 0.18), child: Text(t['ad'].toString().characters.first.toUpperCase(), style: const TextStyle(color: _mor1, fontWeight: FontWeight.bold, fontSize: 18))),
           const SizedBox(width: 12),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(t['ad'].toString(), style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+            Row(children: [
+              Flexible(child: Text(t['ad'].toString(), style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis)),
+              if (_n(t['anlasmali']).toInt() == 1) ...[const SizedBox(width: 6), _anlasmaliRozet()],
+            ]),
             const SizedBox(height: 3),
             Text('${(t['telefon']?.toString() ?? '').isNotEmpty ? '${t['telefon']} · ' : ''}${_n(t['fatura_sayisi']).toInt()} fatura', style: const TextStyle(color: _gri, fontSize: 12)),
           ])),
@@ -231,10 +250,11 @@ class _TedarikciScreenState extends State<TedarikciScreen> {
     final telC = TextEditingController(text: t?['telefon']?.toString() ?? '');
     final aciklamaC = TextEditingController(text: t?['aciklama']?.toString() ?? '');
     final yeni = t == null;
-    final ok = await showModalBottomSheet<bool>(useRootNavigator: true, 
+    bool anlasmali = _n(t?['anlasmali']).toInt() == 1;
+    final ok = await showModalBottomSheet<bool>(useRootNavigator: true,
       context: context, isScrollControlled: true, backgroundColor: _bg,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => Padding(
+      builder: (ctx) => StatefulBuilder(builder: (ctx, setSt) => Padding(
         padding: EdgeInsets.only(left: 16, right: 16, top: 16, bottom: MediaQuery.of(ctx).viewInsets.bottom + 16),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
           Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 14), alignment: Alignment.center, decoration: BoxDecoration(color: const Color(0xFF2D3752), borderRadius: BorderRadius.circular(2))),
@@ -245,17 +265,34 @@ class _TedarikciScreenState extends State<TedarikciScreen> {
           TextField(controller: telC, keyboardType: TextInputType.phone, style: const TextStyle(color: Colors.white), decoration: _dec('Telefon')),
           const SizedBox(height: 10),
           TextField(controller: aciklamaC, style: const TextStyle(color: Colors.white), decoration: _dec('Not (opsiyonel)')),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFF2D3752))),
+            child: Row(children: [
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: const [
+                Text('Anlaşmalı tedarikçi', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+                SizedBox(height: 2),
+                Text('Patron onayı olmadan direkt sipariş geçilebilir.', style: TextStyle(color: _gri, fontSize: 11)),
+              ])),
+              Switch(
+                value: anlasmali,
+                activeThumbColor: const Color(0xFF22C55E),
+                onChanged: (v) => setSt(() => anlasmali = v),
+              ),
+            ]),
+          ),
           const SizedBox(height: 14),
           SizedBox(width: double.infinity, child: FilledButton(style: FilledButton.styleFrom(backgroundColor: _mor1, padding: const EdgeInsets.symmetric(vertical: 14)), onPressed: () => Navigator.pop(ctx, true), child: const Text('Kaydet', style: TextStyle(fontWeight: FontWeight.bold)))),
         ]),
-      ),
+      )),
     );
     if (ok != true) return;
     if (adC.text.trim().isEmpty) { _uyar('Ad boş olamaz'); return; }
     if (!mounted) return;
     final auth = context.read<AuthProvider>();
     try {
-      final res = await Api.tedarikciKaydet(auth.token!, id: yeni ? null : _n(t['id']).toInt(), ad: adC.text.trim(), telefon: telC.text.trim(), aciklama: aciklamaC.text.trim());
+      final res = await Api.tedarikciKaydet(auth.token!, id: yeni ? null : _n(t['id']).toInt(), ad: adC.text.trim(), telefon: telC.text.trim(), aciklama: aciklamaC.text.trim(), anlasmali: anlasmali);
       if (!mounted) return;
       if (res['ok'] == 1) { _yukle(); } else { _uyar(res['hata']?.toString() ?? 'Kaydedilemedi'); }
     } catch (_) { _uyar('Bağlantı hatası'); }

@@ -374,7 +374,7 @@ class _MenuYonetimiScreenState extends State<MenuYonetimiScreen> {
   Future<void> _kategoriDuzenle(Map<String, dynamic>? kat) async {
     final adCtrl = TextEditingController(text: kat?['ad']?.toString() ?? '');
     final siraCtrl = TextEditingController(text: '${kat?['sira'] ?? kategoriler.length}');
-    final t = _t;
+    final t = context.read<TemaProvider>(); // callback → watch debug'de patlar, dialog açılmaz
     final res = await showDialog<String>(useRootNavigator: true, 
       context: context,
       builder: (ctx) => AlertDialog(
@@ -440,7 +440,7 @@ class _MenuYonetimiScreenState extends State<MenuYonetimiScreen> {
   }
 
   Widget _alan(TextEditingController c, String etiket, TextInputType tip, {int maxLines = 1}) {
-    final t = _t;
+    final t = context.read<TemaProvider>(); // dialog içinde çağrılır → watch debug'de patlar
     return TextField(
       controller: c,
       keyboardType: tip,
@@ -543,7 +543,7 @@ class _UrunDuzenleSayfaState extends State<_UrunDuzenleSayfa> {
   }
 
   Future<void> _sil() async {
-    final t = _t;
+    final t = context.read<TemaProvider>(); // callback → watch debug'de patlar
     final onay = await showDialog<bool>(useRootNavigator: true, 
       context: context,
       builder: (ctx) => AlertDialog(
@@ -573,8 +573,8 @@ class _UrunDuzenleSayfaState extends State<_UrunDuzenleSayfa> {
       if (!ok) return;
     }
     if (!mounted) return;
-    final t = _t;
-    final kaynak = await showModalBottomSheet<ImageSource>(useRootNavigator: true, 
+    final t = context.read<TemaProvider>(); // callback → watch debug'de patlar
+    final kaynak = await showModalBottomSheet<ImageSource>(useRootNavigator: true,
       context: context,
       backgroundColor: t.card,
       builder: (ctx) => SafeArea(
@@ -793,7 +793,7 @@ class _UrunDuzenleSayfaState extends State<_UrunDuzenleSayfa> {
   }
 
   Widget _alan(TextEditingController c, String etiket, TextInputType tip, {int maxLines = 1}) {
-    final t = _t;
+    final t = context.read<TemaProvider>(); // dialog içinde çağrılır → watch debug'de patlar
     return TextField(
       controller: c,
       keyboardType: tip,

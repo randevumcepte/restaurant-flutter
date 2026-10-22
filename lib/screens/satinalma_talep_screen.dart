@@ -685,6 +685,8 @@ class _TalepDetayScreenState extends State<TalepDetayScreen> {
     if (['yeni', 'teklif'].contains(durum)) {
       bilgi('Her kaleme teklif girip ⭐ ile birini öner, sonra patrona gönder.');
       w.add(btn('Patrona Gönder (Onaya)', Icons.send, t.amber, () => _calistir((tok) => Api.talepPatronaGonder(tok, widget.id), basari: 'Patrona gönderildi')));
+      w.add(btn('Anlaşmalıdan Direkt Sipariş', Icons.bolt, const Color(0xFF0EA5E9), () => _calistir((tok) => Api.talepAnlasmaliDirekt(tok, widget.id), basari: 'Direkt sipariş oluşturuldu')));
+      bilgi('⚡ Anlaşmalı tedarikçiye ⭐ önerip fiyat girdiğin kalemler patron onayı olmadan direkt siparişe döner, tedarikçiye WhatsApp gider.');
     }
     if (durum == 'onayda') {
       if (widget.patron) {
@@ -693,6 +695,8 @@ class _TalepDetayScreenState extends State<TalepDetayScreen> {
       } else {
         bilgi('Patron onayı bekleniyor. Teklif/öneri hâlâ düzenlenebilir.');
       }
+      w.add(btn('Anlaşmalıdan Direkt Sipariş', Icons.bolt, const Color(0xFF0EA5E9), () => _calistir((tok) => Api.talepAnlasmaliDirekt(tok, widget.id), basari: 'Direkt sipariş oluşturuldu')));
+      bilgi('⚡ Anlaşmalı tedarikçiye ⭐ önerip fiyat girdiğin kalemler patron onayı olmadan direkt siparişe döner, tedarikçiye WhatsApp gider.');
     }
     if (durum == 'onaylandi') {
       bilgi('Onaylandı. Tedarikçiye-gruplu sipariş oluşturabilirsin.');

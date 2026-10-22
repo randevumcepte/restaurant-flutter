@@ -103,6 +103,7 @@ class Api {
       _post('/satinalma-talep/patron-sec', token, {'talep_kalem_id': '$kalemId', 'secilen_tedarikci_id': '$tedId', 'patron_not': not});
   static Future<Map<String, dynamic>> talepOnayla(String token, int id) => _post('/satinalma-talep/onayla', token, {'id': '$id'});
   static Future<Map<String, dynamic>> talepPoOlustur(String token, int id) => _post('/satinalma-talep/po-olustur', token, {'id': '$id'});
+  static Future<Map<String, dynamic>> talepAnlasmaliDirekt(String token, int id) => _post('/satinalma-talep/anlasmali-direkt', token, {'id': '$id'});
   static Future<Map<String, dynamic>> talepDurumGuncelle(String token, int id, String durum) => _post('/satinalma-talep/durum-guncelle', token, {'id': '$id', 'durum': durum});
   static Future<Map<String, dynamic>> siparisOnerisi(String token) => _get('/api/patron/siparis-onerisi', token);
   static Future<Map<String, dynamic>> siparisOnerisiOlustur(String token, String kalemlerJson) => _post('/api/patron/siparis-onerisi-olustur', token, {'kalemler': kalemlerJson});
@@ -622,8 +623,8 @@ class Api {
 
   // ---- TEDARIKCILER ----
   static Future<Map<String, dynamic>> tedarikciler(String token) => _get('/api/patron/tedarikciler', token);
-  static Future<Map<String, dynamic>> tedarikciKaydet(String token, {int? id, required String ad, String telefon = '', String aciklama = ''}) {
-    final body = <String, String>{'ad': ad, 'telefon': telefon, 'aciklama': aciklama};
+  static Future<Map<String, dynamic>> tedarikciKaydet(String token, {int? id, required String ad, String telefon = '', String aciklama = '', bool anlasmali = false}) {
+    final body = <String, String>{'ad': ad, 'telefon': telefon, 'aciklama': aciklama, 'anlasmali': anlasmali ? '1' : '0'};
     if (id != null) body['id'] = '$id';
     return _post('/api/patron/tedarikci-kaydet', token, body);
   }
