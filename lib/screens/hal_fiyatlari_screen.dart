@@ -25,6 +25,7 @@ String _p(dynamic v) => v == null ? '—' : '${_fmtP.format(_n(v))}TL';
 
 class _HalFiyatlariScreenState extends State<HalFiyatlariScreen> {
   bool loading = true;
+  int sekme = 0; // 0 = Sen vs Hal, 1 = Hal Fiyatları
   List hal = [];
   List kiyas = [];
 
@@ -80,61 +81,91 @@ class _HalFiyatlariScreenState extends State<HalFiyatlariScreen> {
                         style: TextStyle(color: t.sub, fontSize: 12.5)),
                   ),
 
-                  // ---- SEN vs HAL ----
-                  MBolumBaslik('Sen vs Hal', renk: _kirmizi, sayi: kiyas.length),
-                  const SizedBox(height: 8),
-                  if (kiyas.isEmpty)
-                    _bos(t, 'Eşleşen malzeme/alış yok. Hal ürün adı malzeme adına benzemeli.')
-                  else
-                    MTablo(
-                      sutunlar: const [
-                        MSutun('Malzeme', flex: 26),
-                        MSutun('Hal Ort.', flex: 17, hiza: TextAlign.right),
-                        MSutun('Senin Son', flex: 19, hiza: TextAlign.right),
-                        MSutun('Fark', flex: 22, hiza: TextAlign.center),
-                      ],
-                      satirlar: [
-                        for (final k in kiyas)
-                          [
-                            Text('${k['malzeme']}', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.ink, fontSize: 12.5, fontWeight: FontWeight.w600)),
-                            Text(_p(k['hal']), textAlign: TextAlign.right, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.sub, fontSize: 11.5)),
-                            Text(_p(k['senin']), textAlign: TextAlign.right, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.ink, fontSize: 12, fontWeight: FontWeight.bold)),
-                            FittedBox(
-                              fit: BoxFit.scaleDown,
-                              alignment: Alignment.center,
-                              child: MRozet(_n(k['fark']) > 0 ? '+${k['fark']}%' : '${k['fark']}%', _n(k['fark']) >= 20 ? _kirmizi : (_n(k['fark']) > 0 ? _amber : _yesil)),
-                            ),
-                          ],
-                      ],
-                    ),
+                  // ---- SEKME BUTONLARI: Sen vs Hal | Hal Fiyatları ----
+                  Row(children: [
+                    Expanded(child: _sekmeBtn(t, 0, 'Sen vs Hal', kiyas.length, _kirmizi)),
+                    const SizedBox(width: 10),
+                    Expanded(child: _sekmeBtn(t, 1, 'Hal Fiyatları', hal.length, _yesilK)),
+                  ]),
+                  const SizedBox(height: 16),
 
-                  const SizedBox(height: 22),
-                  MBolumBaslik('Hal Fiyatları', renk: _yesilK, sayi: hal.length),
-                  const SizedBox(height: 8),
-                  if (hal.isEmpty)
-                    _bos(t, halMesaj ?? 'Hal fiyatı yok. "Yenile"ye bas; gelmezse sunucu dış erişime kapalı olabilir (webden manuel girilebilir).')
-                  else
-                    MTablo(
-                      sutunlar: const [
-                        MSutun('Ürün', flex: 30),
-                        MSutun('Asgari', flex: 18, hiza: TextAlign.right),
-                        MSutun('Ortalama', flex: 20, hiza: TextAlign.right),
-                        MSutun('Azami', flex: 18, hiza: TextAlign.right),
-                      ],
-                      satirlar: [
-                        for (final h in hal)
-                          [
-                            Text('${h['urun_ad']}', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.ink, fontSize: 12.5, fontWeight: FontWeight.w600)),
-                            Text(_p(h['asgari']), textAlign: TextAlign.right, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.sub2, fontSize: 11.5)),
-                            Text(_p(h['ortalama']), textAlign: TextAlign.right, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.ink, fontSize: 12, fontWeight: FontWeight.bold)),
-                            Text(_p(h['azami']), textAlign: TextAlign.right, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.sub2, fontSize: 11.5)),
-                          ],
-                      ],
-                    ),
+                  // ---- SEÇİLİ SEKME ----
+                  if (sekme == 0) ...[
+                    if (kiyas.isEmpty)
+                      _bos(t, 'Eşleşen malzeme/alış yok. Hal ürün adı malzeme adına benzemeli.')
+                    else
+                      MTablo(
+                        sutunlar: const [
+                          MSutun('Malzeme', flex: 26),
+                          MSutun('Hal Ort.', flex: 17, hiza: TextAlign.right),
+                          MSutun('Senin Son', flex: 19, hiza: TextAlign.right),
+                          MSutun('Fark', flex: 22, hiza: TextAlign.center),
+                        ],
+                        satirlar: [
+                          for (final k in kiyas)
+                            [
+                              Text('${k['malzeme']}', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.ink, fontSize: 12.5, fontWeight: FontWeight.w600)),
+                              Text(_p(k['hal']), textAlign: TextAlign.right, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.sub, fontSize: 11.5)),
+                              Text(_p(k['senin']), textAlign: TextAlign.right, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.ink, fontSize: 12, fontWeight: FontWeight.bold)),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.center,
+                                child: MRozet(_n(k['fark']) > 0 ? '+${k['fark']}%' : '${k['fark']}%', _n(k['fark']) >= 20 ? _kirmizi : (_n(k['fark']) > 0 ? _amber : _yesil)),
+                              ),
+                            ],
+                        ],
+                      ),
+                  ] else ...[
+                    if (hal.isEmpty)
+                      _bos(t, halMesaj ?? 'Hal fiyatı yok. "Yenile"ye bas; gelmezse sunucu dış erişime kapalı olabilir (webden manuel girilebilir).')
+                    else
+                      MTablo(
+                        sutunlar: const [
+                          MSutun('Ürün', flex: 30),
+                          MSutun('Asgari', flex: 18, hiza: TextAlign.right),
+                          MSutun('Ortalama', flex: 20, hiza: TextAlign.right),
+                          MSutun('Azami', flex: 18, hiza: TextAlign.right),
+                        ],
+                        satirlar: [
+                          for (final h in hal)
+                            [
+                              Text('${h['urun_ad']}', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.ink, fontSize: 12.5, fontWeight: FontWeight.w600)),
+                              Text(_p(h['asgari']), textAlign: TextAlign.right, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.sub2, fontSize: 11.5)),
+                              Text(_p(h['ortalama']), textAlign: TextAlign.right, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.ink, fontSize: 12, fontWeight: FontWeight.bold)),
+                              Text(_p(h['azami']), textAlign: TextAlign.right, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.sub2, fontSize: 11.5)),
+                            ],
+                        ],
+                      ),
+                  ],
                   const SizedBox(height: 24),
                 ],
               ),
             ),
+    );
+  }
+
+  Widget _sekmeBtn(TemaProvider t, int i, String yazi, int sayi, Color renk) {
+    final secili = sekme == i;
+    return InkWell(
+      onTap: () => setState(() => sekme = i),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
+        decoration: BoxDecoration(
+          color: secili ? renk.withValues(alpha: 0.16) : t.card,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: secili ? renk : t.line, width: secili ? 1.4 : 1),
+        ),
+        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Flexible(child: Text(yazi, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: secili ? renk : t.sub, fontSize: 13.5, fontWeight: FontWeight.bold))),
+          const SizedBox(width: 7),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+            decoration: BoxDecoration(color: (secili ? renk : t.sub2).withValues(alpha: 0.18), borderRadius: BorderRadius.circular(20)),
+            child: Text('$sayi', style: TextStyle(color: secili ? renk : t.sub2, fontSize: 11, fontWeight: FontWeight.bold)),
+          ),
+        ]),
+      ),
     );
   }
 
