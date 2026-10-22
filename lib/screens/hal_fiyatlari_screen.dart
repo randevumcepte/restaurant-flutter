@@ -34,16 +34,18 @@ class _HalFiyatlariScreenState extends State<HalFiyatlariScreen> {
     _yukle();
   }
 
-  Future<void> _yukle() async {
+  String? halMesaj;
+  Future<void> _yukle({bool force = false}) async {
     final auth = context.read<AuthProvider>();
     setState(() => loading = true);
     try {
-      final res = await Api.halFiyatlari(auth.token!);
+      final res = await Api.halFiyatlari(auth.token!, force: force);
       if (!mounted) return;
       if (res['ok'] == 1) {
         setState(() {
           hal = (res['hal'] as List?) ?? [];
           kiyas = (res['kiyas'] as List?) ?? [];
+          halMesaj = res['hal_mesaj']?.toString();
           loading = false;
         });
       } else {
@@ -62,11 +64,11 @@ class _HalFiyatlariScreenState extends State<HalFiyatlariScreen> {
       ikon: Icons.storefront,
       geri: true,
       altBaslik: 'Toptan hal referansı · sen vs hal',
-      araclar: [MButon('Yenile', _yesilK, _yukle, dolu: false, ikon: Icons.refresh)],
+      araclar: [MButon('Yenile', _yesilK, () => _yukle(force: true), dolu: false, ikon: Icons.refresh)],
       govde: loading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
-              onRefresh: _yukle,
+              onRefresh: () => _yukle(force: true),
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
@@ -109,7 +111,7 @@ class _HalFiyatlariScreenState extends State<HalFiyatlariScreen> {
                   MBolumBaslik('Hal Fiyatları', renk: _yesilK, sayi: hal.length),
                   const SizedBox(height: 8),
                   if (hal.isEmpty)
-                    _bos(t, 'Hal fiyatı yok. Sunucu dış erişime kapalıysa webden manuel girilebilir.')
+                    _bos(t, halMesaj ?? 'Hal fiyatı yok. "Yenile"ye bas; gelmezse sunucu dış erişime kapalı olabilir (webden manuel girilebilir).')
                   else
                     MTablo(
                       sutunlar: const [
