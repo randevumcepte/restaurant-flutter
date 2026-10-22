@@ -88,18 +88,19 @@ class _HalFiyatlariScreenState extends State<HalFiyatlariScreen> {
                   else
                     MTablo(
                       sutunlar: const [
-                        MSutun('Malzeme', flex: 28),
-                        MSutun('Hal Ort.', flex: 18, hiza: TextAlign.right),
-                        MSutun('Senin Son', flex: 18, hiza: TextAlign.right),
-                        MSutun('Fark', flex: 14, hiza: TextAlign.center),
+                        MSutun('Malzeme', flex: 26),
+                        MSutun('Hal Ort.', flex: 17, hiza: TextAlign.right),
+                        MSutun('Senin Son', flex: 19, hiza: TextAlign.right),
+                        MSutun('Fark', flex: 22, hiza: TextAlign.center),
                       ],
                       satirlar: [
                         for (final k in kiyas)
                           [
-                            Text('${k['malzeme']}', style: TextStyle(color: t.ink, fontSize: 12.5, fontWeight: FontWeight.w600)),
-                            Text(_p(k['hal']), textAlign: TextAlign.right, style: TextStyle(color: t.sub, fontSize: 12)),
-                            Text(_p(k['senin']), textAlign: TextAlign.right, style: TextStyle(color: t.ink, fontSize: 12.5, fontWeight: FontWeight.bold)),
-                            Align(
+                            Text('${k['malzeme']}', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.ink, fontSize: 12.5, fontWeight: FontWeight.w600)),
+                            Text(_p(k['hal']), textAlign: TextAlign.right, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.sub, fontSize: 11.5)),
+                            Text(_p(k['senin']), textAlign: TextAlign.right, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.ink, fontSize: 12, fontWeight: FontWeight.bold)),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
                               alignment: Alignment.center,
                               child: MRozet(_n(k['fark']) > 0 ? '+${k['fark']}%' : '${k['fark']}%', _n(k['fark']) >= 20 ? _kirmizi : (_n(k['fark']) > 0 ? _amber : _yesil)),
                             ),
@@ -123,10 +124,10 @@ class _HalFiyatlariScreenState extends State<HalFiyatlariScreen> {
                       satirlar: [
                         for (final h in hal)
                           [
-                            Text('${h['urun_ad']}', style: TextStyle(color: t.ink, fontSize: 12.5, fontWeight: FontWeight.w600)),
-                            Text(_p(h['asgari']), textAlign: TextAlign.right, style: TextStyle(color: t.sub2, fontSize: 12)),
-                            Text(_p(h['ortalama']), textAlign: TextAlign.right, style: TextStyle(color: t.ink, fontSize: 12.5, fontWeight: FontWeight.bold)),
-                            Text(_p(h['azami']), textAlign: TextAlign.right, style: TextStyle(color: t.sub2, fontSize: 12)),
+                            Text('${h['urun_ad']}', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.ink, fontSize: 12.5, fontWeight: FontWeight.w600)),
+                            Text(_p(h['asgari']), textAlign: TextAlign.right, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.sub2, fontSize: 11.5)),
+                            Text(_p(h['ortalama']), textAlign: TextAlign.right, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.ink, fontSize: 12, fontWeight: FontWeight.bold)),
+                            Text(_p(h['azami']), textAlign: TextAlign.right, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.sub2, fontSize: 11.5)),
                           ],
                       ],
                     ),
