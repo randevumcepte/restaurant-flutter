@@ -392,7 +392,7 @@ class _YeniTalepSheetState extends State<_YeniTalepSheet> {
       padding: const EdgeInsets.all(9),
       decoration: BoxDecoration(color: t.card2, borderRadius: BorderRadius.circular(12)),
       child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-        Expanded(flex: 5, child: DropdownButtonFormField<int>(
+        Expanded(flex: 4, child: DropdownButtonFormField<int>(
           initialValue: k['malzeme_id'],
           isExpanded: true,
           decoration: _dec(t, ipucu: 'Malzeme'),
@@ -401,7 +401,7 @@ class _YeniTalepSheetState extends State<_YeniTalepSheet> {
           items: widget.malzemeler.map<DropdownMenuItem<int>>((m) => DropdownMenuItem(value: _n(m['id']).toInt(), child: Text('${m['ad']}', overflow: TextOverflow.ellipsis))).toList(),
           onChanged: (v) => setState(() { k['malzeme_id'] = v; k['birim'] = _malzemeBirim(v); }),
         )),
-        const SizedBox(width: 6),
+        const SizedBox(width: 5),
         Expanded(flex: 2, child: TextFormField(
           initialValue: '${k['miktar']}',
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -409,12 +409,36 @@ class _YeniTalepSheetState extends State<_YeniTalepSheet> {
           decoration: _dec(t, ipucu: 'Miktar'),
           onChanged: (v) => k['miktar'] = v,
         )),
-        const SizedBox(width: 4),
-        SizedBox(width: 36, child: IconButton(
+        const SizedBox(width: 5),
+        Expanded(flex: 2, child: _birimAlan(t, k, i)),
+        const SizedBox(width: 2),
+        SizedBox(width: 34, child: IconButton(
           icon: Icon(Icons.close, size: 18, color: t.sub2),
           onPressed: kalemler.length == 1 ? null : () => setState(() => kalemler.removeAt(i)),
         )),
       ]),
+    );
+  }
+
+  // Birim dropdown'u (kg/koli/adet...) — malzeme seçilince baz birim otomatik gelir, kullanıcı değiştirebilir
+  Widget _birimAlan(TemaProvider t, Map<String, dynamic> k, int i) {
+    final set = <String>{};
+    for (final b in widget.birimler) {
+      final ks = '${b['kisaltma'] ?? b['ad'] ?? ''}'.trim();
+      if (ks.isNotEmpty) set.add(ks);
+    }
+    final cur = '${k['birim'] ?? ''}'.trim();
+    if (cur.isNotEmpty) set.add(cur); // otomatik gelen baz birim her zaman listede olsun (dropdown çökmesin)
+    final liste = set.toList();
+    return DropdownButtonFormField<String>(
+      key: ValueKey('birim_${i}_$cur'), // malzeme seçilince birim otomatik yansısın
+      initialValue: cur.isEmpty ? null : cur,
+      isExpanded: true,
+      decoration: _dec(t, ipucu: 'Birim'),
+      dropdownColor: t.card,
+      style: TextStyle(color: t.ink, fontSize: 13.5),
+      items: liste.map<DropdownMenuItem<String>>((ks) => DropdownMenuItem(value: ks, child: Text(ks, overflow: TextOverflow.ellipsis))).toList(),
+      onChanged: (v) => setState(() => k['birim'] = v ?? ''),
     );
   }
 
