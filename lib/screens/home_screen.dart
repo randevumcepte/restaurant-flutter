@@ -18,10 +18,17 @@ import 'santral_ses_screen.dart';
 import 'dahili_yonetim_screen.dart';
 import 'freepbx_ayar_screen.dart';
 import 'garson_ozet_screen.dart';
+import 'servis_akis_screen.dart';
+import 'karsilama_screen.dart';
+import 'departman_is_screen.dart';
 import 'masalar_screen.dart';
 import 'mutfak_screen.dart';
 import 'paket_screen.dart';
 import 'asistan_screen.dart';
+import 'departman_panel_screen.dart';
+import 'bildirim_ayar_screen.dart';
+import 'ik_self_servis_screen.dart';
+import 'patron_ai_brief_screen.dart';
 import 'kasa_screen.dart';
 import 'finans_screen.dart';
 import 'isletme_hub_screen.dart';
@@ -122,14 +129,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _uygulama(BuildContext context) {
-    final rol = context.watch<AuthProvider>().rol;
-    final patron = rol == 'sahip' || rol == 'mudur';
+    final auth = context.watch<AuthProvider>();
+    final patron = auth.rol == 'sahip' || auth.rol == 'mudur';
 
-    // Garson: KENDİ özeti + Masalar + Mutfak (Paket garsona kapalı — masaya bakar).
-    // (İleride yetkiden tek tıkla Paket açılabilir: rol yerine yetki listesine bağlanır.)
-    final List<Widget> ekranlar = patron
-        ? const [DashboardScreen(), MasalarScreen(), MutfakScreen(), PaketScreen()]
-        : const [GarsonOzetScreen(), MasalarScreen(), MutfakScreen()];
+    // DEPARTMAN-BİLİNÇLİ sekmeler: her personel girişte kendi departmanının ekranına düşer.
+    // Patron sabit panel (Özet/Masalar/Mutfak/Paket); diğerleri departmanKod'a göre.
+    final tanim = _sekmeTanimlari(auth, patron);
+    final List<Widget> ekranlar = tanim.map((s) => s.ekran).toList();
 
     if (_index >= ekranlar.length) anaSekme.value = 0;
 
@@ -139,7 +145,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final yanMenu = _YanMenu(
         patron: patron,
         aktifIndex: _index,
-        sekmeler: _sekmeListesi(patron),
+        sekmeler: tanim.map((s) => _Sekme(s.ikon, s.aktifIkon, s.label)).toList(),
         onSekme: (i) {
           // Once sag bolmede acik yonetim ekranini kapat, sonra sekmeye gec
           _icerikNav.currentState?.popUntil((r) => r.isFirst);
@@ -204,24 +210,65 @@ class _HomeScreenState extends State<HomeScreen> {
         // alt-ekran butonlarinin (ör. "Kaydet") uzerine biniyordu. Yazarken zaten gerekmez.
         floatingActionButton: (patron && MediaQuery.of(context).viewInsets.bottom < 1) ? _mikrofon() : null,
         floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-        bottomNavigationBar: patron ? _patronBar() : _personelBar(),
+        bottomNavigationBar: patron ? _patronBar() : _personelBar(tanim),
       ),
     );
   }
 
-  // Sekme (tab) listesi — role gore. Index'ler ekranlar listesiyle birebir.
-  List<_Sekme> _sekmeListesi(bool patron) => patron
-      ? const [
-          _Sekme(Icons.dashboard_outlined, Icons.dashboard, 'Özet'),
-          _Sekme(Icons.table_bar_outlined, Icons.table_bar, 'Masalar'),
-          _Sekme(Icons.restaurant_menu_outlined, Icons.restaurant_menu, 'Mutfak'),
-          _Sekme(Icons.delivery_dining_outlined, Icons.delivery_dining, 'Paket'),
-        ]
-      : const [
-          _Sekme(Icons.insights_outlined, Icons.insights, 'Özetim'),
-          _Sekme(Icons.table_bar_outlined, Icons.table_bar, 'Masalar'),
-          _Sekme(Icons.restaurant_menu_outlined, Icons.restaurant_menu, 'Mutfak'),
-        ];
+  // DEPARTMAN-BİLİNÇLİ sekme tanımı — her personel kendi departmanının ekranına düşer.
+  // İlk sekme = departmanın ana ekranı. Index'ler ekranlar listesiyle birebir.
+  List<_SekmeTanim> _sekmeTanimlari(AuthProvider auth, bool patron) {
+    if (patron) {
+      return const [
+        _SekmeTanim(Icons.dashboard_outlined, Icons.dashboard, 'Özet', DashboardScreen()),
+        _SekmeTanim(Icons.table_bar_outlined, Icons.table_bar, 'Masalar', MasalarScreen()),
+        _SekmeTanim(Icons.restaurant_menu_outlined, Icons.restaurant_menu, 'Mutfak', MutfakScreen()),
+        _SekmeTanim(Icons.delivery_dining_outlined, Icons.delivery_dining, 'Paket', PaketScreen()),
+      ];
+    }
+    const panelim = _SekmeTanim(Icons.dashboard_customize_outlined, Icons.dashboard_customize, 'Panelim', DepartmanPanelScreen());
+    const masalar = _SekmeTanim(Icons.table_bar_outlined, Icons.table_bar, 'Masalar', MasalarScreen());
+    const mutfak = _SekmeTanim(Icons.restaurant_menu_outlined, Icons.restaurant_menu, 'Mutfak', MutfakScreen());
+    switch (auth.departmanKod ?? '') {
+      case 'servis':
+        return const [_SekmeTanim(Icons.room_service_outlined, Icons.room_service, 'İş Akışım', ServisAkisScreen()), masalar, mutfak];
+      case 'karsilama':
+        return const [_SekmeTanim(Icons.co_present_outlined, Icons.co_present, 'Karşılama', KarsilamaScreen()), masalar, _SekmeTanim(Icons.event_available_outlined, Icons.event_available, 'Rezervasyon', RezervasyonScreen())];
+      case 'bar':
+        return const [_SekmeTanim(Icons.local_bar_outlined, Icons.local_bar, 'Bar', MutfakScreen()), masalar];
+      case 'kasa':
+        return const [_SekmeTanim(Icons.point_of_sale_outlined, Icons.point_of_sale, 'Kasa', KasaScreen()), masalar];
+      case 'mutfak': case 'soguk_mutfak': case 'pastane': case 'kasap':
+        return const [mutfak, panelim];
+      case 'satinalma': case 'depo': case 'mal_kabul':
+        return const [_SekmeTanim(Icons.inventory_2_outlined, Icons.inventory_2, 'Stok', IsletmeHubScreen()), panelim];
+      case 'finans':
+        return const [_SekmeTanim(Icons.analytics_outlined, Icons.analytics, 'Finans', FinansScreen()), panelim];
+      case 'ik':
+        return const [_SekmeTanim(Icons.badge_outlined, Icons.badge, 'Personel', PersonelScreen()), panelim];
+      case 'paket_kurye':
+        return const [_SekmeTanim(Icons.delivery_dining_outlined, Icons.delivery_dining, 'Paket', PaketScreen()), panelim];
+      case 'pazarlama': case 'crm':
+        return const [_SekmeTanim(Icons.local_offer_outlined, Icons.local_offer, 'Pazarlama', IndirimlerScreen()), panelim];
+      case 'kalite':
+        return const [_SekmeTanim(Icons.verified_user_outlined, Icons.verified_user, 'Kalite', DepartmanIsScreen(kod: 'kalite', baslik: 'Kalite / Gıda Güvenliği (HACCP)', renk: Color(0xFF16A34A))), panelim];
+      case 'temizlik':
+        return const [_SekmeTanim(Icons.cleaning_services_outlined, Icons.cleaning_services, 'Temizlik', DepartmanIsScreen(kod: 'temizlik', baslik: 'Temizlik / Hijyen', renk: Color(0xFF0EA5E9))), panelim];
+      case 'guvenlik':
+        return const [_SekmeTanim(Icons.security_outlined, Icons.security, 'Güvenlik', DepartmanIsScreen(kod: 'guvenlik', baslik: 'Güvenlik', renk: Color(0xFF475569))), panelim];
+      case 'teknik':
+        return const [_SekmeTanim(Icons.build_outlined, Icons.build, 'Teknik', DepartmanIsScreen(kod: 'teknik', baslik: 'Teknik Servis / Bakım-Onarım', renk: Color(0xFFF97316))), panelim];
+      case 'it':
+        return const [_SekmeTanim(Icons.dns_outlined, Icons.dns, 'IT', DepartmanIsScreen(kod: 'it', baslik: 'IT / Bilgi İşlem', renk: Color(0xFF6366F1))), panelim];
+      case 'bulasik':
+        return const [_SekmeTanim(Icons.wash_outlined, Icons.wash, 'Bulaşık', DepartmanIsScreen(kod: 'bulasik', baslik: 'Bulaşıkhane / Steward', renk: Color(0xFF06B6D4))), panelim];
+      case 'satis_etkinlik':
+        return const [_SekmeTanim(Icons.celebration_outlined, Icons.celebration, 'Etkinlik', DepartmanIsScreen(kod: 'satis_etkinlik', baslik: 'Satış / Etkinlik', renk: Color(0xFFA855F7))), panelim];
+      default:
+        // Departman atanmamış / bilinmeyen → eski garson düzeni (geriye uyumlu).
+        return const [_SekmeTanim(Icons.insights_outlined, Icons.insights, 'Özetim', GarsonOzetScreen()), masalar, mutfak];
+    }
+  }
 
   // Ortada yükseltilmiş mikrofon — Patron Asistan devreye girer.
   Widget _mikrofon() {
@@ -269,8 +316,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Personel alt bar: sade 3 sekme (mic yok — asistan patrona özel)
-  Widget _personelBar() {
+  // Personel alt bar: departmana göre dinamik sekmeler (mic yok — asistan patrona özel)
+  Widget _personelBar(List<_SekmeTanim> tanim) {
     return BottomAppBar(
       color: _bar,
       elevation: 12,
@@ -279,9 +326,7 @@ class _HomeScreenState extends State<HomeScreen> {
       height: 64,
       padding: EdgeInsets.zero,
       child: Row(children: [
-        _item(0, Icons.insights_outlined, Icons.insights, 'Özetim'),
-        _item(1, Icons.table_bar_outlined, Icons.table_bar, 'Masalar'),
-        _item(2, Icons.restaurant_menu_outlined, Icons.restaurant_menu, 'Mutfak'),
+        for (int i = 0; i < tanim.length; i++) _item(i, tanim[i].ikon, tanim[i].aktifIkon, tanim[i].label),
       ]),
     );
   }
@@ -320,6 +365,15 @@ class _Sekme {
   final IconData aktifIkon;
   final String label;
   const _Sekme(this.ikon, this.aktifIkon, this.label);
+}
+
+// Departman-bilinçli sekme tanımı: ikon + etiket + o sekmenin açacağı ekran.
+class _SekmeTanim {
+  final IconData ikon;
+  final IconData aktifIkon;
+  final String label;
+  final Widget ekran;
+  const _SekmeTanim(this.ikon, this.aktifIkon, this.label, this.ekran);
 }
 
 /// Masaustu sol menu — DAR ikon seridi; fareyle uzerine gelince saga dogru acilir
@@ -427,6 +481,10 @@ class _YanMenuState extends State<_YanMenu> {
                       if (patron) _link(t, Icons.chat_outlined, 'WhatsApp Yönetimi', () async {
                         try { await launchUrl(Uri.parse('${Api.base}/whatsapp'), mode: LaunchMode.externalApplication); } catch (_) {}
                       }, renk: const Color(0xFF25D366)),
+                      if (!patron) _link(t, Icons.dashboard_customize, 'Panelim', () => git(const DepartmanPanelScreen()), renk: const Color(0xFF4F46E5)),
+                      if (patron) _link(t, Icons.wb_sunny_outlined, 'Patron AI — Sabah Brifingi', () => git(const PatronAiBriefScreen()), renk: const Color(0xFF7C3AED)),
+                      _link(t, Icons.notifications_active, 'Bildirim Ayarları', () => git(const BildirimAyarScreen()), renk: const Color(0xFF0EA5E9)),
+                      _link(t, Icons.badge, 'İK Self-Servis', () => git(const IkSelfServisScreen()), renk: const Color(0xFF10B981)),
                       if (patron) ...[
                         const SizedBox(height: 10),
                         Divider(height: 1, color: t.line, indent: 14, endIndent: 14),
