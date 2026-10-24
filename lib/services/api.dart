@@ -673,6 +673,12 @@ class Api {
   static Future<Map<String, dynamic>> servisAkis(String token) => _get('/api/servis/akis', token);
   static Future<Map<String, dynamic>> servisTeslim(String token, int kalemId) => _post('/api/servis/teslim', token, {'kalem_id': '$kalemId'});
   static Future<Map<String, dynamic>> servisEkip(String token, {String period = 'gunluk'}) => _get('/api/servis/ekip?period=$period', token);
+  // Karşılama / Host (bekleme listesi + rezervasyon + masa durumu)
+  static Future<Map<String, dynamic>> karsilamaPanel(String token) => _get('/api/karsilama/panel', token);
+  static Future<Map<String, dynamic>> beklemeEkle(String token, {required String ad, String telefon = '', int kisi = 2, String not = '', String tahminiDk = ''}) =>
+      _post('/api/karsilama/bekleme-ekle', token, {'ad': ad, if (telefon.isNotEmpty) 'telefon': telefon, 'kisi': '$kisi', if (not.isNotEmpty) 'not': not, if (tahminiDk.isNotEmpty) 'tahmini_dk': tahminiDk});
+  static Future<Map<String, dynamic>> beklemeDurum(String token, int id, String durum) => _post('/api/karsilama/bekleme-durum', token, {'id': '$id', 'durum': durum});
+  static Future<Map<String, dynamic>> beklemeOturt(String token, int id, int masaId) => _post('/api/karsilama/bekleme-oturt', token, {'id': '$id', 'masa_id': '$masaId'});
 
   // ---- SEF GARSON AI (garsonun gozu: satis uyarilari + oneri) ----
   static Future<Map<String, dynamic>> sefGarsonUyarilar(String token, {bool sadeceBenim = false}) =>
