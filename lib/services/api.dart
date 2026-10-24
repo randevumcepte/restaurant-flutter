@@ -679,6 +679,11 @@ class Api {
       _post('/api/karsilama/bekleme-ekle', token, {'ad': ad, if (telefon.isNotEmpty) 'telefon': telefon, 'kisi': '$kisi', if (not.isNotEmpty) 'not': not, if (tahminiDk.isNotEmpty) 'tahmini_dk': tahminiDk});
   static Future<Map<String, dynamic>> beklemeDurum(String token, int id, String durum) => _post('/api/karsilama/bekleme-durum', token, {'id': '$id', 'durum': durum});
   static Future<Map<String, dynamic>> beklemeOturt(String token, int id, int masaId) => _post('/api/karsilama/bekleme-oturt', token, {'id': '$id', 'masa_id': '$masaId'});
+  // Generic departman iş/kontrol/olay takibi (Grup B: kalite/temizlik/guvenlik/teknik/it/bulasik/etkinlik)
+  static Future<Map<String, dynamic>> departmanIsPanel(String token, String kod) => _get('/api/departman-is/panel?kod=$kod', token);
+  static Future<Map<String, dynamic>> departmanIsEkle(String token, Map<String, String> body) => _post('/api/departman-is/ekle', token, body);
+  static Future<Map<String, dynamic>> departmanIsDurum(String token, int id, String durum, {String deger = ''}) => _post('/api/departman-is/durum', token, {'id': '$id', 'durum': durum, if (deger.isNotEmpty) 'deger': deger});
+  static Future<Map<String, dynamic>> departmanIsSil(String token, int id) => _post('/api/departman-is/sil', token, {'id': '$id'});
 
   // ---- SEF GARSON AI (garsonun gozu: satis uyarilari + oneri) ----
   static Future<Map<String, dynamic>> sefGarsonUyarilar(String token, {bool sadeceBenim = false}) =>

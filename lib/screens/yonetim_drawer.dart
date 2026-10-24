@@ -31,6 +31,7 @@ import 'odul_dogrula_screen.dart';
 import 'departman_panel_screen.dart';
 import 'servis_akis_screen.dart';
 import 'karsilama_screen.dart';
+import 'departman_is_screen.dart';
 import 'bildirim_ayar_screen.dart';
 import 'patron_ai_brief_screen.dart';
 
@@ -88,6 +89,14 @@ class YonetimDrawer extends StatelessWidget {
               if (!patron) git(Icons.room_service, 'Servis — İş Akışım', const ServisAkisScreen(), renk: const Color(0xFF0EA5E9)),
               // Karşılama / Host — bekleme listesi + rezervasyon + oturt (host departmanı)
               git(Icons.co_present, 'Karşılama / Host', const KarsilamaScreen(), renk: const Color(0xFF0EA5E9)),
+              // Grup B departman iş ekranları — patron hepsini, personel sadece kendi departmanını görür.
+              if (patron || auth.departmanKod == 'kalite') git(Icons.verified_user, 'Kalite / HACCP', const DepartmanIsScreen(kod: 'kalite', baslik: 'Kalite / Gıda Güvenliği (HACCP)', renk: Color(0xFF16A34A)), renk: const Color(0xFF16A34A)),
+              if (patron || auth.departmanKod == 'temizlik') git(Icons.cleaning_services, 'Temizlik / Hijyen', const DepartmanIsScreen(kod: 'temizlik', baslik: 'Temizlik / Hijyen', renk: Color(0xFF0EA5E9)), renk: const Color(0xFF0EA5E9)),
+              if (patron || auth.departmanKod == 'guvenlik') git(Icons.security, 'Güvenlik', const DepartmanIsScreen(kod: 'guvenlik', baslik: 'Güvenlik', renk: Color(0xFF475569)), renk: const Color(0xFF475569)),
+              if (patron || auth.departmanKod == 'teknik') git(Icons.build, 'Teknik / Bakım', const DepartmanIsScreen(kod: 'teknik', baslik: 'Teknik Servis / Bakım-Onarım', renk: Color(0xFFF97316)), renk: const Color(0xFFF97316)),
+              if (patron || auth.departmanKod == 'it') git(Icons.dns, 'IT / Bilgi İşlem', const DepartmanIsScreen(kod: 'it', baslik: 'IT / Bilgi İşlem', renk: Color(0xFF6366F1)), renk: const Color(0xFF6366F1)),
+              if (patron || auth.departmanKod == 'bulasik') git(Icons.wash, 'Bulaşıkhane / Steward', const DepartmanIsScreen(kod: 'bulasik', baslik: 'Bulaşıkhane / Steward', renk: Color(0xFF06B6D4)), renk: const Color(0xFF06B6D4)),
+              if (patron || auth.departmanKod == 'satis_etkinlik') git(Icons.celebration, 'Satış / Etkinlik', const DepartmanIsScreen(kod: 'satis_etkinlik', baslik: 'Satış / Etkinlik', renk: Color(0xFFA855F7)), renk: const Color(0xFFA855F7)),
               if (patron) git(Icons.wb_sunny_outlined, 'Patron AI — Sabah Brifingi', const PatronAiBriefScreen(), renk: const Color(0xFF7C3AED)),
               if (patron) git(Icons.point_of_sale, 'Kasa (Vardiya)', const KasaScreen()),
               if (patron) git(Icons.analytics_outlined, 'Finans / Kâr-Zarar', const FinansScreen()),
