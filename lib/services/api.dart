@@ -3,9 +3,12 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import '../config/app_config.dart';
 import '../local/cihaz_rol.dart';
 import '../local/kasa_bulucu.dart';
+import '../local/yerel_motor.dart';
+import '../local/sync_service.dart';
 
 /// ResteOS backend (Laravel) — restoran API'si.
 class Api {
@@ -23,6 +26,20 @@ class Api {
       e is SocketException || e is TimeoutException || e is http.ClientException;
   // Istek bu base ile kasaya mi gitti? (bulut degilse kasaya)
   static bool _kasayaGitti(String b) => b != AppConfig.baseUrl;
+
+  // OFFLINE IN-PROCESS YEDEK: bagimsiz / kasa cihazinin KENDI POS cagrilari buluta
+  // gidemeyince YerelMotor'a duser. Terminal'de CALISMAZ: terminalin yerel SQLite'i
+  // senkronlanmaz (veriyi kasadan ceker) + terminal zaten _get/_post icinde
+  // kasa->bulut yedegine sahip. Yalniz gercek baglanti hatasinda devreye girer
+  // (401/500 gibi sunucu yanitlarinda DEGIL -> online hata mesaji korunur).
+  static bool _yerelUygun(Object e) =>
+      CihazRol.rol != Rol.terminal && _baglantiHatasiMi(e);
+
+  // PEŞİN OFFLINE: gerçek internet erişimi yoksa (wifi var ama internet yok dahil) POS
+  // çağrısını buluta HİÇ gönderme -> 20sn takılma olmaz, anında yerele düş.
+  // (Terminal hariç: terminalin yereli senkronlanmaz; o kasa->bulut yedeğini kullanır.)
+  static bool _pesinOffline() =>
+      CihazRol.rol != Rol.terminal && !SyncService.instance.online;
   static const Duration _zamanAsimi = Duration(seconds: 20);
 
   // Yanıtı GÜVENLE çöz: HTML/500/boş/liste gelse bile çökme yok, tutarlı {ok:0,hata} döner.
@@ -59,6 +76,27 @@ class Api {
       _post('/api/bildirim/cihaz-sil', token, {if (fcmToken.isNotEmpty) 'token': fcmToken});
   static Future<Map<String, dynamic>> bildirimTest(String token) =>
       _post('/api/bildirim/test', token, {});
+
+  // ---------------- DEPARTMAN + YETKI + BILDIRIM TERCIHI (Patron AI Faz 1-2) ----------------
+  // Giriş yapanın etkin sayfa yetkileri + departman + AI erişimi (Flutter ekran kapısı).
+  static Future<Map<String, dynamic>> yetkilerim(String token) => _get('/api/yetkilerim', token);
+  // Jenerik departman paneli: kişinin yetkili olduğu KPI kartları.
+  static Future<Map<String, dynamic>> departmanPanel(String token) => _get('/api/departman/panel', token);
+  // Kişiye özel bildirim tercihleri.
+  static Future<Map<String, dynamic>> bildirimTercih(String token) => _get('/api/bildirim/tercih', token);
+  static Future<Map<String, dynamic>> bildirimTercihKaydet(String token,
+          {required String tip, required bool acik}) =>
+      _post('/api/bildirim/tercih-kaydet', token, {'tip': tip, 'acik': acik ? '1' : '0'});
+
+  // ---------------- PATRON AI — SABAH BRİFİNGİ (Faz 3) ----------------
+  static Future<Map<String, dynamic>> patronAiBrief(String token, {bool force = false}) =>
+      _get('/api/patron-ai/brief${force ? '?force=1' : ''}', token);
+  static Future<Map<String, dynamic>> patronAiZincir(String token) =>
+      _get('/api/patron-ai/zincir-ozet', token);
+  static Future<Map<String, dynamic>> patronAiTakip(String token) =>
+      _get('/api/patron-ai/takip', token);
+  static Future<Map<String, dynamic>> patronAiTakipDurum(String token, {required int id, required String durum}) =>
+      _post('/api/patron-ai/takip-durum', token, {'id': '$id', 'durum': durum});
 
   // ---------------- MESAI (QR + geofence) ----------------
   static Future<Map<String, dynamic>> mesaiDurum(String token) => _get('/api/mesai/durum', token);
@@ -179,13 +217,27 @@ class Api {
     if (kalemIdler != null && kalemIdler.isNotEmpty) body['kalem_idler'] = kalemIdler;
     if (cariId != null) body['cari_id'] = '$cariId';
     if (marka != null && marka.isNotEmpty) body['marka'] = marka;
-    final r = await http.post(
-      Uri.parse('$base/api/patron/adisyon-islem'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
-      body: body,
-    );
-    if (r.statusCode == 401) throw ApiYetkiHatasi();
-    return jsonDecode(r.body) as Map<String, dynamic>;
+    if (_pesinOffline()) {
+      final y = await YerelMotor.instance.islem(islem: islem, adisyonHandle: adisyonId, odemeTip: odemeTip, tutar: tutar, oran: oran, onayPin: onayPin);
+      return y ?? {'ok': 0, 'offline': 1, 'hata': 'Çevrimdışı — bu işlem desteklenmiyor.'};
+    }
+    try {
+      final r = await http.post(
+        Uri.parse('$base/api/patron/adisyon-islem'),
+        headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+        body: body,
+      ).timeout(_zamanAsimi);
+      if (r.statusCode == 401) throw ApiYetkiHatasi();
+      return _coz(r);
+    } catch (e) {
+      // OFFLINE: odeme/kapat + yönetici PIN'li ikram/iskonto yereldde karsilanir.
+      if (_yerelUygun(e)) {
+        final y = await YerelMotor.instance
+            .islem(islem: islem, adisyonHandle: adisyonId, odemeTip: odemeTip, tutar: tutar, oran: oran, onayPin: onayPin);
+        if (y != null) return y;
+      }
+      rethrow;
+    }
   }
 
   static Future<Map<String, dynamic>> personeller(String token) => _get('/api/patron/personeller', token);
@@ -201,13 +253,19 @@ class Api {
   }
 
   static Future<Map<String, dynamic>> masaAc(String token, int masaId, int misafir) async {
-    final r = await http.post(
-      Uri.parse('$base/api/patron/masa-ac'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
-      body: {'masa_id': '$masaId', 'misafir': '$misafir'},
-    );
-    if (r.statusCode == 401) throw ApiYetkiHatasi();
-    return jsonDecode(r.body) as Map<String, dynamic>;
+    if (_pesinOffline()) return YerelMotor.instance.masaAc(masaId, misafir);
+    try {
+      final r = await http.post(
+        Uri.parse('$base/api/patron/masa-ac'),
+        headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+        body: {'masa_id': '$masaId', 'misafir': '$misafir'},
+      ).timeout(_zamanAsimi);
+      if (r.statusCode == 401) throw ApiYetkiHatasi();
+      return _coz(r);
+    } catch (e) {
+      if (_yerelUygun(e)) return YerelMotor.instance.masaAc(masaId, misafir);
+      rethrow;
+    }
   }
 
   static Future<Map<String, dynamic>> cariler(String token) => _get('/api/patron/cariler', token);
@@ -247,6 +305,23 @@ class Api {
         DateTime.now().difference(_menuCacheZaman!) < _menuCacheOmru) {
       return _menuCache!;
     }
+    // 1b) ÇEVRİMDIŞI (gerçek erişim yok): online çekmeyi ATLA -> SP cache ya da SQLite menü (20sn takılma yok).
+    if (_pesinOffline()) {
+      try {
+        final sp = await SharedPreferences.getInstance();
+        final kayit = sp.getString(_menuKaliciKey);
+        if (kayit != null) {
+          final m = jsonDecode(kayit) as Map<String, dynamic>;
+          _menuCache = m; _menuCacheZaman = DateTime.now();
+          return m;
+        }
+      } catch (_) {}
+      try {
+        final m = await YerelMotor.instance.menu();
+        if (((m['urunler'] as List?) ?? []).isNotEmpty) { _menuCache = m; _menuCacheZaman = DateTime.now(); return m; }
+      } catch (_) {}
+      return {'ok': 0, 'offline': 1, 'kategoriler': const [], 'urunler': const []};
+    }
     // 2) Çevrimiçi: ağdan taze çek + kalıcı önbelleğe yaz
     try {
       final m = await _get('/api/menu', token);
@@ -257,6 +332,7 @@ class Api {
           final sp = await SharedPreferences.getInstance();
           await sp.setString(_menuKaliciKey, jsonEncode(m));
         } catch (_) {}
+        _gorselleriOnbellekle(m); // OFFLINE foto: tüm ürün fotolarını diske indir (fire-and-forget)
       }
       return m;
     } on ApiYetkiHatasi {
@@ -273,8 +349,37 @@ class Api {
           return m;
         }
       } catch (_) {}
-      rethrow; // kalıcı önbellek de yoksa hatayı yükselt
+      // 4) SharedPreferences önbelleği de yoksa: senkronla inen YEREL menüyü (SQLite) kullan.
+      //    (Terminal hariç — terminalin yerel SQLite'ı senkronlanmaz.)
+      if (CihazRol.rol != Rol.terminal) {
+        try {
+          final m = await YerelMotor.instance.menu();
+          final urunler = (m['urunler'] as List?) ?? [];
+          if (urunler.isNotEmpty) {
+            _menuCache = m;
+            _menuCacheZaman = DateTime.now();
+            return m;
+          }
+        } catch (_) {}
+      }
+      rethrow; // hiçbir önbellek yoksa hatayı yükselt
     }
+  }
+
+  /// OFFLINE FOTO: menü inince tüm ürün görsellerini diske indir. CachedNetworkImage
+  /// aynı önbellekten (DefaultCacheManager) okur → internet gitse de fotolar görünür.
+  /// Fire-and-forget; hata/yavaşlık satış akışını etkilemez.
+  static void _gorselleriOnbellekle(Map<String, dynamic> menu) {
+    try {
+      final urunler = (menu['urunler'] as List?) ?? [];
+      final cm = DefaultCacheManager();
+      for (final u in urunler) {
+        final g = (u is Map) ? u['gorsel']?.toString() : null;
+        if (g != null && g.startsWith('http')) {
+          unawaited(cm.downloadFile(g).then((_) {}, onError: (_) {}));
+        }
+      }
+    } catch (_) {}
   }
 
   /// Menü değişince (ürün/kategori ekle-düzenle-sil, fiyat, foto) önbelleği düşür.
@@ -285,13 +390,21 @@ class Api {
   }
 
   static Future<Map<String, dynamic>> adisyonUrunEkle(String token, int adisyonId, List<Map<String, int>> kalemler) async {
-    final r = await http.post(
-      Uri.parse('$base/api/patron/adisyon-urun-ekle'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
-      body: {'adisyon_id': '$adisyonId', 'kalemler': jsonEncode(kalemler)},
-    );
-    if (r.statusCode == 401) throw ApiYetkiHatasi();
-    return jsonDecode(r.body) as Map<String, dynamic>;
+    if (_pesinOffline()) return YerelMotor.instance.siparisEkle(adisyonId, kalemler);
+    try {
+      final r = await http.post(
+        Uri.parse('$base/api/patron/adisyon-urun-ekle'),
+        headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+        body: {'adisyon_id': '$adisyonId', 'kalemler': jsonEncode(kalemler)},
+      ).timeout(_zamanAsimi);
+      if (r.statusCode == 401) throw ApiYetkiHatasi();
+      return _coz(r);
+    } catch (e) {
+      // ignore: avoid_print
+      print('[OFFLINE] adisyonUrunEkle catch: yerelUygun=${_yerelUygun(e)} hata=$e adisyonId=$adisyonId');
+      if (_yerelUygun(e)) return YerelMotor.instance.siparisEkle(adisyonId, kalemler);
+      rethrow;
+    }
   }
 
   static Future<Map<String, dynamic>> kalemVoid(String token, int adisyonId, int kalemId, {String? sebep, String? onayPin}) async {
@@ -304,17 +417,32 @@ class Api {
     return jsonDecode(r.body) as Map<String, dynamic>;
   }
 
-  static Future<Map<String, dynamic>> mutfak(String token, {String? istasyon}) =>
-      _get('/api/mutfak${istasyon != null && istasyon != 'hepsi' ? '?istasyon=$istasyon' : ''}', token);
+  static Future<Map<String, dynamic>> mutfak(String token, {String? istasyon}) async {
+    if (_pesinOffline()) return YerelMotor.instance.mutfak();
+    try {
+      return await _get('/api/mutfak${istasyon != null && istasyon != 'hepsi' ? '?istasyon=$istasyon' : ''}', token);
+    } catch (e) {
+      if (_yerelUygun(e)) return YerelMotor.instance.mutfak();
+      rethrow;
+    }
+  }
 
   static Future<Map<String, dynamic>> mutfakHazir(String token, {int? kalemId, int? adisyonId}) async {
     final body = <String, String>{};
     if (kalemId != null) body['kalem_id'] = '$kalemId';
     if (adisyonId != null) body['adisyon_id'] = '$adisyonId';
-    final r = await http.post(Uri.parse('$base/api/mutfak/hazir'),
-        headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'}, body: body);
-    if (r.statusCode == 401) throw ApiYetkiHatasi();
-    return jsonDecode(r.body) as Map<String, dynamic>;
+    if (_pesinOffline() && adisyonId != null) return YerelMotor.instance.mutfakDurum(adisyonId, 'hazir', ['gonderildi', 'hazirlaniyor']);
+    try {
+      final r = await http.post(Uri.parse('$base/api/mutfak/hazir'),
+          headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'}, body: body).timeout(_zamanAsimi);
+      if (r.statusCode == 401) throw ApiYetkiHatasi();
+      return _coz(r);
+    } catch (e) {
+      if (_yerelUygun(e) && adisyonId != null) {
+        return YerelMotor.instance.mutfakDurum(adisyonId, 'hazir', ['gonderildi', 'hazirlaniyor']);
+      }
+      rethrow;
+    }
   }
 
   // Hazirlamaya BASLA (Yeni -> Hazirlaniyor)
@@ -322,10 +450,18 @@ class Api {
     final body = <String, String>{};
     if (kalemId != null) body['kalem_id'] = '$kalemId';
     if (adisyonId != null) body['adisyon_id'] = '$adisyonId';
-    final r = await http.post(Uri.parse('$base/api/mutfak/basla'),
-        headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'}, body: body);
-    if (r.statusCode == 401) throw ApiYetkiHatasi();
-    return jsonDecode(r.body) as Map<String, dynamic>;
+    if (_pesinOffline() && adisyonId != null) return YerelMotor.instance.mutfakDurum(adisyonId, 'hazirlaniyor', ['gonderildi']);
+    try {
+      final r = await http.post(Uri.parse('$base/api/mutfak/basla'),
+          headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'}, body: body).timeout(_zamanAsimi);
+      if (r.statusCode == 401) throw ApiYetkiHatasi();
+      return _coz(r);
+    } catch (e) {
+      if (_yerelUygun(e) && adisyonId != null) {
+        return YerelMotor.instance.mutfakDurum(adisyonId, 'hazirlaniyor', ['gonderildi']);
+      }
+      rethrow;
+    }
   }
 
   // Servise hazir (durum=hazir) siparisler + garson aldi (servis)
@@ -334,7 +470,15 @@ class Api {
     final body = <String, String>{};
     if (kalemId != null) body['kalem_id'] = '$kalemId';
     if (adisyonId != null) body['adisyon_id'] = '$adisyonId';
-    return _post('/api/mutfak/servis', token, body);
+    if (_pesinOffline() && adisyonId != null) return YerelMotor.instance.mutfakDurum(adisyonId, 'servis', ['hazir']);
+    try {
+      return await _post('/api/mutfak/servis', token, body);
+    } catch (e) {
+      if (_yerelUygun(e) && adisyonId != null) {
+        return YerelMotor.instance.mutfakDurum(adisyonId, 'servis', ['hazir']);
+      }
+      rethrow;
+    }
   }
 
   // 86 / Tukendi yonetimi
@@ -450,8 +594,24 @@ class Api {
   static Future<Map<String, dynamic>> masaAyir(String token, int adisyonId, int masaId, String kalemIdler) =>
       _post('/api/patron/masa-ayir', token, {'adisyon_id': '$adisyonId', 'masa_id': '$masaId', 'kalem_idler': kalemIdler});
 
-  static Future<Map<String, dynamic>> fis(String token, int adisyonId) => _get('/api/patron/fis?adisyon_id=$adisyonId', token);
-  static Future<Map<String, dynamic>> adisyonKalemleri(String token, int adisyonId) => _get('/api/patron/adisyon-kalemleri?adisyon_id=$adisyonId', token);
+  static Future<Map<String, dynamic>> fis(String token, int adisyonId) async {
+    if (_pesinOffline()) return YerelMotor.instance.fis(adisyonId);
+    try {
+      return await _get('/api/patron/fis?adisyon_id=$adisyonId', token);
+    } catch (e) {
+      if (_yerelUygun(e)) return YerelMotor.instance.fis(adisyonId);
+      rethrow;
+    }
+  }
+  static Future<Map<String, dynamic>> adisyonKalemleri(String token, int adisyonId) async {
+    if (_pesinOffline()) return YerelMotor.instance.kalemler(adisyonId);
+    try {
+      return await _get('/api/patron/adisyon-kalemleri?adisyon_id=$adisyonId', token);
+    } catch (e) {
+      if (_yerelUygun(e)) return YerelMotor.instance.kalemler(adisyonId);
+      rethrow;
+    }
+  }
   static Future<Map<String, dynamic>> adisyonOdemeler(String token, int adisyonId) => _get('/api/patron/adisyon-odemeler?adisyon_id=$adisyonId', token);
   static Future<Map<String, dynamic>> odemeGeriAl(String token, int odemeId, {String? onayPin}) =>
       _post('/api/patron/odeme-geri-al', token, {'odeme_id': '$odemeId', if (onayPin != null && onayPin.isNotEmpty) 'onay_pin': onayPin});
@@ -509,6 +669,10 @@ class Api {
   static Future<Map<String, dynamic>> garsonCagriKapat(String token, int id) => _post('/api/patron/garson-cagri-kapat', token, {'id': '$id'});
   static Future<Map<String, dynamic>> garsonCagriHepsiniKapat(String token) => _post('/api/patron/garson-cagri-hepsini-kapat', token, {});
   static Future<Map<String, dynamic>> garsonOzet(String token) => _get('/api/patron/garson-ozet', token);
+  // Servis / Garson iş akışı (A) + Servis Şefi ekip görünümü (B)
+  static Future<Map<String, dynamic>> servisAkis(String token) => _get('/api/servis/akis', token);
+  static Future<Map<String, dynamic>> servisTeslim(String token, int kalemId) => _post('/api/servis/teslim', token, {'kalem_id': '$kalemId'});
+  static Future<Map<String, dynamic>> servisEkip(String token, {String period = 'gunluk'}) => _get('/api/servis/ekip?period=$period', token);
 
   // ---- SEF GARSON AI (garsonun gozu: satis uyarilari + oneri) ----
   static Future<Map<String, dynamic>> sefGarsonUyarilar(String token, {bool sadeceBenim = false}) =>
@@ -706,7 +870,37 @@ class Api {
   static Future<Map<String, dynamic>> kasaKapat(String token, double sayilan, {String not = ''}) =>
       _post('/api/patron/kasa-kapat', token, {'sayilan': '$sayilan', 'not': not});
 
-  static Future<Map<String, dynamic>> masalar(String token) => _get('/api/masalar', token);
+  static const String _masalarKaliciKey = 'masalar_kalici_v1';
+  // Offline masa listesi: önbellekli online liste varsa bölgeli overlay, yoksa düz yerel.
+  static Future<Map<String, dynamic>> _masalarYerel() async {
+    try {
+      final sp = await SharedPreferences.getInstance();
+      final kayit = sp.getString(_masalarKaliciKey);
+      if (kayit != null) {
+        final cached = jsonDecode(kayit) as Map<String, dynamic>;
+        return await YerelMotor.instance.masalarOverlay(cached);
+      }
+    } catch (_) {}
+    return YerelMotor.instance.masalar();
+  }
+
+  static Future<Map<String, dynamic>> masalar(String token) async {
+    if (_pesinOffline()) return _masalarYerel(); // çevrimdışı -> buluta hiç gitme
+    try {
+      final r = await _get('/api/masalar', token);
+      // Çevrimiçi masa listesini (bölge/ad/kapasite dahil) kalıcı önbelleğe yaz → offline bölgeler korunur.
+      if (r['masalar'] is List) {
+        try {
+          final sp = await SharedPreferences.getInstance();
+          await sp.setString(_masalarKaliciKey, jsonEncode(r));
+        } catch (_) {}
+      }
+      return r;
+    } catch (e) {
+      if (_yerelUygun(e)) return _masalarYerel();
+      rethrow;
+    }
+  }
   // --- Masa & QR yonetimi (kalici qr_token + arsiv) ---
   static Future<Map<String, dynamic>> masaYonetim(String token) => _get('/api/patron/masa-yonetim', token);
   static Future<Map<String, dynamic>> masaEkle(String token, {String? ad, int kapasite = 4, int? bolgeId}) =>
@@ -736,6 +930,11 @@ class Api {
       _get('/api/patron/garson-performans?period=$period${garsonId != null ? '&garson_id=$garsonId' : ''}', token);
   static Future<Map<String, dynamic>> adimKaydet(String token, int adim) =>
       _post('/api/adim-kaydet', token, {'adim': '$adim'});
+  // Adım (fiziksel aktivite) izni durumunu bildir: patron personeller sayfasında görür.
+  static Future<Map<String, dynamic>> adimIzni(String token, bool izinli) =>
+      _post('/api/adim-izni', token, {'izin': izinli ? '1' : '0'});
+  // Yönetici PIN hash'leri (offline İkram/İskonto onayı için): girişte çekilip yerele cache'lenir.
+  static Future<Map<String, dynamic>> yetkiliPinler(String token) => _get('/api/yetkili-pinler', token);
 
   // ---- SALON SEMA (dijital ikiz) ----
   static Future<Map<String, dynamic>> salonSema(String token) => _get('/api/patron/salon-sema', token);

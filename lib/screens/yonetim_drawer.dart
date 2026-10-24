@@ -28,6 +28,10 @@ import 'yazici_ayarlari_screen.dart';
 import 'sebep_yonetimi_screen.dart';
 import 'asistan_screen.dart';
 import 'odul_dogrula_screen.dart';
+import 'departman_panel_screen.dart';
+import 'servis_akis_screen.dart';
+import 'bildirim_ayar_screen.dart';
+import 'patron_ai_brief_screen.dart';
 
 /// Yönetim menüsü (drawer) — HER SAYFADAN erişilebilsin diye paylaşımlı bileşen.
 /// Navigasyon kararını çağırana bırakır: [onGit] ekran açar, [onWeb] tarayıcı linki açar.
@@ -77,6 +81,11 @@ class YonetimDrawer extends StatelessWidget {
             child: ListView(padding: EdgeInsets.zero, children: [
               // Ödül Doğrula — hem kasa hem garson (müşteri ödül QR kodunu okut/onayla)
               git(Icons.qr_code_scanner, 'Ödül Doğrula', const OdulDogrulaScreen(), renk: const Color(0xFF22C55E)),
+              // Departman paneli — alt personel kendi alanının özetini görür (patronda zaten dashboard var).
+              if (!patron) git(Icons.dashboard_customize, 'Panelim', const DepartmanPanelScreen(), renk: const Color(0xFF4F46E5)),
+              // Servis/Garson iş akışı (A: çağrı+servise hazır+açık masa; sorumlu → Ekip görünümü içeriden)
+              if (!patron) git(Icons.room_service, 'Servis — İş Akışım', const ServisAkisScreen(), renk: const Color(0xFF0EA5E9)),
+              if (patron) git(Icons.wb_sunny_outlined, 'Patron AI — Sabah Brifingi', const PatronAiBriefScreen(), renk: const Color(0xFF7C3AED)),
               if (patron) git(Icons.point_of_sale, 'Kasa (Vardiya)', const KasaScreen()),
               if (patron) git(Icons.analytics_outlined, 'Finans / Kâr-Zarar', const FinansScreen()),
               if (patron) git(Icons.inventory_2_outlined, 'Stok & Satın Alma', const IsletmeHubScreen()),
@@ -104,6 +113,7 @@ class YonetimDrawer extends StatelessWidget {
               if (patron) git(Icons.print_outlined, 'Yazıcı Ayarları', const YaziciAyarlariScreen(), renk: const Color(0xFF14B8A6)),
               if (patron) git(Icons.rule_folder_outlined, 'İptal / İkram Sebepleri', const SebepYonetimiScreen()),
               git(Icons.auto_awesome, 'Patron Asistan', const AsistanScreen(), renk: const Color(0xFFC4B5FD)),
+              git(Icons.notifications_active, 'Bildirim Ayarları', const BildirimAyarScreen(), renk: const Color(0xFF0EA5E9)),
             ]),
           ),
           Divider(height: 1, color: t.line),
