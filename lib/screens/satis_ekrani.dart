@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
 import '../providers/tema_provider.dart';
 import '../services/api.dart';
 import '../services/yazici_servisi.dart';
+import '../local/sync_service.dart';
 import '../responsive.dart';
 import 'cari_hesaplar_screen.dart';
 import 'barkod_tarayici.dart';
@@ -119,16 +121,32 @@ class _SatisEkraniState extends State<SatisEkrani> {
       }
       _secili.removeWhere((id) => !_kalemler.any((k) => _n((k as Map)['id']).toInt() == id && k['odeme_durum'] != 'odendi'));
       setState(() => loading = false);
+      _sheetSetState?.call(() {}); // dar ekrandaki adisyon sheet'ini de tazele (kaydet/ödeme/ikram sonrası)
     } on ApiYetkiHatasi {
       if (mounted) context.read<AuthProvider>().cikis();
     } catch (_) {
       if (mounted) setState(() => loading = false);
+      _sheetSetState?.call(() {});
     }
+  }
+
+  // Dar ekranda adisyon paneli modal sheet'te açılır; sheet KENDİ setState'ini bu alana yazar.
+  // _yenile: durum değişince HEM parent HEM sheet yenilenir (seçim/temizle anında yansısın).
+  StateSetter? _sheetSetState;
+  void _yenile(VoidCallback fn) {
+    fn();
+    if (mounted) setState(() {});
+    _sheetSetState?.call(() {});
   }
 
   void _snack(String m, Color c) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m), backgroundColor: c, duration: const Duration(seconds: 2)));
+    // floating + margin: mesaj mikrofonun ÜSTünde yüzer, FAB'ı yukarı İTMEZ (tasarım bozulmaz).
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(m), backgroundColor: c, duration: const Duration(seconds: 2),
+      behavior: SnackBarBehavior.floating,
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+    ));
   }
 
   void _ekle(int id) => setState(() => _pending[id] = (_pending[id] ?? 0) + 1);
@@ -156,9 +174,12 @@ class _SatisEkraniState extends State<SatisEkrani> {
           final yr = await YaziciServisi().otoMutfakFisi(masa: widget.masaAd, kalemler: fisKalem, adisyonNo: widget.adisyonId);
           if (yr != null && yr != 'ok' && mounted) _snack('Mutfak yazıcı: $yr', _turuncu);
         } catch (_) {}
-        _pending.clear();
+        // setState: "kaydedilmedi" bölümü ANINDA kalksın (clear tek başına rebuild tetiklemiyordu).
+        if (mounted) setState(() => _pending.clear());
         await _yukle();
-        setState(() => _mesgul = false);
+        if (mounted) setState(() => _mesgul = false);
+        // NET GERİ BİLDİRİM: kaydedildiği belli olsun (çevrimdışıyken ürünler aynı göründüğü için şart).
+        _snack(res['offline'] == 1 ? '✓ Sipariş kaydedildi (çevrimdışı)' : '✓ Sipariş kaydedildi', _yesil);
         return true;
       }
       setState(() => _mesgul = false);
@@ -469,9 +490,18 @@ class _SatisEkraniState extends State<SatisEkrani> {
     }
   }
 
+  // Çevrimdışıyken yönetici işlemleri (iskonto/ikram/iptal) desteklenmez — sadece sipariş+ödeme.
+  bool get _cevrimdisi => !SyncService.instance.online;
+
   Future<void> _iskonto() async {
     final oran = await _sayiDialog('İskonto Uygula', 'Yüzde (%)', '%');
     if (oran == null || oran <= 0) return;
+    // ÇEVRİMDIŞI: yönetici PIN'i yerelde doğrulanır (internet gerekmez).
+    if (_cevrimdisi) {
+      final pin = await _pinSor('Müdür/Sahip PIN (çevrimdışı iskonto onayı)');
+      if (pin != null && pin.trim().isNotEmpty) await _islemUygula('iskonto', oran: oran, onayPin: pin.trim());
+      return;
+    }
     await _onayIste(tip: 'iskonto', oran: oran, bekle: false, baslik: '${widget.masaAd} · %${oran.round()} iskonto',
         pinIle: (pin) => _islemUygula('iskonto', oran: oran, onayPin: pin));
   }
@@ -489,85 +519,65 @@ class _SatisEkraniState extends State<SatisEkrani> {
       _snack('İkram edilecek ürün yok. Önce ürün ekleyin.', _kirmizi);
       return;
     }
-    final secili = <int>{};
-    final sebepCtrl = TextEditingController();
-    final onay = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(builder: (ctx, setD) {
-        double toplam = 0;
-        for (final k in secilebilir) {
-          if (secili.contains(_n(k['id']).toInt())) toplam += _n(k['tutar']).toDouble();
-        }
-        return AlertDialog(
-          title: const Text('İkram — Ürün Seç'),
-          content: SizedBox(
-            width: 380,
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Flexible(
-                child: ListView(shrinkWrap: true, children: [
-                  for (final k in secilebilir)
-                    CheckboxListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      value: secili.contains(_n(k['id']).toInt()),
-                      onChanged: (v) => setD(() {
-                        final id = _n(k['id']).toInt();
-                        if (v == true) {
-                          secili.add(id);
-                        } else {
-                          secili.remove(id);
-                        }
-                      }),
-                      title: Text('${_n(k['adet']).toInt()}x ${k['ad']}'),
-                      secondary: Text(_tl(_n(k['tutar']).toDouble())),
-                    ),
-                ]),
-              ),
-              const Divider(),
-              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                const Text('İkram Toplamı', style: TextStyle(fontWeight: FontWeight.bold)),
-                Text(_tl(toplam), style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFD97706))),
-              ]),
-              const SizedBox(height: 10),
-              TextField(
-                controller: sebepCtrl,
-                minLines: 1,
-                maxLines: 2,
-                textCapitalization: TextCapitalization.sentences,
-                onChanged: (_) => setD(() {}),
-                decoration: const InputDecoration(
-                  labelText: 'İkram sebebi (zorunlu)',
-                  hintText: 'Örn. müşteri şikayeti, bekleme, doğum günü…',
-                  border: OutlineInputBorder(),
-                  isDense: true,
-                ),
-              ),
-            ]),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Vazgeç')),
-            FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFFD97706)),
-              onPressed: (secili.isEmpty || sebepCtrl.text.trim().isEmpty) ? null : () => Navigator.pop(ctx, true),
-              child: const Text('Talebi Gönder'),
-            ),
-          ],
-        );
-      }),
-    );
-    final sebep = sebepCtrl.text.trim();
-    // NOT: controller dispose EDİLMİYOR (çalışan _sayiDialog ile aynı) — dialog kapanırken
-    // dispose edilince debug'da '_dependents.isEmpty' assert'i fırlıyordu.
-    if (onay != true || secili.isEmpty) return;
-    final ids = secili.join(',');
+    // Ürünler ANA LİSTEDEN işaretlenir (sol kutucuk); İkram popup'ı SADECE sebep sorar.
+    final seciliIds = _secili.where((id) => secilebilir.any((k) => _n(k['id']).toInt() == id)).toList();
+    if (seciliIds.isEmpty) {
+      _snack('Önce listeden ikram edilecek ürün(ler)i işaretleyin (sol kutucuk).', _turuncu);
+      return;
+    }
     double toplam = 0;
     for (final k in secilebilir) {
-      if (secili.contains(_n(k['id']).toInt())) toplam += _n(k['tutar']).toDouble();
+      if (seciliIds.contains(_n(k['id']).toInt())) toplam += _n(k['tutar']).toDouble();
+    }
+    final ids = seciliIds.join(',');
+    final sebep = (await _ikramSebepSor(toplam))?.trim() ?? '';
+    if (sebep.isEmpty) return;
+    // ÇEVRİMDIŞI: yönetici PIN'i yerelde doğrulanır (internet gerekmez).
+    if (_cevrimdisi) {
+      final pin = await _pinSor('Müdür/Sahip PIN (çevrimdışı ikram onayı)');
+      if (pin != null && pin.trim().isNotEmpty) await _islemUygula('ikram', tutar: toplam, kalemIdler: ids, sebep: sebep, onayPin: pin.trim());
+      return;
     }
     // Non-blocking: talebi yolla, ekran kapansın, garson devam etsin. Sonuç bildirimi arka planda gelir.
     await _onayIste(tip: 'ikram', tutar: toplam, kalemIdler: ids, sebep: sebep, bekle: false,
         baslik: '${widget.masaAd} · ${_tl(toplam)} ikram${sebep.isNotEmpty ? ' · $sebep' : ''}',
         pinIle: (pin) => _islemUygula('ikram', tutar: toplam, kalemIdler: ids, sebep: sebep, onayPin: pin));
+  }
+
+  // İKRAM SEBEBİ: ürün seçimi ana listede yapıldığı için burada SADECE sebep istenir.
+  Future<String?> _ikramSebepSor(double toplam) {
+    final ctrl = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(builder: (ctx, setD) => AlertDialog(
+        title: const Text('İkram Sebebi'),
+        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            const Text('İkram Toplamı', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text(_tl(toplam), style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFD97706))),
+          ]),
+          const SizedBox(height: 12),
+          TextField(
+            controller: ctrl, autofocus: true, minLines: 1, maxLines: 2,
+            textCapitalization: TextCapitalization.sentences,
+            onChanged: (_) => setD(() {}),
+            decoration: const InputDecoration(
+              labelText: 'İkram sebebi (zorunlu)',
+              hintText: 'Örn. müşteri şikayeti, bekleme, doğum günü…',
+              border: OutlineInputBorder(), isDense: true,
+            ),
+          ),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Vazgeç')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFD97706)),
+            onPressed: ctrl.text.trim().isEmpty ? null : () => Navigator.pop(ctx, ctrl.text.trim()),
+            child: const Text('İkram Uygula'),
+          ),
+        ],
+      )),
+    );
   }
 
   // ---- YÖNETİCİ ONAY AKIŞI (kasiyer tarafı) ----
@@ -1008,8 +1018,14 @@ class _SatisEkraniState extends State<SatisEkrani> {
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Expanded(
               child: Stack(fit: StackFit.expand, children: [
-                gorsel != null
-                    ? Image.network(gorsel, fit: BoxFit.cover, errorBuilder: (_, _, _) => _fotoYer(t, u['emoji']?.toString()))
+                gorsel != null && gorsel.isNotEmpty
+                    ? CachedNetworkImage(
+                        imageUrl: gorsel,
+                        fit: BoxFit.cover,
+                        // Diske kaydeder -> internet gitse de daha once inen foto OFFLINE gorunur.
+                        placeholder: (_, __) => _fotoYer(t, u['emoji']?.toString()),
+                        errorWidget: (_, __, ___) => _fotoYer(t, u['emoji']?.toString()),
+                      )
                     : _fotoYer(t, u['emoji']?.toString()),
                 if (adet > 0)
                   Positioned(top: 6, right: 6, child: Container(
@@ -1063,6 +1079,17 @@ class _SatisEkraniState extends State<SatisEkrani> {
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
         decoration: const BoxDecoration(gradient: LinearGradient(colors: [_mor, _mavi])),
         child: Row(children: [
+          // BELİRGİN GERİ OK: masalara dön (dairesel beyaz zemin).
+          InkWell(
+            onTap: () => Navigator.of(context).maybePop(),
+            borderRadius: BorderRadius.circular(22),
+            child: Container(
+              width: 40, height: 40, alignment: Alignment.center,
+              margin: const EdgeInsets.only(right: 10),
+              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.22), shape: BoxShape.circle),
+              child: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
+            ),
+          ),
           Icon(_birlesikMi ? Icons.merge_type : Icons.table_restaurant, color: Colors.white, size: 22),
           const SizedBox(width: 10),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1132,7 +1159,7 @@ class _SatisEkraniState extends State<SatisEkrani> {
           ]),
           if (_secili.isNotEmpty)
             Align(alignment: Alignment.centerRight, child: GestureDetector(
-              onTap: () => setState(() => _secili.clear()),
+              onTap: () => _yenile(() => _secili.clear()),
               child: Padding(padding: const EdgeInsets.only(top: 2), child: Text('Seçimi temizle', style: TextStyle(color: t.sub, fontSize: 11.5, decoration: TextDecoration.underline))),
             )),
           const SizedBox(height: 10),
@@ -1148,13 +1175,30 @@ class _SatisEkraniState extends State<SatisEkrani> {
           ]),
           const SizedBox(height: 10),
           if (_pending.isNotEmpty) ...[
-            SizedBox(width: double.infinity, child: FilledButton.icon(
-              onPressed: _mesgul ? null : () => _kaydet(),
-              icon: const Icon(Icons.save_outlined, size: 19),
-              label: Text('Siparişi Kaydet ($_pendingAdet)', style: const TextStyle(fontWeight: FontWeight.bold)),
-              style: FilledButton.styleFrom(backgroundColor: _mor, padding: const EdgeInsets.symmetric(vertical: 13), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13))),
-            )),
-            const SizedBox(height: 10),
+            // BELİRGİN: kaydedilmemiş ürün varken en dikkat çeken buton (parlak + büyük + gölge).
+            SizedBox(
+              width: double.infinity,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(15),
+                  boxShadow: [BoxShadow(color: _mor.withValues(alpha: 0.5), blurRadius: 16, offset: const Offset(0, 4))],
+                ),
+                child: FilledButton.icon(
+                  onPressed: _mesgul ? null : () => _kaydet(),
+                  icon: const Icon(Icons.save, size: 23, color: Colors.white),
+                  label: Text('SİPARİŞİ KAYDET ($_pendingAdet)',
+                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16.5, color: Colors.white, letterSpacing: 0.4)),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: _mor,
+                    disabledBackgroundColor: _mor.withValues(alpha: 0.6),
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
           ],
           // Ödeme yöntemleri
           Row(children: [
@@ -1169,10 +1213,14 @@ class _SatisEkraniState extends State<SatisEkrani> {
             _odeBtn(t, 'acik_hesap', 'Açık Hesap', Icons.account_balance_wallet_outlined, _mor),
           ]),
           const SizedBox(height: 8),
-          // Kısmi / böl / para üstü
+          // Kısmi / böl / para üstü — kaydedilmemiş ürün varken KAPALI
           GestureDetector(
-            onTap: _mesgul ? null : _kismiSheet,
-            child: Container(
+            onTap: (_mesgul || _pending.isNotEmpty)
+                ? (_pending.isNotEmpty ? () => _snack('Önce "Siparişi Kaydet"', _turuncu) : null)
+                : _kismiSheet,
+            child: Opacity(
+              opacity: _pending.isNotEmpty ? 0.45 : 1,
+              child: Container(
               width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 11), alignment: Alignment.center,
               decoration: BoxDecoration(color: t.card2, borderRadius: BorderRadius.circular(12), border: Border.all(color: t.line)),
               child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
@@ -1180,6 +1228,7 @@ class _SatisEkraniState extends State<SatisEkrani> {
                 const SizedBox(width: 7),
                 Text('Kısmi / Böl · Para Üstü', style: TextStyle(color: t.sub2, fontSize: 13, fontWeight: FontWeight.bold)),
               ]),
+            ),
             ),
           ),
         ]),
@@ -1212,7 +1261,7 @@ class _SatisEkraniState extends State<SatisEkrani> {
       child: Text(s, style: TextStyle(color: c, fontSize: 9.5, fontWeight: FontWeight.bold, letterSpacing: 0.3)),
     );
     return GestureDetector(
-      onTap: secilebilir ? () => setState(() { secili ? _secili.remove(id) : _secili.add(id); }) : null,
+      onTap: secilebilir ? () => _yenile(() { secili ? _secili.remove(id) : _secili.add(id); }) : null,
       child: Opacity(
         opacity: cizik ? 0.6 : 1,
         child: Container(
@@ -1293,15 +1342,20 @@ class _SatisEkraniState extends State<SatisEkrani> {
         ),
       );
 
-  Widget _odeBtn(TemaProvider t, String tip, String ad, IconData ikon, Color renk) => Expanded(
+  Widget _odeBtn(TemaProvider t, String tip, String ad, IconData ikon, Color renk) {
+    // Kaydedilmemiş ürün varken ödeme KAPALI — önce "Siparişi Kaydet".
+    final kilit = _mesgul || _pending.isNotEmpty;
+    return Expanded(
         child: Opacity(
-          opacity: _mesgul ? 0.5 : 1,
+          opacity: kilit ? 0.45 : 1,
           child: Material(
             color: renk, borderRadius: BorderRadius.circular(14),
             elevation: 2, shadowColor: renk.withValues(alpha: 0.4),
             child: InkWell(
               borderRadius: BorderRadius.circular(14),
-              onTap: _mesgul ? null : () => _ode(tip),
+              onTap: kilit
+                  ? (_pending.isNotEmpty ? () => _snack('Önce "Siparişi Kaydet"', _turuncu) : null)
+                  : () => _ode(tip),
               child: Container(
                 height: 62, alignment: Alignment.center,
                 child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
@@ -1313,16 +1367,24 @@ class _SatisEkraniState extends State<SatisEkrani> {
           ),
         ),
       );
+  }
 
   // ---------- DAR ekran: alt sepet çubuğu ----------
   Widget _altSepetBar(TemaProvider t) => SafeArea(
         child: GestureDetector(
-          onTap: () => showModalBottomSheet(
-            context: context, backgroundColor: t.card, isScrollControlled: true,
-            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-            // Yükseklik 0.92: sipariş listesi gerçek yer bulsun (eski 0.7'de butonlar ürünleri eziyordu)
-            builder: (_) => SizedBox(height: MediaQuery.of(context).size.height * 0.92, child: _adisyonPaneli(t)),
-          ),
+          onTap: () async {
+            // StatefulBuilder: sheet KENDİ içinde yenilenebilsin (seçim/temizle anında yansısın).
+            await showModalBottomSheet(
+              context: context, backgroundColor: t.card, isScrollControlled: true,
+              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+              // Yükseklik 0.92: sipariş listesi gerçek yer bulsun (eski 0.7'de butonlar ürünleri eziyordu)
+              builder: (_) => StatefulBuilder(builder: (ctx, setSheet) {
+                _sheetSetState = setSheet;
+                return SizedBox(height: MediaQuery.of(context).size.height * 0.92, child: _adisyonPaneli(t));
+              }),
+            );
+            _sheetSetState = null; // sheet kapandı
+          },
           child: Container(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
             decoration: BoxDecoration(color: t.card, border: Border(top: BorderSide(color: t.line))),

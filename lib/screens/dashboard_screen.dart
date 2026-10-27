@@ -7,6 +7,10 @@ import '../responsive.dart';
 import '../services/api.dart';
 import 'detay_screen.dart';
 import 'asistan_screen.dart';
+import 'departman_panel_screen.dart';
+import 'bildirim_ayar_screen.dart';
+import 'ik_self_servis_screen.dart';
+import 'patron_ai_brief_screen.dart';
 import 'personel_screen.dart';
 import 'gider_screen.dart';
 import 'isletme_hub_screen.dart';
@@ -241,6 +245,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               if (patron) oge(Icons.casino_outlined, 'Çarkıfelek Yönetimi', () => git(const CarkYonetimScreen()), renk: const Color(0xFF8B5CF6)),
               if (patron) oge(Icons.chat_outlined, 'WhatsApp Yönetimi', () { Navigator.of(context).pop(); _webAc('/whatsapp'); }, renk: const Color(0xFF25D366)),
               oge(Icons.auto_awesome, 'Patron Asistan', () => git(const AsistanScreen()), renk: const Color(0xFFC4B5FD)),
+              if (!patron) oge(Icons.dashboard_customize, 'Panelim', () => git(const DepartmanPanelScreen()), renk: const Color(0xFF4F46E5)),
+              if (patron) oge(Icons.wb_sunny_outlined, 'Patron AI — Sabah Brifingi', () => git(const PatronAiBriefScreen()), renk: const Color(0xFF7C3AED)),
+              oge(Icons.notifications_active, 'Bildirim Ayarları', () => git(const BildirimAyarScreen()), renk: const Color(0xFF0EA5E9)),
+              oge(Icons.badge, 'İK Self-Servis', () => git(const IkSelfServisScreen()), renk: const Color(0xFF10B981)),
             ]),
           ),
           Divider(height: 1, color: _line),

@@ -303,6 +303,14 @@ class _PersonelScreenState extends State<PersonelScreen> {
                   const SizedBox(width: 8),
                   Text('+prim ${_tl(p['prim_hesap'])}', style: TextStyle(color: t.yesil, fontSize: 12)),
                 ],
+                if (p['adim_izni'] == 0) ...[
+                  const SizedBox(width: 8),
+                  const Icon(Icons.directions_walk, size: 13, color: _kirmizi),
+                  const Text(' Adım izni KAPALI', style: TextStyle(color: _kirmizi, fontSize: 11, fontWeight: FontWeight.bold)),
+                ] else if (p['adim_izni'] == 1) ...[
+                  const SizedBox(width: 8),
+                  Icon(Icons.directions_walk, size: 13, color: t.yesil),
+                ],
               ]),
             ]),
           ),
@@ -380,6 +388,22 @@ class _PersonelScreenState extends State<PersonelScreen> {
                     Text('+prim ${_tl(p['prim_hesap'])}', style: const TextStyle(color: _yesil, fontSize: 12)),
                   ],
                 ]),
+                // ADIM İZNİ: 0=kapalı (kırmızı uyarı), 1=açık (yeşil), null=bildirmedi (gizli).
+                if (p['adim_izni'] == 0) ...[
+                  const SizedBox(height: 4),
+                  Row(children: const [
+                    Icon(Icons.directions_walk, size: 13, color: _kirmizi),
+                    SizedBox(width: 4),
+                    Text('Adım izni KAPALI', style: TextStyle(color: _kirmizi, fontSize: 11, fontWeight: FontWeight.bold)),
+                  ]),
+                ] else if (p['adim_izni'] == 1) ...[
+                  const SizedBox(height: 4),
+                  Row(children: const [
+                    Icon(Icons.directions_walk, size: 13, color: _yesil),
+                    SizedBox(width: 4),
+                    Text('Adım izni açık', style: TextStyle(color: _yesil, fontSize: 11)),
+                  ]),
+                ],
               ]),
             ),
             Column(crossAxisAlignment: CrossAxisAlignment.end, children: [

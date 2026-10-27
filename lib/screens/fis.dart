@@ -118,8 +118,9 @@ Future<Uint8List> _fisDoc(Map d) async {
           pw.Padding(
             padding: const pw.EdgeInsets.symmetric(vertical: 1.5),
             child: pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-              pw.Expanded(child: pw.Text('${n((k as Map)['adet']).toInt()}x ${k['ad']}', style: const pw.TextStyle(fontSize: 9.5))),
-              pw.Text(tl(k['tutar']), style: const pw.TextStyle(fontSize: 9.5)),
+              // İKRAM: TÜM SATIR üstü çizili (isim + fiyat) -> bedava olduğu net belli olsun.
+              pw.Expanded(child: pw.Text('${n((k as Map)['adet']).toInt()}x ${k['ad']}${n(k['ikram']) == 1 ? '  (İkram)' : ''}', style: pw.TextStyle(fontSize: 9.5, decoration: n(k['ikram']) == 1 ? pw.TextDecoration.lineThrough : pw.TextDecoration.none))),
+              pw.Text(tl(k['tutar']), style: pw.TextStyle(fontSize: 9.5, decoration: n(k['ikram']) == 1 ? pw.TextDecoration.lineThrough : pw.TextDecoration.none)),
             ]),
           ),
         pw.Divider(),

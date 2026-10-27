@@ -24,17 +24,25 @@ class LocalDb {
   static final LocalDb instance = LocalDb._();
 
   static const _dosya = 'resteos_local.db';
-  static const _surum = 1;
+  static const _surum = 2; // v2: adisyon_kalemleri.ikram kolonu (offline ikram işareti)
 
   Database? _db;
 
   Future<Database> get db async => _db ??= await _ac();
+
+  // Şema yükseltme (eski kurulumlar): eksik kolonları güvenle ekle.
+  Future<void> _yukselt(Database d, int eski, int yeni) async {
+    if (eski < 2) {
+      try { await d.execute('ALTER TABLE adisyon_kalemleri ADD COLUMN ikram INTEGER DEFAULT 0'); } catch (_) {}
+    }
+  }
 
   Future<Database> _ac() async {
     final opts = OpenDatabaseOptions(
       version: _surum,
       onConfigure: (d) async => d.execute('PRAGMA foreign_keys = ON'),
       onCreate: _olustur,
+      onUpgrade: _yukselt,
     );
     // Masaustu (windows/linux/macos): sqflite yerine ffi motoru gerekir.
     final masaustu = !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
@@ -50,6 +58,7 @@ class LocalDb {
       version: opts.version!,
       onConfigure: opts.onConfigure,
       onCreate: opts.onCreate,
+      onUpgrade: opts.onUpgrade,
     );
   }
 
@@ -136,6 +145,7 @@ class LocalDb {
         kur           TEXT,
         not_metni     TEXT,
         personel_id   INTEGER,
+        ikram         INTEGER DEFAULT 0,    -- 1: bu kalem ikram (fişte üstü çizili, bedava)
         gonderim_zamani INTEGER,
         updated_at    INTEGER, dirty INTEGER DEFAULT 1, deleted INTEGER DEFAULT 0, rev INTEGER DEFAULT 0
       )''');

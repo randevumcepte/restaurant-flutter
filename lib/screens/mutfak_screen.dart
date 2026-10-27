@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/tema_provider.dart';
 import '../services/api.dart';
+import '../widgets/sync_durum_rozeti.dart';
 
 /// Mutfak (KDS) hub — 4 sekme:
 ///  1) Siparişler: istasyon filtreli + all-day toplu üretim görünümü
@@ -299,6 +300,7 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
         title: Text('👨‍🍳 Mutfak · ${basliklar[_tab.index]}',
             style: TextStyle(color: _ink, fontSize: 17, fontWeight: FontWeight.bold)),
         actions: [
+          const Padding(padding: EdgeInsets.symmetric(horizontal: 4), child: Center(child: SyncDurumRozeti())),
           IconButton(
             onPressed: () {
               if (_tab.index == 0) _siparisYukle();

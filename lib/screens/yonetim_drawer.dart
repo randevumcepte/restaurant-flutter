@@ -33,6 +33,7 @@ import 'servis_akis_screen.dart';
 import 'karsilama_screen.dart';
 import 'departman_is_screen.dart';
 import 'bildirim_ayar_screen.dart';
+import 'ik_self_servis_screen.dart';
 import 'patron_ai_brief_screen.dart';
 
 /// Yönetim menüsü (drawer) — HER SAYFADAN erişilebilsin diye paylaşımlı bileşen.
@@ -126,6 +127,7 @@ class YonetimDrawer extends StatelessWidget {
               if (patron) git(Icons.rule_folder_outlined, 'İptal / İkram Sebepleri', const SebepYonetimiScreen()),
               git(Icons.auto_awesome, 'Patron Asistan', const AsistanScreen(), renk: const Color(0xFFC4B5FD)),
               git(Icons.notifications_active, 'Bildirim Ayarları', const BildirimAyarScreen(), renk: const Color(0xFF0EA5E9)),
+              git(Icons.badge, 'İK Self-Servis', const IkSelfServisScreen(), renk: const Color(0xFF10B981)),
             ]),
           ),
           Divider(height: 1, color: t.line),

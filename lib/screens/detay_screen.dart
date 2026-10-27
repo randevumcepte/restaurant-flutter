@@ -1782,10 +1782,13 @@ class _DetayScreenState extends State<DetayScreen> {
       // Genis ekranda 5'e kadar tek satir; kart sayisi azsa bos slot birakma
       final maxCols = (c.maxWidth / 200).floor().clamp(2, 5);
       final cols = entries.isEmpty ? 1 : (entries.length < maxCols ? entries.length : maxCols);
-      return GridView.count(
-        crossAxisCount: cols, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
-        childAspectRatio: 1.7, mainAxisSpacing: 12, crossAxisSpacing: 12,
-        children: entries.map((e) => _statKart(e.key.toString(), e.value.toString())).toList(),
+      // SABİT YÜKSEKLİK (mainAxisExtent): içerik ~94px sabit; childAspectRatio dar kartta taşırıyordu.
+      return GridView.builder(
+        shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: cols, mainAxisExtent: 100, mainAxisSpacing: 12, crossAxisSpacing: 12),
+        itemCount: entries.length,
+        itemBuilder: (_, i) => _statKart(entries[i].key.toString(), entries[i].value.toString()),
       );
     });
   }

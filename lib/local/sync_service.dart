@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/widgets.dart';
+import 'package:http/http.dart' as http;
+import '../config/app_config.dart';
 import 'cihaz_rol.dart';
 import 'local_db.dart';
 import 'sync_worker.dart';
@@ -27,7 +29,9 @@ class SyncService extends ChangeNotifier with WidgetsBindingObserver {
   Duration _aralik = _min;
   int _bosTur = 0;
 
-  bool online = false;      // internet baglantisi var mi (arayuz seviyesi)
+  bool online = true;       // GERÇEK internet erişimi var mı (İYİMSER başlangıç: aksi kanıtlanana
+                            // kadar çevrimiçi say -> açılışta menü/masa buluttan çekilip önbelleğe/foto diske iner).
+  bool _baglanti = true;    // ağ arayüzü bağlı mı (wifi/mobil) — erişim bundan ayrı
   bool calisiyor = false;
   int bekleyen = 0;         // outbox'ta bekleyen islem sayisi
   DateTime? sonSenkron;
@@ -39,19 +43,38 @@ class SyncService extends ChangeNotifier with WidgetsBindingObserver {
     _basladi = true;
     WidgetsBinding.instance.addObserver(this);
 
-    // Baglanti durumunu dinle: kesilince dur, gelince aninda senkronla.
+    // Baglanti durumunu dinle: kesilince dur, gelince GERÇEK erişimi doğrula.
     final c = Connectivity();
-    online = !(await c.checkConnectivity()).contains(ConnectivityResult.none);
+    _baglanti = !(await c.checkConnectivity()).contains(ConnectivityResult.none);
+    // İYİMSER BAŞLANGIÇ: ağ varsa online say (probe birkaç sn sonra düzeltir).
+    // Yoksa ilk saniyelerde "çevrimdışı" sanılıp masa/menü önbelleğe YAZILMADAN düz liste gösteriliyordu.
+    online = _baglanti;
     _baglantiAbone = c.onConnectivityChanged.listen((sonuc) {
-      final vardi = online;
-      online = !sonuc.contains(ConnectivityResult.none);
-      notifyListeners();
-      if (!vardi && online) simdiSenkronla(); // yeni baglanti -> hemen senkron
+      _baglanti = !sonuc.contains(ConnectivityResult.none);
+      if (!_baglanti) { // ağ gitti -> kesin çevrimdışı
+        if (online) { online = false; notifyListeners(); }
+      } else {
+        simdiSenkronla(); // ağ geldi -> gerçek erişimi yokla + senkronla
+      }
     });
 
     _zamanla();
     await _bekleyenGuncelle();
-    if (online) simdiSenkronla();
+    simdiSenkronla();
+  }
+
+  // GERÇEK internet erişimi yoklaması: "wifi bağlı ama internet yok" durumunu yakalar.
+  // connectivity sadece arayüzü bilir; bu ise sunucuya ulaşılıyor mu onu test eder.
+  Future<void> _erisimYokla() async {
+    if (!_baglanti) { if (online) { online = false; notifyListeners(); } return; }
+    bool eristi = false;
+    try {
+      final r = await http.head(Uri.parse(AppConfig.baseUrl)).timeout(const Duration(seconds: 4));
+      eristi = r.statusCode > 0;
+    } catch (_) {
+      eristi = false;
+    }
+    if (eristi != online) { online = eristi; notifyListeners(); }
   }
 
   void durdur() {
@@ -85,7 +108,9 @@ class SyncService extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> simdiSenkronla() async {
     if (calisiyor) return;
-    // Baglanti yoksa HIC deneme -> tamamen yerel calis.
+    // GERÇEK erişimi yokla (wifi var ama internet yok -> online=false yapar).
+    await _erisimYokla();
+    // Erişim yoksa HIC deneme -> tamamen yerel calis.
     if (!online) {
       await _bekleyenGuncelle();
       return;

@@ -30,6 +30,8 @@ class AdimServisi {
     _basladi = true;
     try {
       final izin = await Permission.activityRecognition.request();
+      // Durumu HER ZAMAN sunucuya bildir (verse de reddetse de) -> patron görür.
+      try { await Api.adimIzni(token, izin.isGranted); } catch (_) {}
       if (!izin.isGranted) { _basladi = false; return; }
       _sub = Pedometer.stepCountStream.listen(_olay, onError: (_) {}, cancelOnError: false);
     } catch (_) {

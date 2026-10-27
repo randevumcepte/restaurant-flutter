@@ -7,6 +7,7 @@ import '../providers/tema_provider.dart';
 import '../responsive.dart';
 import '../services/api.dart';
 import '../widgets/sef_garson_serit.dart';
+import '../widgets/sync_durum_rozeti.dart';
 import 'satis_ekrani.dart';
 
 class MasalarScreen extends StatefulWidget {
@@ -194,6 +195,7 @@ class _MasalarScreenState extends State<MasalarScreen> {
         title: Text('Masalar  ($dolu / ${masalar.length} dolu)',
             style: TextStyle(color: t.ink, fontSize: 18, fontWeight: FontWeight.bold)),
         actions: [
+          const Padding(padding: EdgeInsets.symmetric(horizontal: 4), child: Center(child: SyncDurumRozeti())),
           if (_benimMasalar.isNotEmpty)
             TextButton.icon(
               onPressed: () async { setState(() => _sadeceBenim = !_sadeceBenim); await _yukle(); },

@@ -98,6 +98,21 @@ class Api {
   static Future<Map<String, dynamic>> patronAiTakipDurum(String token, {required int id, required String durum}) =>
       _post('/api/patron-ai/takip-durum', token, {'id': '$id', 'durum': durum});
 
+  // ---------------- İK SELF-SERVİS (personel kendi: vardiya/izin/avans/bordro) ----------------
+  static Future<Map<String, dynamic>> ikSelf(String token) => _get('/api/ik/self', token);
+  static Future<Map<String, dynamic>> ikSelfIzin(String token,
+          {required String tip, required String baslangic, required String bitis, String? gun, String? aciklama}) =>
+      _post('/api/ik/self/izin', token, {
+        'tip': tip, 'baslangic': baslangic, 'bitis': bitis,
+        if (gun != null && gun.isNotEmpty) 'gun': gun,
+        if (aciklama != null && aciklama.isNotEmpty) 'aciklama': aciklama,
+      });
+  static Future<Map<String, dynamic>> ikSelfAvans(String token, {required String tutar, String? aciklama}) =>
+      _post('/api/ik/self/avans', token, {
+        'tutar': tutar,
+        if (aciklama != null && aciklama.isNotEmpty) 'aciklama': aciklama,
+      });
+
   // ---------------- MESAI (QR + geofence) ----------------
   static Future<Map<String, dynamic>> mesaiDurum(String token) => _get('/api/mesai/durum', token);
   static Future<Map<String, dynamic>> mesaiQrSecret(String token) => _get('/api/mesai/qr-secret', token);
@@ -218,7 +233,7 @@ class Api {
     if (cariId != null) body['cari_id'] = '$cariId';
     if (marka != null && marka.isNotEmpty) body['marka'] = marka;
     if (_pesinOffline()) {
-      final y = await YerelMotor.instance.islem(islem: islem, adisyonHandle: adisyonId, odemeTip: odemeTip, tutar: tutar, oran: oran, onayPin: onayPin);
+      final y = await YerelMotor.instance.islem(islem: islem, adisyonHandle: adisyonId, odemeTip: odemeTip, tutar: tutar, oran: oran, onayPin: onayPin, kalemIdler: kalemIdler);
       return y ?? {'ok': 0, 'offline': 1, 'hata': 'Çevrimdışı — bu işlem desteklenmiyor.'};
     }
     try {
@@ -233,7 +248,7 @@ class Api {
       // OFFLINE: odeme/kapat + yönetici PIN'li ikram/iskonto yereldde karsilanir.
       if (_yerelUygun(e)) {
         final y = await YerelMotor.instance
-            .islem(islem: islem, adisyonHandle: adisyonId, odemeTip: odemeTip, tutar: tutar, oran: oran, onayPin: onayPin);
+            .islem(islem: islem, adisyonHandle: adisyonId, odemeTip: odemeTip, tutar: tutar, oran: oran, onayPin: onayPin, kalemIdler: kalemIdler);
         if (y != null) return y;
       }
       rethrow;
@@ -400,8 +415,6 @@ class Api {
       if (r.statusCode == 401) throw ApiYetkiHatasi();
       return _coz(r);
     } catch (e) {
-      // ignore: avoid_print
-      print('[OFFLINE] adisyonUrunEkle catch: yerelUygun=${_yerelUygun(e)} hata=$e adisyonId=$adisyonId');
       if (_yerelUygun(e)) return YerelMotor.instance.siparisEkle(adisyonId, kalemler);
       rethrow;
     }
