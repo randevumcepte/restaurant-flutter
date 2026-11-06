@@ -1,21 +1,27 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'api.dart';
 
-/// AI Santral panel uclari. Bu rotalar oturum/token GEREKTIRMEZ (acik panel uclari),
-/// o yuzden Bearer yok; dogrudan JSON cagri.
+/// AI Santral panel uclari. Giris yapan personelin token'i ile cagrilir;
+/// sunucu yetkiyi ve subeyi bu token'dan belirler.
 class SantralApi {
   static String get _b => Api.base;
 
+  static Future<Map<String, String>> _basliklar() async {
+    final sp = await SharedPreferences.getInstance();
+    return {'Accept': 'application/json', 'Authorization': 'Bearer ${sp.getString('token') ?? ''}'};
+  }
+
   static Future<Map<String, dynamic>> _get(String path) async {
-    final r = await http.get(Uri.parse('$_b$path'), headers: {'Accept': 'application/json'});
+    final r = await http.get(Uri.parse('$_b$path'), headers: await _basliklar());
     return jsonDecode(r.body) as Map<String, dynamic>;
   }
 
   static Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> body) async {
     final r = await http.post(
       Uri.parse('$_b$path'),
-      headers: {'Accept': 'application/json', 'Content-Type': 'application/json'},
+      headers: {...await _basliklar(), 'Content-Type': 'application/json'},
       body: jsonEncode(body),
     );
     return jsonDecode(r.body) as Map<String, dynamic>;
