@@ -30,6 +30,7 @@ import 'bildirim_ayar_screen.dart';
 import 'ik_self_servis_screen.dart';
 import 'patron_ai_brief_screen.dart';
 import 'kasa_screen.dart';
+import 'z_raporu_screen.dart';
 import 'finans_screen.dart';
 import 'isletme_hub_screen.dart';
 import 'menu_yonetimi_screen.dart';
@@ -229,6 +230,16 @@ class _HomeScreenState extends State<HomeScreen> {
     const panelim = _SekmeTanim(Icons.dashboard_customize_outlined, Icons.dashboard_customize, 'Panelim', DepartmanPanelScreen());
     const masalar = _SekmeTanim(Icons.table_bar_outlined, Icons.table_bar, 'Masalar', MasalarScreen());
     const mutfak = _SekmeTanim(Icons.restaurant_menu_outlined, Icons.restaurant_menu, 'Mutfak', MutfakScreen());
+    // Kasiyer: departmanı ne olursa olsun yalnız kasa noktasında açık Panel sayfaları
+    if (auth.kasiyer) {
+      return [
+        masalar,
+        if (auth.kasaSayfaAcik('/mutfak')) mutfak,
+        if (auth.kasaSayfaAcik('/paket')) const _SekmeTanim(Icons.delivery_dining_outlined, Icons.delivery_dining, 'Paket', PaketScreen()),
+        if (auth.kasaSayfaAcik('/kasa')) const _SekmeTanim(Icons.point_of_sale_outlined, Icons.point_of_sale, 'Kasa', KasaScreen()),
+        if (auth.kasaSayfaAcik('/dashboard') || auth.kasaSayfaAcik('/departman-brief')) panelim,
+      ];
+    }
     switch (auth.departmanKod ?? '') {
       case 'servis':
         return const [_SekmeTanim(Icons.room_service_outlined, Icons.room_service, 'İş Akışım', ServisAkisScreen()), masalar, mutfak];
@@ -447,9 +458,13 @@ class _YanMenuState extends State<_YanMenu> {
                       for (int i = 0; i < widget.sekmeler.length; i++) ...[
                         _tab(t, widget.sekmeler[i], i == widget.aktifIndex, () => widget.onSekme(i)),
                         // Mutfak'in hemen altina Rezervasyon (icerik panelinde acilir — tab degil)
-                        if (widget.sekmeler[i].label == 'Mutfak')
+                        if (widget.sekmeler[i].label == 'Mutfak' && !auth.kasiyer)
                           _link(t, Icons.event_available_outlined, 'Rezervasyon', () => git(const RezervasyonScreen()), renk: const Color(0xFF8B5CF6)),
                       ],
+                      if (auth.kasiyer && auth.kasaSayfaAcik('/rezervasyon'))
+                        _link(t, Icons.event_available_outlined, 'Rezervasyon', () => git(const RezervasyonScreen()), renk: const Color(0xFF8B5CF6)),
+                      if (auth.kasiyer && auth.kasaSayfaAcik('/z-raporu'))
+                        _link(t, Icons.summarize_outlined, 'Z Raporu', () => git(const ZRaporuScreen()), renk: const Color(0xFF0EA5E9)),
                       if (widget.onAsistan != null) ...[
                         const SizedBox(height: 6),
                         _asistanBtn(widget.onAsistan!, acik),
@@ -457,7 +472,7 @@ class _YanMenuState extends State<_YanMenu> {
                       const SizedBox(height: 10),
                       Divider(height: 1, color: t.line, indent: 14, endIndent: 14),
                       const SizedBox(height: 8),
-                      _baslik(t, 'YÖNETİM', acik),
+                      if (!auth.kasiyer) _baslik(t, 'YÖNETİM', acik),
                       // Ödül Doğrula — hem kasa hem garson (müşteri ödül QR kodunu okut/onayla)
                       _link(t, Icons.qr_code_scanner, 'Ödül Doğrula', () => git(const OdulDogrulaScreen()), renk: const Color(0xFF22C55E)),
                       if (patron) _link(t, Icons.point_of_sale, 'Kasa (Vardiya)', () => git(const KasaScreen())),
@@ -663,6 +678,8 @@ class _YanMenuState extends State<_YanMenu> {
   }
 
   Widget _link(TemaProvider t, IconData ikon, String label, VoidCallback onTap, {Color? renk}) {
+    // Kasiyer: yönetim linkleri gizli; Panel sayfaları, tema ve çıkış kalır
+    if (context.read<AuthProvider>().kasiyer && !const {'Rezervasyon', 'Z Raporu', 'Açık moda geç', 'Koyu moda geç', 'Çıkış'}.contains(label)) return const SizedBox.shrink();
     final r = renk ?? t.sub2;
     // KAPALI: sadece ortalanmis ikon (72px seride sola sabitli)
     if (!_acik) {

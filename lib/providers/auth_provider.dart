@@ -27,6 +27,11 @@ class AuthProvider extends ChangeNotifier {
   bool departmanSorumlu = false;     // departman sorumlusu mu (ekip/yönetim görünümleri)
   String? olcek;                     // işletme büyüklüğü: kucuk | orta | buyuk (null = tam menü, eski işletme)
   List<String> aktifDepartmanlar = []; // şubede kurulu departman kodları
+  List<String>? kasaSayfalari;       // kasiyere açık sayfa adresleri (null = kasiyer değil, kısıt yok)
+
+  // Kasiyer yalnız Panel sayfalarını görür; kasa noktası ayarı hangilerinin açık olduğunu belirler (web paneliyle aynı kural).
+  bool get kasiyer => kasaSayfalari != null;
+  bool kasaSayfaAcik(String adres) => kasaSayfalari?.contains(adres) ?? true;
 
   // Küçük/orta işletmede menü sadeleşir; kurulu departmanın menüsü her zaman görünür (web paneliyle aynı kural).
   bool get _sadeMenu => olcek == 'kucuk' || olcek == 'orta';
@@ -60,6 +65,8 @@ class AuthProvider extends ChangeNotifier {
         olcek = (o == null || o.isEmpty) ? null : o;
         final ad_ = res['aktif_departmanlar'];
         aktifDepartmanlar = (ad_ is List) ? ad_.map((e) => e.toString()).toList() : [];
+        final ks = res['kasa_sayfalari'];
+        kasaSayfalari = (ks is List) ? ks.map((e) => e.toString()).toList() : null;
         final sp = await SharedPreferences.getInstance();
         await sp.setString('yetkiler', yetkiler.join(','));
         await sp.setString('ai_erisim', aiErisim);
@@ -68,6 +75,7 @@ class AuthProvider extends ChangeNotifier {
         await sp.setBool('departman_sorumlu', departmanSorumlu);
         await sp.setString('olcek', olcek ?? '');
         await sp.setString('aktif_departmanlar', aktifDepartmanlar.join(','));
+        await sp.setString('kasa_sayfalari', kasaSayfalari?.join(',') ?? '');
         notifyListeners();
       }
     } catch (_) {/* sessiz: eski rol bazlı davranış sürer */}
@@ -94,6 +102,8 @@ class AuthProvider extends ChangeNotifier {
     if (olcek != null && olcek!.isEmpty) olcek = null;
     final adCache = sp.getString('aktif_departmanlar') ?? '';
     aktifDepartmanlar = adCache.isEmpty ? [] : adCache.split(',');
+    final ksCache = sp.getString('kasa_sayfalari') ?? '';
+    kasaSayfalari = ksCache.isEmpty ? null : ksCache.split(',');
     notifyListeners();
     // Açılışta zaten girişliyse push token'ını tazele + senkronu başlat (ilk pull dahil).
     if (token != null && token!.isNotEmpty) {
@@ -182,7 +192,7 @@ class AuthProvider extends ChangeNotifier {
         'token': token, 'ad': ad, 'rol': rol, 'sube': sube, 'sube_id': subeId, 'marka_ad': markaAd,
         'yetkiler': yetkiler, 'ai_erisim': aiErisim, 'departman_ad': departmanAd,
         'departman_kod': departmanKod, 'departman_sorumlu': departmanSorumlu,
-        'olcek': olcek, 'aktif_departmanlar': aktifDepartmanlar,
+        'olcek': olcek, 'aktif_departmanlar': aktifDepartmanlar, 'kasa_sayfalari': kasaSayfalari,
       }));
     } catch (_) {}
   }
@@ -212,6 +222,8 @@ class AuthProvider extends ChangeNotifier {
       olcek = d['olcek']?.toString();
       final adK = d['aktif_departmanlar'];
       aktifDepartmanlar = (adK is List) ? adK.map((e) => e.toString()).toList() : [];
+      final ksK = d['kasa_sayfalari'];
+      kasaSayfalari = (ksK is List) ? ksK.map((e) => e.toString()).toList() : null;
       // Aktif oturum olarak da yaz (uygulama yeniden açılınca otomatik girişli gelsin).
       await sp.setString('token', token ?? '');
       await sp.setString('ad', ad ?? '');
@@ -264,6 +276,7 @@ class AuthProvider extends ChangeNotifier {
     departmanSorumlu = false;
     olcek = null;
     aktifDepartmanlar = [];
+    kasaSayfalari = null;
     notifyListeners();
   }
 }

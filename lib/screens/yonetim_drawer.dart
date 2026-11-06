@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/tema_provider.dart';
 import 'kasa_screen.dart';
+import 'z_raporu_screen.dart';
 import 'finans_screen.dart';
 import 'isletme_hub_screen.dart';
 import 'uretim_riski_screen.dart';
@@ -62,8 +63,17 @@ class YonetimDrawer extends StatelessWidget {
       );
     }
 
-    Widget git(IconData i, String b, Widget e, {Color? renk}) => oge(i, b, () { kapat(); onGit(e); }, renk: renk);
-    Widget web(IconData i, String b, String p, {Color? renk}) => oge(i, b, () { kapat(); onWeb(p); }, renk: renk);
+    // Kasiyer: yalnız kasa noktasında açık Rezervasyon/Z Raporu + cihaz kurulumu (LAN); gerisi gizli
+    bool kasiyereAcik(Widget e) =>
+        (e is RezervasyonScreen && auth.kasaSayfaAcik('/rezervasyon')) || (e is ZRaporuScreen && auth.kasaSayfaAcik('/z-raporu')) || e is LanAyarScreen;
+    Widget git(IconData i, String b, Widget e, {Color? renk}) {
+      if (auth.kasiyer && !kasiyereAcik(e)) return const SizedBox.shrink();
+      return oge(i, b, () { kapat(); onGit(e); }, renk: renk);
+    }
+    Widget web(IconData i, String b, String p, {Color? renk}) {
+      if (auth.kasiyer) return const SizedBox.shrink();
+      return oge(i, b, () { kapat(); onWeb(p); }, renk: renk);
+    }
 
     return Drawer(
       backgroundColor: t.card,
@@ -82,6 +92,7 @@ class YonetimDrawer extends StatelessWidget {
           const SizedBox(height: 6),
           Expanded(
             child: ListView(padding: EdgeInsets.zero, children: [
+              if (auth.kasiyer) git(Icons.summarize_outlined, 'Z Raporu', const ZRaporuScreen(), renk: const Color(0xFF0EA5E9)),
               // Ödül Doğrula — hem kasa hem garson (müşteri ödül QR kodunu okut/onayla)
               git(Icons.qr_code_scanner, 'Ödül Doğrula', const OdulDogrulaScreen(), renk: const Color(0xFF22C55E)),
               // Departman paneli — alt personel kendi alanının özetini görür (patronda zaten dashboard var).
