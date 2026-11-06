@@ -25,6 +25,13 @@ class AuthProvider extends ChangeNotifier {
   String? departmanIkon;
   String? departmanKod;              // servis | mutfak | bar ... (departman-bilinçli yönlendirme için)
   bool departmanSorumlu = false;     // departman sorumlusu mu (ekip/yönetim görünümleri)
+  String? olcek;                     // işletme büyüklüğü: kucuk | orta | buyuk (null = tam menü, eski işletme)
+  List<String> aktifDepartmanlar = []; // şubede kurulu departman kodları
+
+  // Küçük/orta işletmede menü sadeleşir; kurulu departmanın menüsü her zaman görünür (web paneliyle aynı kural).
+  bool get _sadeMenu => olcek == 'kucuk' || olcek == 'orta';
+  bool get ortaVeUstu => olcek != 'kucuk';
+  bool departmanMenude(String kod) => !_sadeMenu || aktifDepartmanlar.contains(kod);
 
   bool get girisli => token != null;
 
@@ -49,12 +56,18 @@ class AuthProvider extends ChangeNotifier {
         departmanIkon = dep?['ikon']?.toString();
         departmanKod = dep?['kod']?.toString();
         departmanSorumlu = (dep?['sorumlu']?.toString() == '1') || (dep?['sorumlu'] == 1) || (dep?['sorumlu'] == true);
+        final o = res['olcek']?.toString();
+        olcek = (o == null || o.isEmpty) ? null : o;
+        final ad_ = res['aktif_departmanlar'];
+        aktifDepartmanlar = (ad_ is List) ? ad_.map((e) => e.toString()).toList() : [];
         final sp = await SharedPreferences.getInstance();
         await sp.setString('yetkiler', yetkiler.join(','));
         await sp.setString('ai_erisim', aiErisim);
         await sp.setString('departman_ad', departmanAd ?? '');
         await sp.setString('departman_kod', departmanKod ?? '');
         await sp.setBool('departman_sorumlu', departmanSorumlu);
+        await sp.setString('olcek', olcek ?? '');
+        await sp.setString('aktif_departmanlar', aktifDepartmanlar.join(','));
         notifyListeners();
       }
     } catch (_) {/* sessiz: eski rol bazlı davranış sürer */}
@@ -77,6 +90,10 @@ class AuthProvider extends ChangeNotifier {
     departmanKod = sp.getString('departman_kod');
     if (departmanKod != null && departmanKod!.isEmpty) departmanKod = null;
     departmanSorumlu = sp.getBool('departman_sorumlu') ?? false;
+    olcek = sp.getString('olcek');
+    if (olcek != null && olcek!.isEmpty) olcek = null;
+    final adCache = sp.getString('aktif_departmanlar') ?? '';
+    aktifDepartmanlar = adCache.isEmpty ? [] : adCache.split(',');
     notifyListeners();
     // Açılışta zaten girişliyse push token'ını tazele + senkronu başlat (ilk pull dahil).
     if (token != null && token!.isNotEmpty) {
@@ -165,6 +182,7 @@ class AuthProvider extends ChangeNotifier {
         'token': token, 'ad': ad, 'rol': rol, 'sube': sube, 'sube_id': subeId, 'marka_ad': markaAd,
         'yetkiler': yetkiler, 'ai_erisim': aiErisim, 'departman_ad': departmanAd,
         'departman_kod': departmanKod, 'departman_sorumlu': departmanSorumlu,
+        'olcek': olcek, 'aktif_departmanlar': aktifDepartmanlar,
       }));
     } catch (_) {}
   }
@@ -191,6 +209,9 @@ class AuthProvider extends ChangeNotifier {
       departmanKod = d['departman_kod']?.toString();
       if (departmanKod != null && departmanKod!.isEmpty) departmanKod = null;
       departmanSorumlu = d['departman_sorumlu'] == true;
+      olcek = d['olcek']?.toString();
+      final adK = d['aktif_departmanlar'];
+      aktifDepartmanlar = (adK is List) ? adK.map((e) => e.toString()).toList() : [];
       // Aktif oturum olarak da yaz (uygulama yeniden açılınca otomatik girişli gelsin).
       await sp.setString('token', token ?? '');
       await sp.setString('ad', ad ?? '');
@@ -203,6 +224,8 @@ class AuthProvider extends ChangeNotifier {
       await sp.setString('departman_ad', departmanAd ?? '');
       await sp.setString('departman_kod', departmanKod ?? '');
       await sp.setBool('departman_sorumlu', departmanSorumlu);
+      await sp.setString('olcek', olcek ?? '');
+      await sp.setString('aktif_departmanlar', aktifDepartmanlar.join(','));
       SyncService.instance.basla(); // internet gelince biriken veri senkronlanır
       return true;
     } catch (_) {
@@ -239,6 +262,8 @@ class AuthProvider extends ChangeNotifier {
     departmanIkon = null;
     departmanKod = null;
     departmanSorumlu = false;
+    olcek = null;
+    aktifDepartmanlar = [];
     notifyListeners();
   }
 }
