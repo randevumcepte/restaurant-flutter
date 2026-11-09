@@ -952,6 +952,8 @@ class Api {
   // ---- GARSON PERFORMANS + ISI HARITASI + ADIM ----
   static Future<Map<String, dynamic>> garsonPerformans(String token, {String period = 'gunluk', int? garsonId}) =>
       _get('/api/patron/garson-performans?period=$period${garsonId != null ? '&garson_id=$garsonId' : ''}', token);
+  // Isı haritası + alan uyumu: İşletme Düzeni planı, atamalar, işlem sayıları (web Garson Yönetimi ile aynı)
+  static Future<Map<String, dynamic>> isiHaritasi(String token) => _get('/api/patron/isi-haritasi', token);
   static Future<Map<String, dynamic>> adimKaydet(String token, int adim) =>
       _post('/api/adim-kaydet', token, {'adim': '$adim'});
   // Adım (fiziksel aktivite) izni durumunu bildir: patron personeller sayfasında görür.
