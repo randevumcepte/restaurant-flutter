@@ -134,6 +134,26 @@ class Api {
 
   // ---------------- SATINALMA / STOK (profesyonel) ----------------
   static Future<Map<String, dynamic>> fiyatRadari(String token) => _get('/api/patron/fiyat-radari', token);
+  // Fiyat Radarı v2 (web /fiyat-radari ile aynı): dönem/tedarikçi/zam eşiği filtreli
+  static String _frQs(int gun, int ted, num esik) => 'gun=$gun&ted=$ted&esik=$esik';
+  static Future<Map<String, dynamic>> fiyatRadariV2(String token, {int gun = 120, int ted = 0, num esik = 8}) =>
+      _get('/api/patron/fiyat-radari-v2?${_frQs(gun, ted, esik)}', token);
+  static Future<Map<String, dynamic>> fiyatRadariRaporLink(String token, String rapor, String format, {int gun = 120, int ted = 0, num esik = 8}) =>
+      _get('/api/patron/fiyat-radari-v2/rapor-link?rapor=$rapor&format=$format&${_frQs(gun, ted, esik)}', token);
+  // AI analizi 20-40 sn sürer → standart 20 sn zaman aşımı yetmez; AI internet ister → doğrudan bulut
+  static Future<Map<String, dynamic>> fiyatRadariAi(String token, {String soru = '', bool yenile = false, int gun = 120, int ted = 0, num esik = 8}) async {
+    try {
+      final r = await http.post(Uri.parse('${AppConfig.baseUrl}/api/patron/fiyat-radari-v2/ai?${_frQs(gun, ted, esik)}'),
+          headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+          body: {'soru': soru, 'yenile': yenile ? '1' : '0'}).timeout(const Duration(seconds: 100));
+      if (r.statusCode == 401) throw ApiYetkiHatasi();
+      return _coz(r);
+    } on ApiYetkiHatasi {
+      rethrow;
+    } catch (_) {
+      return {'ok': 0, 'hata': 'AI servisine ulaşılamadı. İnternet bağlantını kontrol et.'};
+    }
+  }
   static Future<Map<String, dynamic>> satinalmaAnaliz(String token) => _get('/api/patron/satinalma-analiz', token);
   static Future<Map<String, dynamic>> partiTakip(String token) => _get('/api/patron/parti-takip', token);
   static Future<Map<String, dynamic>> halFiyatlari(String token, {bool force = false}) => _get('/api/patron/hal-fiyatlari${force ? '?force=1' : ''}', token);
