@@ -430,7 +430,7 @@ class _StokScreenState extends State<StokScreen> {
   Widget _hareketSatir(Map h) {
     final miktar = _n(h['miktar']);
     final poz = miktar >= 0;
-    final tipAd = {'alis': 'Alış', 'tuketim': 'Satış tüketimi', 'fire': 'Fire', 'sayim': 'Sayım', 'iade': 'Giriş', 'transfer': 'Transfer'}[h['tip']] ?? h['tip'].toString();
+    final tipAd = {'alis': 'Alış', 'tuketim': 'Satış tüketimi', 'fire': 'Fire', 'sayim': 'Sayım', 'iade': 'Giriş', 'transfer': 'Transfer', 'transfer_giris': 'Şubeden transfer', 'transfer_cikis': 'Şubeye transfer'}[h['tip']] ?? h['tip'].toString();
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(children: [

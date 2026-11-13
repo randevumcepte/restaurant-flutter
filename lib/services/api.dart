@@ -178,6 +178,41 @@ class Api {
   static Future<Map<String, dynamic>> talepPoOlustur(String token, int id) => _post('/satinalma-talep/po-olustur', token, {'id': '$id'});
   static Future<Map<String, dynamic>> talepAnlasmaliDirekt(String token, int id) => _post('/satinalma-talep/anlasmali-direkt', token, {'id': '$id'});
   static Future<Map<String, dynamic>> talepDurumGuncelle(String token, int id, String durum) => _post('/satinalma-talep/durum-guncelle', token, {'id': '$id', 'durum': durum});
+  // ---- ŞUBELER ARASI TRANSFER (web /sube-transfer ile aynı uçlar; 403 = gor_transfer yok) ----
+  static Future<Map<String, dynamic>> trfListe(String token) => _get('/api/sube-transfer/liste', token);
+  static Future<Map<String, dynamic>> trfOneriler(String token) => _get('/api/sube-transfer/oneriler', token);
+  static Future<Map<String, dynamic>> trfStok(String token, List<int> mids) => _get('/api/sube-transfer/stok?m=${mids.join(',')}', token);
+  static Future<Map<String, dynamic>> trfDetay(String token, int id) => _get('/api/sube-transfer/detay?id=$id', token);
+  // kalemler PHP dizi biçiminde form alanı olarak gider: kalemler[0][malzeme_id]=..
+  static Map<String, String> _trfKalemler(List<Map<String, num>> kalemler) => {
+        for (var i = 0; i < kalemler.length; i++) ...{
+          'kalemler[$i][malzeme_id]': '${kalemler[i]['malzeme_id']}',
+          'kalemler[$i][miktar]': '${kalemler[i]['miktar']}',
+        },
+      };
+  static Future<Map<String, dynamic>> trfIste(String token, {required int gonderenSubeId, required List<Map<String, num>> kalemler, String not = '', String kaynak = 'elle'}) =>
+      _post('/api/sube-transfer/iste', token, {'gonderen_sube_id': '$gonderenSubeId', 'not': not, 'kaynak': kaynak, ..._trfKalemler(kalemler)});
+  static Future<Map<String, dynamic>> trfOner(String token, {required int alanSubeId, required List<Map<String, num>> kalemler, String not = '', String kaynak = 'oneri'}) =>
+      _post('/api/sube-transfer/oner', token, {'alan_sube_id': '$alanSubeId', 'not': not, 'kaynak': kaynak, ..._trfKalemler(kalemler)});
+  static Future<Map<String, dynamic>> trfKarar(String token, int id, String karar, {Map<int, num> miktar = const {}, num? kdvOrani, String sebep = '', String not = ''}) =>
+      _post('/api/sube-transfer/karar', token, {
+        'id': '$id', 'karar': karar,
+        for (final e in miktar.entries) 'miktar[${e.key}]': '${e.value}',
+        if (kdvOrani != null) 'kdv_orani': '$kdvOrani',
+        if (sebep.isNotEmpty) 'sebep': sebep,
+        if (not.isNotEmpty) 'not': not,
+      });
+  static Future<Map<String, dynamic>> trfKabul(String token, int id, String karar, {String sebep = ''}) =>
+      _post('/api/sube-transfer/kabul', token, {'id': '$id', 'karar': karar, if (sebep.isNotEmpty) 'sebep': sebep});
+  static Future<Map<String, dynamic>> trfSevk(String token, int id) => _post('/api/sube-transfer/sevk', token, {'id': '$id'});
+  static Future<Map<String, dynamic>> trfTeslim(String token, int id, {required Map<int, num> miktar, Map<int, String> farkNot = const {}}) =>
+      _post('/api/sube-transfer/teslim', token, {
+        'id': '$id',
+        for (final e in miktar.entries) 'miktar[${e.key}]': '${e.value}',
+        for (final e in farkNot.entries) if (e.value.trim().isNotEmpty) 'fark_not[${e.key}]': e.value.trim(),
+      });
+  static Future<Map<String, dynamic>> trfIptal(String token, int id, String sebep) => _post('/api/sube-transfer/iptal', token, {'id': '$id', 'sebep': sebep});
+
   static Future<Map<String, dynamic>> siparisOnerisi(String token) => _get('/api/patron/siparis-onerisi', token);
   static Future<Map<String, dynamic>> siparisOnerisiOlustur(String token, String kalemlerJson) => _post('/api/patron/siparis-onerisi-olustur', token, {'kalemler': kalemlerJson});
   static Future<Map<String, dynamic>> faturaBekleyen(String token) => _get('/api/patron/fatura-bekleyen', token);
