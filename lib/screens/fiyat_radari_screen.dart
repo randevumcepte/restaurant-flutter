@@ -1072,7 +1072,7 @@ class _FiyatRadariScreenState extends State<FiyatRadariScreen> {
               icon: aiYukleniyor
                   ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                   : const Icon(Icons.auto_awesome, size: 18),
-              label: Text(aiYukleniyor ? 'Analiz ediliyor… (20-40 sn)' : 'Analiz Et'),
+              label: Text(aiYukleniyor ? 'Analiz ediliyor… (~10 sn)' : 'Analiz Et'),
               style: ElevatedButton.styleFrom(
                   backgroundColor: _aiMor,
                   foregroundColor: Colors.white,
@@ -1135,7 +1135,7 @@ class _FiyatRadariScreenState extends State<FiyatRadariScreen> {
       ),
       const SizedBox(height: 14),
       if (aiHata != null) ...[_bos(t, aiHata!, Icons.error_outline, _kirmizi), const SizedBox(height: 12)],
-      if (a == null && aiHata == null) _bos(t, 'Henüz analiz yok. "Analiz Et"e bas — 20-40 saniye sürer.', Icons.auto_awesome, _aiMor),
+      if (a == null && aiHata == null) _bos(t, 'Henüz analiz yok. "Analiz Et"e bas — yaklaşık 10 saniye sürer.', Icons.auto_awesome, _aiMor),
       if (a != null) ...[
         Container(
           padding: const EdgeInsets.all(16),
