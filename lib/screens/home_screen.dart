@@ -50,6 +50,7 @@ import 'sebep_yonetimi_screen.dart';
 import 'masa_atama_screen.dart';
 import 'garson_performans_screen.dart';
 import 'salon_sema_screen.dart';
+import 'demirbas_screen.dart';
 import '../services/adim_servisi.dart';
 import '../services/mesai_servisi.dart';
 import 'mesai_kapisi_screen.dart';
@@ -478,6 +479,8 @@ class _YanMenuState extends State<_YanMenu> {
                       if (patron) _link(t, Icons.point_of_sale, 'Kasa (Vardiya)', () => git(const KasaScreen())),
                       if (patron) _link(t, Icons.analytics_outlined, 'Finans / Kâr-Zarar', () => git(const FinansScreen())),
                       if (patron) _link(t, Icons.inventory_2_outlined, 'Stok & Satın Alma', () => git(const IsletmeHubScreen())),
+                      if (!auth.kasiyer && (auth.yetkiVar('gor_demirbas') || auth.yetkiVar('gor_demirbas_duzenle')))
+                        _link(t, Icons.qr_code_2, 'Demirbaş & Etiket', () => git(const DemirbasScreen()), renk: const Color(0xFF7C3AED)),
                       if (patron) _link(t, Icons.restaurant_menu, 'Menü Yönetimi', () => git(const MenuYonetimiScreen())),
                       if (patron) _link(t, Icons.palette_outlined, 'QR Menü Rengi', () => git(const TemaSecimScreen()), renk: t.gold),
                       if (patron) _link(t, Icons.local_offer_outlined, 'İndirimler', () => git(const IndirimlerScreen()), renk: t.yesil),

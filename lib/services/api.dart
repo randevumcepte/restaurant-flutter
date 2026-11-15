@@ -233,6 +233,25 @@ class Api {
   static Future<Map<String, dynamic>> barkodIcUret(String token, String tur, int hedefId) =>
       _post('/api/barkod/ic-uret', token, {'tur': tur, 'hedef_id': '$hedefId'});
 
+  // ---------------- DEMİRBAŞ & ETİKET (web /demirbas paritesi) ----------------
+  static Future<Map<String, dynamic>> demirbasListe(String token) => _get('/api/demirbas/liste', token);
+  static Future<Map<String, dynamic>> demirbasDetay(String token, {int? id, String? kod}) =>
+      _get(kod != null ? '/api/demirbas/detay?kod=${Uri.encodeComponent(kod)}' : '/api/demirbas/detay?id=${id ?? 0}', token);
+  static Future<Map<String, dynamic>> demirbasKaydet(String token, Map<String, String> body) => _post('/api/demirbas/kaydet', token, body);
+  static Future<Map<String, dynamic>> demirbasIslem(String token, int id, String islem, [Map<String, String> ek = const {}]) =>
+      _post('/api/demirbas/islem', token, {'id': '$id', 'islem': islem, ...ek});
+  static Future<Map<String, dynamic>> demirbasSayim(String token) => _get('/api/demirbas/sayim', token);
+  static Future<Map<String, dynamic>> demirbasSayimBaslat(String token, {String lokasyon = ''}) =>
+      _post('/api/demirbas/sayim/baslat', token, {if (lokasyon.isNotEmpty) 'lokasyon': lokasyon});
+  static Future<Map<String, dynamic>> demirbasSayimOkut(String token, String kod, {String lokasyon = ''}) =>
+      _post('/api/demirbas/sayim/okut', token, {'kod': kod, if (lokasyon.isNotEmpty) 'lokasyon': lokasyon});
+  static Future<Map<String, dynamic>> demirbasSayimBitir(String token, {bool konumGuncelle = true, bool eksikKayip = false, bool iptal = false}) =>
+      _post('/api/demirbas/sayim/bitir', token, {'konum_guncelle': konumGuncelle ? '1' : '0', 'eksik_kayip': eksikKayip ? '1' : '0', 'iptal': iptal ? '1' : '0'});
+  static Future<Map<String, dynamic>> etiketAyar(String token) => _get('/api/etiket/ayar', token);
+  static Future<Map<String, dynamic>> etiketAyarKaydet(String token, Map<String, String> body) => _post('/api/etiket/ayar', token, body);
+  static Future<Map<String, dynamic>> etiketKomut(String token, {required String tur, required List<int> ids, int adet = 1}) =>
+      _post('/api/etiket/komut', token, {'tur': tur, 'ids': ids.join(','), 'adet': '$adet'});
+
   static Future<Map<String, dynamic>> _get(String path, String token) async {
     final b = base;
     try {

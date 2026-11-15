@@ -17,6 +17,7 @@ import 'fatura_eslestir_screen.dart';
 import 'mal_kabul_screen.dart';
 import 'satinalma_talep_screen.dart';
 import 'sube_transfer_screen.dart';
+import 'demirbas_screen.dart';
 import '../responsive.dart';
 import '../ui/masaustu_kit.dart';
 import '../providers/tema_provider.dart';
@@ -35,6 +36,7 @@ class IsletmeHubScreen extends StatelessWidget {
     final ogeler = <_Hub>[
       _Hub('Satın Alma Talebi', 'Departman talep · teklif · onay', Icons.assignment_outlined, const Color(0xFF7C3AED), const SatinalmaTalepScreen()),
       _Hub('Şubeler Arası Transfer', 'Kardeş şubeden iste · gönder', Icons.swap_horiz, const Color(0xFF0891B2), const SubeTransferScreen()),
+      _Hub('Demirbaş & Etiket', 'Ekipman · barkod etiketi · sayım', Icons.qr_code_2, const Color(0xFF7C3AED), const DemirbasScreen()),
       _Hub('Stok / Malzeme', 'Mevcut stok · kritik · fire', Icons.inventory_2_outlined, const Color(0xFF4F46E5), const StokScreen()),
       _Hub('Reçeteler', 'Ürün maliyeti · food-cost', Icons.menu_book_outlined, const Color(0xFF7C3AED), const ReceteScreen()),
       _Hub('Alış Faturaları', 'Stok girişi · fiyat uyarısı', Icons.receipt_long_outlined, const Color(0xFFD97706), const AlisFaturaScreen()),
@@ -94,6 +96,7 @@ class IsletmeHubScreen extends StatelessWidget {
     final ogeler = <_Hub>[
       _Hub('Satın Alma Talebi', 'Departman talep · teklif · onay', Icons.assignment_outlined, const Color(0xFF7C3AED), const SatinalmaTalepScreen()),
       _Hub('Şubeler Arası Transfer', 'Kardeş şubeden iste · gönder', Icons.swap_horiz, const Color(0xFF0891B2), const SubeTransferScreen()),
+      _Hub('Demirbaş & Etiket', 'Ekipman · barkod etiketi · sayım', Icons.qr_code_2, const Color(0xFF7C3AED), const DemirbasScreen()),
       _Hub('Stok / Malzeme', 'Mevcut stok · kritik · fire', Icons.inventory_2_outlined, const Color(0xFF4F46E5), const StokScreen()),
       _Hub('Reçeteler', 'Ürün maliyeti · food-cost', Icons.menu_book_outlined, const Color(0xFF7C3AED), const ReceteScreen()),
       _Hub('Alış Faturaları', 'Stok girişi · fiyat uyarısı', Icons.receipt_long_outlined, const Color(0xFFD97706), const AlisFaturaScreen()),

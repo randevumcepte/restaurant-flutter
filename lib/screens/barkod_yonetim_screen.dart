@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import '../providers/tema_provider.dart';
 import '../services/api.dart';
 import '../services/yazici_servisi.dart';
+import '../services/etiket_yazici.dart';
 import 'barkod_tarayici.dart';
 
 /// BARKOD YÖNETİMİ — bir ürüne (tur='urun') ya da malzemeye (tur='malzeme') barkod ekle/sil.
@@ -89,8 +90,47 @@ class _BarkodYonetimScreenState extends State<BarkodYonetimScreen> {
     else { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r['hata']?.toString() ?? 'Üretilemedi'), backgroundColor: const Color(0xFFDC2626))); }
   }
 
+  // Etiket yazıcısı (ZPL/TSPL) tanımlıysa /api/etiket/komut ile ağdaki etiket yazıcısına basar.
+  // true = bu yolla işlendi; false = ayar yok/escpos/tarayici → mevcut ESC/POS akışı devam eder.
+  Future<bool> _etiketYazicisiylaBas(int barkodId) async {
+    final token = context.read<AuthProvider>().token!;
+    Map<String, dynamic> ayar;
+    try {
+      ayar = await Api.etiketAyar(token);
+    } catch (_) {
+      return false;
+    }
+    final dil = (ayar['ayar'] is Map ? (ayar['ayar'] as Map)['dil'] : null)?.toString() ?? '';
+    if (dil != 'zpl' && dil != 'tspl') return false;
+    if (!mounted) return true;
+    final adetC = TextEditingController(text: '1');
+    final t = context.read<TemaProvider>();
+    final adet = await showDialog<int>(useRootNavigator: true, context: context, builder: (c) => AlertDialog(
+      backgroundColor: t.card,
+      title: Text('Etiket Bas (${dil.toUpperCase()})', style: TextStyle(color: t.ink, fontSize: 17)),
+      content: TextField(controller: adetC, keyboardType: TextInputType.number, autofocus: true, style: TextStyle(color: t.ink),
+          decoration: InputDecoration(labelText: 'Adet', labelStyle: TextStyle(color: t.sub))),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(c), child: const Text('Vazgeç')),
+        FilledButton(onPressed: () => Navigator.pop(c, (int.tryParse(adetC.text.trim()) ?? 1).clamp(1, 500)), child: const Text('Yazdır')),
+      ],
+    ));
+    adetC.dispose();
+    if (adet == null || !mounted) return true;
+    String sonuc;
+    try {
+      sonuc = await EtiketYazici.yazdir(token, tur: 'barkod', ids: [barkodId], adet: adet);
+    } catch (_) {
+      sonuc = 'Bağlantı hatası';
+    }
+    if (mounted) _mesaj(sonuc == 'ok' ? '$adet etiket yazıcıya gönderildi ✓' : sonuc, sonuc != 'ok');
+    return true;
+  }
+
   // Etiket bas (mevcut fiş yazıcı, ESC/POS CODE128) — adet + SKT gün + fiyat sorar.
-  Future<void> _etiketYazdir(String barkod) async {
+  Future<void> _etiketYazdir(String barkod, {int? barkodId}) async {
+    if (barkodId != null && await _etiketYazicisiylaBas(barkodId)) return;
+    if (!mounted) return;
     final adetC = TextEditingController(text: '1');
     final sktC = TextEditingController();
     final fiyatC = TextEditingController();
@@ -186,7 +226,7 @@ class _BarkodYonetimScreenState extends State<BarkodYonetimScreen> {
                             Icon(Icons.qr_code_2, color: t.mor1),
                             const SizedBox(width: 12),
                             Expanded(child: Text(b['barkod']?.toString() ?? '', style: TextStyle(color: t.ink, fontSize: 15, fontWeight: FontWeight.w700, letterSpacing: 0.5))),
-                            IconButton(tooltip: 'Etiket bas', onPressed: () => _etiketYazdir(b['barkod']?.toString() ?? ''), icon: Icon(Icons.print, color: t.mor1)),
+                            IconButton(tooltip: 'Etiket bas', onPressed: () => _etiketYazdir(b['barkod']?.toString() ?? '', barkodId: (b['id'] as num?)?.toInt()),icon: Icon(Icons.print, color: t.mor1)),
                             IconButton(onPressed: () => _sil((b['id'] as num).toInt()), icon: const Icon(Icons.delete_outline, color: Color(0xFFDC2626))),
                           ]),
                         );
