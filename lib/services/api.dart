@@ -177,6 +177,8 @@ class Api {
   static Future<Map<String, dynamic>> talepOnayla(String token, int id) => _post('/satinalma-talep/onayla', token, {'id': '$id'});
   static Future<Map<String, dynamic>> talepPoOlustur(String token, int id) => _post('/satinalma-talep/po-olustur', token, {'id': '$id'});
   static Future<Map<String, dynamic>> talepAnlasmaliDirekt(String token, int id) => _post('/satinalma-talep/anlasmali-direkt', token, {'id': '$id'});
+  static Future<Map<String, dynamic>> talepLimitBilgi(String token, int id) => _get('/satinalma-talep/limit-bilgi?id=$id', token);
+  static Future<Map<String, dynamic>> talepLimitOnay(String token, int id) => _post('/satinalma-talep/limit-onay', token, {'id': '$id'});
   static Future<Map<String, dynamic>> talepDurumGuncelle(String token, int id, String durum) => _post('/satinalma-talep/durum-guncelle', token, {'id': '$id', 'durum': durum});
   // ---- ŞUBELER ARASI TRANSFER (web /sube-transfer ile aynı uçlar; 403 = gor_transfer yok) ----
   static Future<Map<String, dynamic>> trfListe(String token) => _get('/api/sube-transfer/liste', token);

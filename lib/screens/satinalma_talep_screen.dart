@@ -471,6 +471,7 @@ class _TalepDetayScreenState extends State<TalepDetayScreen> {
   bool loading = true, islemde = false;
   Map? talep;
   List kalemler = [];
+  Map? limit; // satın almacı onay limiti (web ile aynı uç: /satinalma-talep/limit-bilgi)
 
   @override
   void initState() { super.initState(); _yukle(); }
@@ -484,6 +485,27 @@ class _TalepDetayScreenState extends State<TalepDetayScreen> {
         setState(() { talep = res['talep'] as Map?; kalemler = (res['kalemler'] as List?) ?? []; loading = false; });
       } else { setState(() => loading = false); }
     } catch (_) { if (mounted) setState(() => loading = false); }
+    try {
+      final l = await Api.talepLimitBilgi(auth.token!, widget.id);
+      if (mounted) setState(() => limit = _ok(l['ok']) && _ok(l['goster']) ? l : null);
+    } catch (_) {}
+  }
+
+  String _tl(dynamic x) {
+    final s = _n(x).round().toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.');
+    return '$s ₺';
+  }
+
+  void _limitOnay() {
+    final l = limit; if (l == null) return;
+    showDialog(context: context, builder: (ctx) => AlertDialog(
+      title: const Text('Limitimle Onayla ve Sipariş Geç'),
+      content: Text('Toplam ${_tl(l['tutar'])} — senin onay limitin içinde. Patron onayı beklenmeden sipariş geçilecek, patrona bilgi gider.\n\n⭐ seçilmeyen kalemde en ucuz teklif kullanılır; teslim tarihi tedarikçinin teklifindeki tarihtir.'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Vazgeç')),
+        ElevatedButton(onPressed: () { Navigator.pop(ctx); _calistir((tok) => Api.talepLimitOnay(tok, widget.id), basari: 'Sipariş geçildi (limit içi)'); }, child: const Text('Siparişi Geç')),
+      ],
+    ));
   }
 
   void _toast(String m, {Color? renk}) {
@@ -708,6 +730,16 @@ class _TalepDetayScreenState extends State<TalepDetayScreen> {
 
     if (['yeni', 'teklif'].contains(durum)) {
       bilgi('Her kaleme teklif girip ⭐ ile birini öner, sonra patrona gönder.');
+      final l = limit;
+      if (l != null) {
+        final ay = l['aylik'] != null ? ' · bu ay ${_tl(l['kullanilan'])} / ${_tl(l['aylik'])}' : '';
+        if (_ok(l['uygun'])) {
+          w.add(btn('Limitimle Onayla ve Sipariş Geç · ${_tl(l['tutar'])}', Icons.verified, t.yesil, _limitOnay));
+          bilgi('🟢 Limitin içinde (limitin ${_tl(l['limit'])}$ay). Patron onayı beklenmez, patrona bilgi gider.${_n(l['kalan_kalem']) > 0 ? ' Fiyatı gelmeyen ${_n(l['kalan_kalem']).toInt()} kalem talepte kalır.' : ''}');
+        } else {
+          bilgi('🔒 Kendi limitinle onaylanamaz: ${l['neden'] ?? ''} (limitin ${_tl(l['limit'])}$ay)');
+        }
+      }
       w.add(btn('Patrona Gönder (Onaya)', Icons.send, t.amber, () => _calistir((tok) => Api.talepPatronaGonder(tok, widget.id), basari: 'Patrona gönderildi')));
       w.add(btn('Anlaşmalıdan Direkt Sipariş', Icons.bolt, const Color(0xFF0EA5E9), () => _calistir((tok) => Api.talepAnlasmaliDirekt(tok, widget.id), basari: 'Direkt sipariş oluşturuldu')));
       bilgi('⚡ Anlaşmalı tedarikçiye ⭐ önerip fiyat girdiğin kalemler patron onayı olmadan direkt siparişe döner, tedarikçiye WhatsApp gider.');
@@ -727,6 +759,7 @@ class _TalepDetayScreenState extends State<TalepDetayScreen> {
       w.add(btn('Sipariş Oluştur (PO)', Icons.shopping_cart_checkout, const Color(0xFF0EA5E9), () => _calistir((tok) => Api.talepPoOlustur(tok, widget.id), basari: 'Sipariş oluşturuldu')));
     }
     if (durum == 'siparis') {
+      if (talep?['sa_onay_tipi'] == 'limit_ici') bilgi('🟢 Satın almacı bu siparişi kendi onay limiti içinde onayladı; patrona bilgi gitti.');
       bilgi('✓ Sipariş oluşturuldu. Mal gelince Mal Kabul ekranından karşılaştır.');
       w.add(btn('Tamamlandı İşaretle', Icons.task_alt, t.yesil, () => _calistir((tok) => Api.talepDurumGuncelle(tok, widget.id, 'tamamlandi'), basari: 'Tamamlandı')));
     }
