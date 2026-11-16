@@ -201,6 +201,16 @@ class _SatisEkraniState extends State<SatisEkrani> {
       if (r['ok'] == 1 && r['tur'] == 'urun') {
         _ekle(_n(r['id']).toInt());
         _snack('${r['ad']} eklendi', _yesil);
+      } else if (r['ok'] == 1 && r['tur'] == 'tarti') {
+        // Terazi etiketi: ürün + gramaj + tutar barkodun içinde → doğrudan adisyona yazılır
+        final k = await Api.etiketKasaEkle(auth.token!, widget.adisyonId, kod);
+        if (!mounted) return;
+        if (k['ok'] == 1) {
+          await _yukle();
+          _snack(k['mesaj']?.toString() ?? '${r['ad']} eklendi', _yesil);
+        } else {
+          _snack(k['hata']?.toString() ?? 'Eklenemedi', _turuncu);
+        }
       } else {
         _snack(r['hata']?.toString() ?? 'Barkod tanımlı değil', _turuncu);
       }

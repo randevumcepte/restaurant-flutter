@@ -253,6 +253,15 @@ class Api {
   static Future<Map<String, dynamic>> etiketAyarKaydet(String token, Map<String, String> body) => _post('/api/etiket/ayar', token, body);
   static Future<Map<String, dynamic>> etiketKomut(String token, {required String tur, required List<int> ids, int adet = 1}) =>
       _post('/api/etiket/komut', token, {'tur': tur, 'ids': ids.join(','), 'adet': '$adet'});
+  // ---------------- BARKOD & ETİKET MERKEZİ (web /barkod-etiket paritesi) ----------------
+  static Future<Map<String, dynamic>> etiketMerkeziListe(String token) => _get('/api/etiket-merkezi/liste', token);
+  static Future<Map<String, dynamic>> etiketMerkeziKaydet(String token, Map<String, String> body) => _post('/api/etiket-merkezi/kaydet', token, body);
+  static Future<Map<String, dynamic>> etiketMerkeziSil(String token, int id) => _post('/api/etiket-merkezi/sil', token, {'id': '$id'});
+  static Future<Map<String, dynamic>> etiketMerkeziAyar(String token, Map<String, String> body) => _post('/api/etiket-merkezi/ayar', token, body);
+  static Future<Map<String, dynamic>> etiketMerkeziBas(String token, Map<String, String> body) => _post('/api/etiket-merkezi/bas', token, body);
+  /// Kasada okutulan barkod (terazi etiketi dahil) → adisyona kalem (gramajla).
+  static Future<Map<String, dynamic>> etiketKasaEkle(String token, int adisyonId, String kod) =>
+      _post('/api/etiket-merkezi/kasa-ekle', token, {'adisyon_id': '$adisyonId', 'kod': kod});
 
   static Future<Map<String, dynamic>> _get(String path, String token) async {
     final b = base;

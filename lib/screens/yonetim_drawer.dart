@@ -36,7 +36,7 @@ import 'departman_is_screen.dart';
 import 'bildirim_ayar_screen.dart';
 import 'ik_self_servis_screen.dart';
 import 'patron_ai_brief_screen.dart';
-import 'demirbas_screen.dart';
+import 'etiket_merkezi_screen.dart';
 
 /// Yönetim menüsü (drawer) — HER SAYFADAN erişilebilsin diye paylaşımlı bileşen.
 /// Navigasyon kararını çağırana bırakır: [onGit] ekran açar, [onWeb] tarayıcı linki açar.
@@ -116,7 +116,7 @@ class YonetimDrawer extends StatelessWidget {
               if (patron) git(Icons.inventory_2_outlined, 'Stok & Satın Alma', const IsletmeHubScreen()),
               if (patron && auth.ortaVeUstu) git(Icons.warning_amber_outlined, 'Üretim Riski', const UretimRiskiScreen(), renk: const Color(0xFFF59E0B)),
               if (patron) git(Icons.fact_check_outlined, 'Sayım (Envanter)', const SayimScreen(), renk: const Color(0xFF0EA5E9)),
-              if (auth.yetkiVar('gor_demirbas') || auth.yetkiVar('gor_demirbas_duzenle')) git(Icons.qr_code_2, 'Demirbaş & Etiket', const DemirbasScreen(), renk: const Color(0xFF7C3AED)),
+              if (auth.yetkiVar('gor_demirbas') || auth.yetkiVar('gor_demirbas_duzenle')) git(Icons.qr_code_scanner, 'Barkod & Etiket', const EtiketMerkeziScreen(), renk: const Color(0xFF7C3AED)),
               if (patron) git(Icons.restaurant_menu, 'Menü Yönetimi', const MenuYonetimiScreen()),
               if (patron) git(Icons.palette_outlined, 'QR Menü Rengi', const TemaSecimScreen(), renk: const Color(0xFFF6CE63)),
               if (patron) git(Icons.local_offer_outlined, 'İndirimler', const IndirimlerScreen(), renk: const Color(0xFF22C55E)),
