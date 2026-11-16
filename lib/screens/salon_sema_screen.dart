@@ -127,6 +127,10 @@ class _SalonSemaScreenState extends State<SalonSemaScreen> {
     try {
       final res = await Api.salonSemaKaydet(auth.token!, jsonEncode(veri));
       if (!mounted) return;
+      // Sunucu bölgeleri İşletme Düzeni ile eşleyip bolge_id ekler; sonraki kayıtta eşleşme korunur
+      if (res['ok'] == 1 && res['bolgeler'] is List) {
+        setState(() => bolgeler = (res['bolgeler'] as List).map((e) => Map<String, dynamic>.from(e)).toList());
+      }
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(res['ok'] == 1 ? 'Şema kaydedildi ✓' : (res['hata']?.toString() ?? 'Kaydedilemedi')),
         backgroundColor: res['ok'] == 1 ? const Color(0xFF16A34A) : const Color(0xFFDC2626)));
