@@ -384,7 +384,7 @@ class _FiyatRadariScreenState extends State<FiyatRadariScreen> {
       (Icons.trending_up, _kirmizi, 'Gizli zam yıllık etkisi', '~${_p0(k['zam_etki'])}', '${_n(k['zam_say'])} malzemede %$esik+ artış'),
       (Icons.compare_arrows, _cyan, 'En ucuzdan alsaydın (yıllık)', '~${_p0(k['ted_kayip'])}', '${_l('karsilastirma').length} malzemede tedarikçi farkı'),
       (Icons.storefront_outlined, _yesil, 'Hal üstü fazla (yıllık)', '~${_p0(k['hal_fazla'])}', '${_halSat.length} malzeme halde eşleşti'),
-      (Icons.savings_outlined, _amber, 'Toplam tasarruf potansiyeli', '~${_p0(_n(k['zam_etki']) + _n(k['ted_kayip']) + _n(k['hal_fazla']))}', 'zam + tedarikçi + hal (kesişebilir)'),
+      (Icons.price_check, _amber, 'Toplam tasarruf potansiyeli', '~${_p0(_n(k['zam_etki']) + _n(k['ted_kayip']) + _n(k['hal_fazla']))}', 'zam + tedarikçi + hal (kesişebilir)'),
     ];
     return LayoutBuilder(builder: (_, c) {
       final sutun = c.maxWidth >= 1100 ? 5 : (c.maxWidth >= 640 ? 3 : 2);
@@ -1031,7 +1031,7 @@ class _FiyatRadariScreenState extends State<FiyatRadariScreen> {
     final bolumler = <Widget?>[
       _aiBolum(t, 'kritik', 'Kritik bulgular', Icons.report_outlined, _kirmizi, md),
       _aiBolum(t, 'gecmis_hatalar', 'Geçmiş hatalar', Icons.history, _amber, md),
-      _aiBolum(t, 'firsatlar', 'Tasarruf fırsatları', Icons.savings_outlined, _yesil, md),
+      _aiBolum(t, 'firsatlar', 'Tasarruf fırsatları', Icons.price_check, _yesil, md),
       _aiBolum(t, 'gelecek', 'Gelecek önerileri', Icons.insights, _mavi, md),
       _aiBolum(t, 'pazarlik', 'Pazarlık argümanları', Icons.handshake_outlined, _cyan, (x) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(_s(x['tedarikci']), style: TextStyle(color: t.ink, fontWeight: FontWeight.w800, fontSize: 12.5)),

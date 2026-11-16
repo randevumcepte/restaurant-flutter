@@ -698,7 +698,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final fcRenk = maliyetY >= 40 ? _kirmizi : (maliyetY >= 30 ? const Color(0xFFF59E0B) : _yesil);
     final mini = !genis; // telefon: 4 kart yan yana, kucuk
     final kartlar = [
-      _bilgiKart(Icons.savings_outlined, 'Brüt Kâr', _k(ciro - maliyet), 'food-cost sonrası', _yesil, mini: mini, sayi: ciro - maliyet, bicim: _k),
+      _bilgiKart(Icons.paid_outlined, 'Brüt Kâr', _k(ciro - maliyet), 'food-cost sonrası', _yesil, mini: mini, sayi: ciro - maliyet, bicim: _k),
       _bilgiKart(Icons.receipt_long_outlined, 'Ort. Adisyon', _tam(_n(d['adisyonOrt'])), 'adisyon başı', _mavi, mini: mini, sayi: _n(d['adisyonOrt']), bicim: _tam),
       _bilgiKart(Icons.local_fire_department_outlined, 'Food-Cost', '%$maliyetY', _k(maliyet), fcRenk, mini: mini, sayi: maliyetY, bicim: (v) => '%${v.round()}'),
       _bilgiKart(Icons.star_outline, 'En Çok Satan',
