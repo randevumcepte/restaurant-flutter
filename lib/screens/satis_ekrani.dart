@@ -171,7 +171,7 @@ class _SatisEkraniState extends State<SatisEkrani> {
           final adMap = {for (final u in urunler) _n((u as Map)['id']).toInt(): u['ad'].toString()};
           final istMap = {for (final u in urunler) _n((u as Map)['id']).toInt(): (u['istasyon']?.toString() ?? 'mutfak')};
           final fisKalem = _pending.entries.map((e) => <String, dynamic>{'adet': e.value, 'ad': adMap[e.key] ?? 'Ürün', 'istasyon': istMap[e.key] ?? 'mutfak'}).toList();
-          final yr = await YaziciServisi().otoMutfakFisi(masa: widget.masaAd, kalemler: fisKalem, adisyonNo: widget.adisyonId);
+          final yr = await YaziciServisi().otoMutfakFisi(masa: widget.masaAd, kalemler: fisKalem, adisyonNo: widget.adisyonId, tur: int.tryParse('${res['tur'] ?? ''}'));
           if (yr != null && yr != 'ok' && mounted) _snack('Mutfak yazıcı: $yr', _turuncu);
         } catch (_) {}
         // setState: "kaydedilmedi" bölümü ANINDA kalksın (clear tek başına rebuild tetiklemiyordu).

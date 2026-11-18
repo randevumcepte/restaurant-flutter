@@ -6,6 +6,7 @@ import '../config/app_config.dart';
 import '../local/sync_service.dart';
 import '../services/api.dart';
 import '../services/notification_service.dart';
+import '../services/qr_fis_servisi.dart';
 
 class AuthProvider extends ChangeNotifier {
   String? token;
@@ -258,6 +259,7 @@ class AuthProvider extends ChangeNotifier {
   Future<void> cikis() async {
     // Senkronu durdur (timer/observer).
     SyncService.instance.durdur();
+    QrFisServisi().durdur(); // QR fiş yoklaması (eski token'la istek atmasın)
     // Önce bu cihazın push kaydını backend'den düşür (token hâlâ geçerliyken).
     await NotificationService().tokenSil();
     final sp = await SharedPreferences.getInstance();

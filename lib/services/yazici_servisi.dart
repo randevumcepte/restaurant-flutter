@@ -23,6 +23,8 @@ class YaziciServisi {
   String mutfakIp = ''; // boş = ana yazıcı IP'si kullanılır (ayrı mutfak yazıcısı için doldur)
   // İSTASYON -> YAZICI IP eşlemesi (bar/izgara/firin/soguk/tatli ayrı yazıcı). Boşsa mutfakIp/ana kullanılır.
   Map<String, String> istasyonIp = {};
+  // QR SİPARİŞ FİŞİ: bu cihaz, masa QR'ından gelen siparişlerin mutfak/bar fişini bassın mı (cihaz başına, varsayılan açık)
+  bool qrFisBas = true;
   bool get mutfakYazar => mutfakMod == 'yazici' || mutfakMod == 'ikisi';
   String get _mutfakHedefIp => mutfakIp.trim().isNotEmpty ? mutfakIp.trim() : ip.trim();
   String _istasyonHedefIp(String ist) {
@@ -35,6 +37,7 @@ class YaziciServisi {
 
   int get _sut => dar ? 32 : 48;
   bool get ayarli => ip.trim().isNotEmpty;
+  bool get mutfakIpVar => _mutfakHedefIp.isNotEmpty;
 
   final _f = NumberFormat.decimalPattern('tr');
   String _tl(dynamic v) => '${_f.format((v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0)).round())} TL';
@@ -50,6 +53,7 @@ class YaziciServisi {
     kodSayfa = p.getInt('yz_kod') ?? 13;
     mutfakMod = p.getString('yz_mutfak_mod') ?? 'ekran';
     mutfakIp = p.getString('yz_mutfak_ip') ?? '';
+    qrFisBas = p.getBool('yz_qr_fis') ?? true;
     try {
       final j = p.getString('yz_ist_ip');
       istasyonIp = (j != null && j.isNotEmpty) ? (jsonDecode(j) as Map).map((k, v) => MapEntry(k.toString(), v.toString())) : {};
@@ -66,6 +70,7 @@ class YaziciServisi {
     await p.setInt('yz_kod', kodSayfa);
     await p.setString('yz_mutfak_mod', mutfakMod);
     await p.setString('yz_mutfak_ip', mutfakIp.trim());
+    await p.setBool('yz_qr_fis', qrFisBas);
     await p.setString('yz_ist_ip', jsonEncode(istasyonIp));
   }
 
@@ -121,12 +126,13 @@ class YaziciServisi {
 
   // ---------- Ağ gönderimi ----------
   Future<String> _gonder(List<int> bytes, {String? hedefIp}) async {
+    final veri = List<int>.from(bytes); // tampon (_b) kopyası: eşzamanlı başka baskı (QR fişi) bağlanırken tamponu silemesin
     final adres = (hedefIp ?? ip).trim();
     if (adres.isEmpty) return 'Yazıcı IP tanımlı değil. Ayarlar → Yazıcı Ayarları';
     Socket? s;
     try {
       s = await Socket.connect(adres, port, timeout: const Duration(seconds: 5));
-      s.add(bytes);
+      s.add(veri);
       await s.flush();
       await Future.delayed(const Duration(milliseconds: 250));
       return 'ok';
@@ -185,16 +191,20 @@ class YaziciServisi {
     return _gonder(_b);
   }
 
-  /// MUTFAK / HAZIRLIK FİŞİ (fiyatsız, büyük punto). d: {masa, garson, tarih, no?, istasyon?, kalemler:[{adet,ad,not?}], not}
+  /// MUTFAK / HAZIRLIK FİŞİ (fiyatsız, büyük punto). d: {masa, garson, tarih, no?, istasyon?, tur?, kaynak?, kalemler:[{adet,ad,not?}], not}
+  /// tur > 1 ise başlığın altında "*** 2. TUR ***" (aynı adisyona sonradan eklenen sipariş); kaynak (örn. QR) masa satırında.
   Future<String> mutfakFisi(Map d) async {
     await yukle();
     final ist = (d['istasyon']?.toString() ?? 'mutfak');
     _init();
     _hizala(1); _boyut(1, 1); _kalin(true);
     _satir('*** ${istasyonAd[ist] ?? 'MUTFAK'} ***');
+    final tur = _n(d['tur']).toInt();
+    if (tur > 1) _satir('*** $tur. TUR ***');
     _kalin(false); _boyut(0, 0); _hizala(0);
     _cizgi();
-    _ikiSutun('Masa: ${d['masa'] ?? '-'}', (d['no'] != null && '${d['no']}'.isNotEmpty) ? 'Fis #${d['no']}' : (d['tarih']?.toString() ?? ''));
+    final kaynak = d['kaynak']?.toString() ?? '';
+    _ikiSutun('Masa: ${d['masa'] ?? '-'}${kaynak.isNotEmpty ? ' ($kaynak)' : ''}', (d['no'] != null && '${d['no']}'.isNotEmpty) ? 'Fis #${d['no']}' : (d['tarih']?.toString() ?? ''));
     if (d['no'] != null) _ikiSutun('', d['tarih']?.toString() ?? '');
     if ((d['garson']?.toString() ?? '').isNotEmpty) _satir('Garson: ${d['garson']}');
     _cizgi();
@@ -216,7 +226,7 @@ class YaziciServisi {
   /// Mod 'ekran' ise HİÇBİR ŞEY yapmaz (sadece KDS). 'yazici'/'ikisi' ise fiş basar.
   /// kalemler: [{adet, ad, not?, istasyon?}]. İSTASYONA GÖRE AYRI FİŞ (bar ayrı, ızgara ayrı) + ayrı yazıcıya.
   /// Hata olursa sessizce kısa mesaj döner (akışı bozmaz).
-  Future<String?> otoMutfakFisi({required String masa, String? garson, required List<Map> kalemler, dynamic adisyonNo}) async {
+  Future<String?> otoMutfakFisi({required String masa, String? garson, required List<Map> kalemler, dynamic adisyonNo, int? tur}) async {
     await yukle();
     if (!mutfakYazar) return null;            // sadece ekran modu -> yazdırma yok
     if (kalemler.isEmpty) return null;
@@ -230,7 +240,7 @@ class YaziciServisi {
     }
     final hatalar = <String>[];
     for (final e in gruplar.entries) {
-      final r = await mutfakFisi({'masa': masa, 'garson': garson ?? '', 'tarih': saat, 'no': adisyonNo, 'istasyon': e.key, 'kalemler': e.value});
+      final r = await mutfakFisi({'masa': masa, 'garson': garson ?? '', 'tarih': saat, 'no': adisyonNo, 'tur': tur, 'istasyon': e.key, 'kalemler': e.value});
       if (r != 'ok') hatalar.add('${istasyonAd[e.key] ?? e.key}: $r');
     }
     return hatalar.isEmpty ? 'ok' : hatalar.join(' · ');

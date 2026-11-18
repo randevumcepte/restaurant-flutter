@@ -24,6 +24,7 @@ class _YaziciAyarlariScreenState extends State<YaziciAyarlariScreen> {
   String mutfakMod = 'ekran';
   bool dar = false;
   bool cekmece = true;
+  bool qrFisBas = true;
   bool turkce = true;
   bool yukleniyor = true;
   bool mesgul = false;
@@ -43,6 +44,7 @@ class _YaziciAyarlariScreenState extends State<YaziciAyarlariScreen> {
         mutfakMod = _srv.mutfakMod;
         dar = _srv.dar;
         cekmece = _srv.cekmece;
+        qrFisBas = _srv.qrFisBas;
         turkce = _srv.turkce;
         yukleniyor = false;
       });
@@ -58,6 +60,7 @@ class _YaziciAyarlariScreenState extends State<YaziciAyarlariScreen> {
     _srv.kodSayfa = int.tryParse(_kodC.text.trim()) ?? 13;
     _srv.dar = dar;
     _srv.cekmece = cekmece;
+    _srv.qrFisBas = qrFisBas;
     _srv.turkce = turkce;
     _srv.mutfakMod = mutfakMod;
     _srv.mutfakIp = _mutfakIpC.text.trim();
@@ -173,6 +176,15 @@ class _YaziciAyarlariScreenState extends State<YaziciAyarlariScreen> {
                   _alan(t, '🍹 Bar yazıcısı IP', _barIpC, ipuc: 'örn. 192.168.1.52', klavye: TextInputType.number),
                   const SizedBox(height: 10),
                   _alan(t, '🔥 Izgara yazıcısı IP', _izgaraIpC, ipuc: 'örn. 192.168.1.53', klavye: TextInputType.number),
+                  const SizedBox(height: 6),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    activeThumbColor: t.mor1,
+                    title: Text('Bu cihaz QR siparişlerinin mutfak/bar fişini bassın', style: TextStyle(color: t.ink, fontSize: 14)),
+                    subtitle: Text('Masa QR\'ından gelen siparişte garson cihazı yok; fişi bu cihaz basar. Birden çok cihaz açıksa aynı fiş iki kez basılmaz.',
+                        style: TextStyle(color: t.sub, fontSize: 11.5, height: 1.35)),
+                    value: qrFisBas, onChanged: (v) => setState(() => qrFisBas = v),
+                  ),
                 ],
               ])),
               const SizedBox(height: 20),

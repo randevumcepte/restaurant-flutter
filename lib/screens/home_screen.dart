@@ -58,6 +58,7 @@ import 'mesai_qr_screen.dart';
 import 'isletme_konum_screen.dart';
 import 'puantaj_screen.dart';
 import '../services/cihaz_servisi.dart';
+import '../services/qr_fis_servisi.dart';
 
 /// Uygulama kabugu — iki yuz:
 ///  • TELEFON: koyu bar + ortada mikrofon (mevcut mobil deneyim, aynen korunur).
@@ -103,6 +104,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (tok != null) {
         AdimServisi().baslat(tok);
         CihazServisi().baslat(tok, rol: auth.rol); // Bağlı Cihazlar: periyodik "buradayım" sinyali
+        QrFisServisi().baslat(tok); // QR siparişin mutfak/bar fişi (yalnız yazıcı modu + IP + ayar açıksa basar)
         // Mesai kilidi: garson/personel mesai açmadan işletme bilgilerini göremez (patron/müdür serbest)
         MesaiServisi().baslat(tok, rolKilit: !(auth.rol == 'sahip' || auth.rol == 'mudur'));
       }
@@ -112,6 +114,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     anaSekme.removeListener(_sekmeDinle);
+    QrFisServisi().durdur(); // çıkışta kabuk kapanır -> QR fiş yoklaması da durur
     super.dispose();
   }
 

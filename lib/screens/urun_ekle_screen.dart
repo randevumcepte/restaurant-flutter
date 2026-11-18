@@ -88,7 +88,7 @@ class _UrunEkleScreenState extends State<UrunEkleScreen> {
         // MUTFAK ÇIKTISI: moda göre fiş bas (ekran modunda hiçbir şey olmaz)
         try {
           final fisKalem = _sepet.entries.map((e) => <String, dynamic>{'adet': e.value, 'ad': _urunById[e.key]?['ad']?.toString() ?? 'Ürün', 'istasyon': _urunById[e.key]?['istasyon']?.toString() ?? 'mutfak'}).toList();
-          await YaziciServisi().otoMutfakFisi(masa: widget.baslik, kalemler: fisKalem, adisyonNo: widget.adisyonId);
+          await YaziciServisi().otoMutfakFisi(masa: widget.baslik, kalemler: fisKalem, adisyonNo: widget.adisyonId, tur: int.tryParse('${res['tur'] ?? ''}'));
         } catch (_) {}
         if (!mounted) return;
         Navigator.of(context).pop(true);

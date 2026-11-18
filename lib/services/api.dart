@@ -526,6 +526,18 @@ class Api {
     }
   }
 
+  // QR SİPARİŞ FİŞİ: masa QR'ından gelen kalemleri al (bu cihaza 90 sn kiralanır) -> bas -> sonucu bildir.
+  // Çevrimdışıyken buluta hiç gitmez (QR siparişi zaten bulutta; sonra alınır).
+  static Future<Map<String, dynamic>> mutfakFisAl(String token) async {
+    if (_pesinOffline()) return {'ok': 0, 'offline': 1};
+    return _post('/api/mutfak/fis-al', token, {});
+  }
+
+  static Future<Map<String, dynamic>> mutfakFisSonuc(String token, List<int> ids, bool basarili) async {
+    if (_pesinOffline()) return {'ok': 0, 'offline': 1};
+    return _post('/api/mutfak/fis-sonuc', token, {'kalem_ids': ids.join(','), 'basarili': basarili ? '1' : '0'});
+  }
+
   static Future<Map<String, dynamic>> mutfakHazir(String token, {int? kalemId, int? adisyonId, List<int>? kalemIds, String? istasyon}) async {
     final body = <String, String>{};
     if (kalemId != null) body['kalem_id'] = '$kalemId';
