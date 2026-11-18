@@ -174,6 +174,44 @@ class _GarsonCagrilariScreenState extends State<GarsonCagrilariScreen> {
     _cek();
   }
 
+  // QR "garsona/kasada öde" çağrısı: seçilen yöntemle tahsil et (önce onay). Sunucu yetkiyi denetler.
+  Future<void> _tahsil(Map<String, dynamic> c, String odemeTip) async {
+    if (_mesgul) return;
+    final etiket = const {'nakit': 'Nakit', 'kredi': 'Kart', 'yemek_karti': 'Yemek Kartı'}[odemeTip] ?? odemeTip;
+    final tutar = (c['tutar'] is num) ? (c['tutar'] as num).toDouble() : double.tryParse('${c['tutar'] ?? ''}');
+    final tutarYazi = tutar != null ? '${tutar.toStringAsFixed(2).replaceAll('.', ',')} TL' : 'Tutar';
+    final onay = await showDialog<bool>(
+      context: context,
+      builder: (d) => AlertDialog(
+        title: const Text('Tahsilat Onayı'),
+        content: Text('${c['masa'] ?? ''} · $tutarYazi $etiket ile tahsil edilsin mi?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(d, false), child: const Text('Vazgeç')),
+          FilledButton(onPressed: () => Navigator.pop(d, true), child: const Text('Tahsil Et')),
+        ],
+      ),
+    );
+    if (onay != true || !mounted) return;
+    _mesgul = true;
+    final auth = context.read<AuthProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final res = await Api.qrKasaTahsil(auth.token!, c['id'] as int, odemeTip);
+      final ok = res['ok'] == 1 || res['ok'] == true;
+      messenger.showSnackBar(SnackBar(
+        content: Text((ok ? res['mesaj'] : res['hata'])?.toString() ?? (ok ? 'Tahsil edildi' : 'Tahsil edilemedi')),
+        backgroundColor: ok ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+      ));
+      if (ok) _biliniyor.remove(c['id']);
+    } on ApiYetkiHatasi {
+      if (mounted) context.read<AuthProvider>().cikis();
+    } catch (_) {
+      messenger.showSnackBar(const SnackBar(content: Text('Bağlantı hatası — tahsilat gönderilemedi')));
+    }
+    _mesgul = false;
+    if (mounted) _cek();
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = _t;
@@ -245,7 +283,8 @@ class _GarsonCagrilariScreenState extends State<GarsonCagrilariScreen> {
         border: Border.all(color: geciken ? t.kirmizi : t.line, width: geciken ? 1.6 : 1),
         boxShadow: t.golge,
       ),
-      child: Row(children: [
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+      Row(children: [
         Container(
           width: 50, height: 50,
           decoration: BoxDecoration(color: vurgu.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(14)),
@@ -275,6 +314,37 @@ class _GarsonCagrilariScreenState extends State<GarsonCagrilariScreen> {
                 child: const Text('✓', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
               ),
       ]),
+      // QR "garsona/kasada öde": tutar + yöntem seçip tahsil et (✓ = yalnız karşılandı)
+      if (tip == 'odeme') ...[
+        if (c['tutar'] != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: Align(alignment: Alignment.centerLeft, child: Text(
+              'Tahsil edilecek: ${((c['tutar'] is num) ? (c['tutar'] as num).toDouble() : (double.tryParse('${c['tutar']}') ?? 0)).toStringAsFixed(2).replaceAll('.', ',')} TL',
+              style: TextStyle(color: t.ink, fontSize: 14, fontWeight: FontWeight.w700))),
+          ),
+        const SizedBox(height: 10),
+        Row(children: [
+          _tahsilBtn(c, 'nakit', 'Nakit', Icons.payments_outlined, const Color(0xFF16A34A)),
+          const SizedBox(width: 8),
+          _tahsilBtn(c, 'kredi', 'Kart', Icons.credit_card, const Color(0xFF2563EB)),
+          const SizedBox(width: 8),
+          _tahsilBtn(c, 'yemek_karti', 'Yemek Kartı', Icons.restaurant, const Color(0xFFD97706)),
+        ]),
+      ],
+      ]),
     );
   }
+
+  Widget _tahsilBtn(Map<String, dynamic> c, String odemeTip, String etiket, IconData ikon, Color renk) => Expanded(
+        child: SizedBox(
+          height: 42,
+          child: FilledButton.icon(
+            onPressed: () => _tahsil(c, odemeTip),
+            style: FilledButton.styleFrom(backgroundColor: renk, padding: const EdgeInsets.symmetric(horizontal: 6)),
+            icon: Icon(ikon, color: Colors.white, size: 17),
+            label: FittedBox(fit: BoxFit.scaleDown, child: Text(etiket, style: const TextStyle(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.w700))),
+          ),
+        ),
+      );
 }

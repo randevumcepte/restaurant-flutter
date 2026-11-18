@@ -478,6 +478,10 @@ class _UrunDuzenleSayfaState extends State<_UrunDuzenleSayfa> {
   late TextEditingController fiyatCtrl;
   late TextEditingController aciklamaCtrl;
   int kategoriId = 0;
+  String istasyon = ''; // KDS istasyonu; '' = seçilmedi (gönderilmez)
+  static const Map<String, String> _istasyonlar = {
+    'izgara': '🔥 Izgara', 'firin': '🍕 Fırın', 'mutfak': '🍳 Sıcak', 'soguk': '🥗 Soğuk', 'tatli': '🍰 Tatlı', 'bar': '🍹 Bar',
+  };
   bool tukendi = false;
   bool aktif = true;
   bool oneCikan = false;
@@ -499,6 +503,8 @@ class _UrunDuzenleSayfaState extends State<_UrunDuzenleSayfa> {
     fiyatCtrl = TextEditingController(text: u != null ? '${(u['fiyat'] is num ? u['fiyat'] : num.tryParse('${u['fiyat']}') ?? 0)}' : '');
     aciklamaCtrl = TextEditingController(text: u?['aciklama']?.toString() ?? '');
     kategoriId = (u?['kategori_id'] ?? 0) as int;
+    final ist = u?['istasyon']?.toString() ?? '';
+    istasyon = _istasyonlar.containsKey(ist) ? ist : '';
     tukendi = u?['tukendi'] == true;
     aktif = u == null ? true : u['aktif'] != false;
     oneCikan = u?['one_cikan'] == true;
@@ -523,7 +529,7 @@ class _UrunDuzenleSayfaState extends State<_UrunDuzenleSayfa> {
       final r = await Api.urunKaydet(auth.token!,
           id: urunId, ad: adCtrl.text.trim(), aciklama: aciklamaCtrl.text.trim(),
           fiyat: fiyat, kategoriId: kategoriId, tukendi: tukendi, aktif: aktif,
-          oneCikan: oneCikan, oneSoz: oneSozCtrl.text.trim());
+          oneCikan: oneCikan, oneSoz: oneSozCtrl.text.trim(), istasyon: istasyon);
       if (!mounted) return false;
       if (r['ok'] == 1) {
         final urn = Map<String, dynamic>.from(r['urun'] ?? {});
@@ -672,6 +678,26 @@ class _UrunDuzenleSayfaState extends State<_UrunDuzenleSayfa> {
                   for (final k in kats) DropdownMenuItem(value: k['id'] as int, child: Text('${k['ad']}')),
                 ],
                 onChanged: (v) => setState(() => kategoriId = v ?? 0),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // İstasyon (KDS): hangi mutfak ekranına düşer — opsiyonel
+          Container(
+            decoration: BoxDecoration(color: t.card2, borderRadius: BorderRadius.circular(10), border: Border.all(color: t.line)),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: istasyon,
+                isExpanded: true,
+                dropdownColor: t.card,
+                iconEnabledColor: t.sub,
+                style: TextStyle(color: t.ink, fontSize: 14.5),
+                items: [
+                  DropdownMenuItem(value: '', child: Text(yeni ? 'İstasyon: otomatik (ürün adından)' : 'İstasyon: değiştirme', style: TextStyle(color: t.sub))),
+                  for (final e in _istasyonlar.entries) DropdownMenuItem(value: e.key, child: Text('İstasyon: ${e.value}')),
+                ],
+                onChanged: (v) => setState(() => istasyon = v ?? ''),
               ),
             ),
           ),

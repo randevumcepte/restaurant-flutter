@@ -20,6 +20,8 @@ class _OdemeModuScreenState extends State<OdemeModuScreen> {
   int kacakDk = 90;
   List bolgeler = []; // [{id, ad, mod}] — mod '' = restoran varsayılanı
   bool loading = true, kaydediyor = false, duzenleyebilir = false;
+  // QR masada ödeme yolları (sunucu döndürdüyse gösterilir/gönderilir)
+  bool qrVar = false, qrKasa = true, qrOnline = true, qrOnlineCalisir = false;
 
   static const Map<String, String> _modAd = {'': 'Varsayılan', 'post_pay': 'Klasik', 'on_odeme': 'Ön Ödemeli', 'acik_kart': 'Açık Hesap+Kart'};
 
@@ -43,6 +45,10 @@ class _OdemeModuScreenState extends State<OdemeModuScreen> {
         kacakDk = (res['kacak_dk'] is num) ? (res['kacak_dk'] as num).toInt() : int.tryParse('${res['kacak_dk']}') ?? 90;
         bolgeler = (res['bolgeler'] as List?) ?? [];
         duzenleyebilir = res['duzenleyebilir'] == true;
+        qrVar = res.containsKey('qr_kasa') || res.containsKey('qr_online');
+        qrKasa = res['qr_kasa'] != false && res['qr_kasa'] != 0;
+        qrOnline = res['qr_online'] != false && res['qr_online'] != 0;
+        qrOnlineCalisir = res['qr_online_calisir'] == true || res['qr_online_calisir'] == 1;
         loading = false;
       });
     } on ApiYetkiHatasi {
@@ -57,7 +63,8 @@ class _OdemeModuScreenState extends State<OdemeModuScreen> {
     setState(() => kaydediyor = true);
     try {
       final res = await Api.odemeModuKaydet(auth.token!, mod: mod, kacakAktif: kacakAktif, kacakDk: kacakDk,
-          bolgeler: jsonEncode(bolgeler.map((b) => {'id': (b as Map)['id'], 'mod': b['mod'] ?? ''}).toList()));
+          bolgeler: jsonEncode(bolgeler.map((b) => {'id': (b as Map)['id'], 'mod': b['mod'] ?? ''}).toList()),
+          qrKasa: qrVar ? qrKasa : null, qrOnline: qrVar ? qrOnline : null);
       if (!mounted) return;
       if (res['ok'] == 1) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Kaydedildi ✓')));
@@ -98,6 +105,42 @@ class _OdemeModuScreenState extends State<OdemeModuScreen> {
                   style: TextStyle(color: t.ink, fontSize: 12.5, height: 1.35),
                 ),
               ),
+
+              if (qrVar) ...[
+                _baslik(t, 'QR Masada Ödeme Seçenekleri'),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                  decoration: BoxDecoration(color: t.card, borderRadius: BorderRadius.circular(12), border: Border.all(color: t.line)),
+                  child: Column(children: [
+                    SwitchListTile(
+                      value: qrKasa,
+                      activeThumbColor: const Color(0xFF22C55E),
+                      contentPadding: EdgeInsets.zero,
+                      title: Text('Garsona / kasada öde', style: TextStyle(color: t.ink, fontSize: 14.5)),
+                      subtitle: Text('Müşteri “hesabı öde” deyince garsona tutarlı ödeme çağrısı ve bildirim gider; garson nakit ya da kartla tahsil eder.', style: TextStyle(color: t.sub2, fontSize: 12)),
+                      onChanged: duzenleyebilir ? (v) => setState(() => qrKasa = v) : null,
+                    ),
+                    Divider(color: t.line, height: 1),
+                    SwitchListTile(
+                      value: qrOnline,
+                      activeThumbColor: const Color(0xFF22C55E),
+                      contentPadding: EdgeInsets.zero,
+                      title: Text('Kartla online öde', style: TextStyle(color: t.ink, fontSize: 14.5)),
+                      subtitle: Text(
+                        qrOnlineCalisir
+                            ? 'Müşteri kendi telefonundan kartla öder.'
+                            : 'Açık olsa bile müşteriye görünmez: online ödeme sağlayıcısı (PayTR / iyzico) henüz bağlı değil.',
+                        style: TextStyle(color: qrOnlineCalisir ? t.sub2 : const Color(0xFFF59E0B), fontSize: 12),
+                      ),
+                      onChanged: duzenleyebilir ? (v) => setState(() => qrOnline = v) : null,
+                    ),
+                  ]),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 6, left: 2),
+                  child: Text('İkisi de kapatılırsa müşteri yine garsona ödeyebilir (hesap ödenmeden kalmasın diye).', style: TextStyle(color: t.sub2, fontSize: 12, height: 1.35)),
+                ),
+              ],
 
               _baslik(t, 'Kaçak Radarı'),
               Container(

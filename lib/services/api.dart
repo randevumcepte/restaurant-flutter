@@ -518,17 +518,21 @@ class Api {
   static Future<Map<String, dynamic>> mutfak(String token, {String? istasyon}) async {
     if (_pesinOffline()) return YerelMotor.instance.mutfak();
     try {
-      return await _get('/api/mutfak${istasyon != null && istasyon != 'hepsi' ? '?istasyon=$istasyon' : ''}', token);
+      // tur_ayri=1 -> ayni masanin 2./3. turu AYRI fis ('kart' anahtari: "39-2"); sunucu istasyon_aktif + bar_ayri doner
+      return await _get('/api/mutfak?tur_ayri=1${istasyon != null && istasyon != 'hepsi' ? '&istasyon=$istasyon' : ''}', token);
     } catch (e) {
       if (_yerelUygun(e)) return YerelMotor.instance.mutfak();
       rethrow;
     }
   }
 
-  static Future<Map<String, dynamic>> mutfakHazir(String token, {int? kalemId, int? adisyonId}) async {
+  static Future<Map<String, dynamic>> mutfakHazir(String token, {int? kalemId, int? adisyonId, List<int>? kalemIds, String? istasyon}) async {
     final body = <String, String>{};
     if (kalemId != null) body['kalem_id'] = '$kalemId';
     if (adisyonId != null) body['adisyon_id'] = '$adisyonId';
+    // Fis (kart) bazli: yalniz o fisin kalemleri degisir (2. tur ayri fis)
+    if (kalemIds != null && kalemIds.isNotEmpty) body['kalem_ids'] = kalemIds.join(',');
+    if (istasyon != null && istasyon.isNotEmpty) body['istasyon'] = istasyon;
     if (_pesinOffline() && adisyonId != null) return YerelMotor.instance.mutfakDurum(adisyonId, 'hazir', ['gonderildi', 'hazirlaniyor']);
     try {
       final r = await http.post(Uri.parse('$base/api/mutfak/hazir'),
@@ -544,10 +548,13 @@ class Api {
   }
 
   // Hazirlamaya BASLA (Yeni -> Hazirlaniyor)
-  static Future<Map<String, dynamic>> mutfakBasla(String token, {int? kalemId, int? adisyonId}) async {
+  static Future<Map<String, dynamic>> mutfakBasla(String token, {int? kalemId, int? adisyonId, List<int>? kalemIds, String? istasyon}) async {
     final body = <String, String>{};
     if (kalemId != null) body['kalem_id'] = '$kalemId';
     if (adisyonId != null) body['adisyon_id'] = '$adisyonId';
+    // Fis (kart) bazli: yalniz o fisin kalemleri degisir (2. tur ayri fis)
+    if (kalemIds != null && kalemIds.isNotEmpty) body['kalem_ids'] = kalemIds.join(',');
+    if (istasyon != null && istasyon.isNotEmpty) body['istasyon'] = istasyon;
     if (_pesinOffline() && adisyonId != null) return YerelMotor.instance.mutfakDurum(adisyonId, 'hazirlaniyor', ['gonderildi']);
     try {
       final r = await http.post(Uri.parse('$base/api/mutfak/basla'),
@@ -672,8 +679,10 @@ class Api {
 
   // ---- ODEME MODU / KACAK ONLEME (sahip/mudur) ----
   static Future<Map<String, dynamic>> odemeModu(String token) => _get('/api/patron/odeme-modu', token);
-  static Future<Map<String, dynamic>> odemeModuKaydet(String token, {required String mod, required bool kacakAktif, required int kacakDk, String? bolgeler}) =>
-      _post('/api/patron/odeme-modu-kaydet', token, {'mod': mod, 'kacak_aktif': kacakAktif ? '1' : '0', 'kacak_dk': '$kacakDk', if (bolgeler != null) 'bolgeler': bolgeler});
+  static Future<Map<String, dynamic>> odemeModuKaydet(String token, {required String mod, required bool kacakAktif, required int kacakDk, String? bolgeler, bool? qrKasa, bool? qrOnline}) =>
+      _post('/api/patron/odeme-modu-kaydet', token, {'mod': mod, 'kacak_aktif': kacakAktif ? '1' : '0', 'kacak_dk': '$kacakDk', if (bolgeler != null) 'bolgeler': bolgeler,
+        // QR masada ödeme yolları: garsona/kasada öde + kartla online öde
+        if (qrKasa != null) 'qr_kasa': qrKasa ? '1' : '0', if (qrOnline != null) 'qr_online': qrOnline ? '1' : '0'});
 
   static Future<Map<String, dynamic>> masaTasi(String token, int adisyonId, int yeniMasaId) =>
       _post('/api/patron/masa-tasi', token, {'adisyon_id': '$adisyonId', 'yeni_masa_id': '$yeniMasaId'});
@@ -766,6 +775,9 @@ class Api {
   static Future<Map<String, dynamic>> garsonCagrilari(String token) => _get('/api/patron/garson-cagrilari', token);
   static Future<Map<String, dynamic>> garsonCagriKapat(String token, int id) => _post('/api/patron/garson-cagri-kapat', token, {'id': '$id'});
   static Future<Map<String, dynamic>> garsonCagriHepsiniKapat(String token) => _post('/api/patron/garson-cagri-hepsini-kapat', token, {});
+  // QR "garsona/kasada öde" cagrisini tahsil et: odemeTip = nakit | kredi | yemek_karti (yetki yoksa ok:0 + hata)
+  static Future<Map<String, dynamic>> qrKasaTahsil(String token, int cagriId, String odemeTip) =>
+      _post('/api/qr/kasa-tahsil', token, {'cagri_id': '$cagriId', 'odeme_tip': odemeTip});
   static Future<Map<String, dynamic>> garsonOzet(String token) => _get('/api/patron/garson-ozet', token);
   // Servis / Garson iş akışı (A) + Servis Şefi ekip görünümü (B)
   static Future<Map<String, dynamic>> servisAkis(String token) => _get('/api/servis/akis', token);
@@ -801,13 +813,15 @@ class Api {
 
   static Future<Map<String, dynamic>> urunKaydet(String token,
       {int? id, required String ad, String aciklama = '', required double fiyat, int kategoriId = 0, bool tukendi = false, bool aktif = true,
-      bool oneCikan = false, String oneSoz = ''}) {
+      bool oneCikan = false, String oneSoz = '', String? istasyon}) {
     final body = {
       'ad': ad, 'aciklama': aciklama, 'fiyat': '$fiyat', 'kategori_id': '$kategoriId',
       'tukendi': tukendi ? '1' : '0', 'aktif': aktif ? '1' : '0',
       'one_cikan': oneCikan ? '1' : '0', 'one_soz': oneSoz,
     };
     if (id != null) body['id'] = '$id';
+    // KDS istasyonu: yalniz secildiyse gonder (bossa sunucu mevcudu korur / yeni urunde addan tahmin eder)
+    if (istasyon != null && istasyon.isNotEmpty) body['istasyon'] = istasyon;
     return _postMenu('/api/patron/urun-kaydet', token, body);
   }
 

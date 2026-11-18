@@ -29,9 +29,10 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
 
   // --- Sekme 1: aktif siparişler ---
   List siparisler = [];
-  List<int> _mutfakSira = []; // "One Al" ile belirlenen adisyon sirasi (one cekilenler basta)
+  List<String> _mutfakSira = []; // "One Al" ile belirlenen fis (kart) sirasi (one cekilenler basta)
   int _yogunluk = 2; // izgara yogunlugu: 0=buyuk/seyrek .. 3=kucuk/sik (varsayilan sik -> cok fis sigsin)
-  Set<int> _bilinenSiparis = {}; // yeni siparis tespiti (ses uyarisi)
+  Set<String> _bilinenSiparis = {}; // yeni siparis tespiti (ses uyarisi) — fis (kart) anahtari
+  bool _barAyri = false; // isletmede ayri bar istasyonu var -> 'hepsi' = icecekler HARIC mutfak
   bool _ilkYukleme = true;
   List istasyonlar = [];
   List toplu = [];
@@ -69,6 +70,14 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
 
   num _n(dynamic v) => v is num ? v : (num.tryParse(v?.toString() ?? '0') ?? 0);
 
+  // Fis anahtari: tur_ayri=1 ile ayni adisyonun 2. turu ayri kart gelir ("39-2") -> adisyon_id TEKIL DEGIL.
+  String _kartKey(Map s) => (s['kart'] ?? s['adisyon_id']).toString();
+  // Bu fisin kalem id'leri (Basla/Hazir yalniz bunlara uygulanir); eski sunucu -> kalemlerden topla
+  List<int> _kartKalemIds(Map s) {
+    final ids = (s['kalem_ids'] as List?) ?? [for (final k in ((s['kalemler'] as List?) ?? [])) (k as Map)['id']];
+    return [for (final v in ids) _n(v).toInt()].where((i) => i > 0).toList();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -101,26 +110,26 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
   // _mutfakSira'yi mevcut adisyonlara gore gunceller (artik olmayanlari atar).
   List _siraUygula(List list) {
     if (_mutfakSira.isEmpty) return list;
-    final byId = {for (final e in list) _n((e as Map)['adisyon_id']).toInt(): e};
+    final byId = {for (final e in list) _kartKey(e as Map): e};
     final sonuc = [];
     for (final id in _mutfakSira) {
       final e = byId.remove(id);
       if (e != null) sonuc.add(e);
     }
-    sonuc.addAll(byId.values); // manuel sirada olmayan (yeni gelen) adisyonlar -> sona
-    _mutfakSira = [for (final e in sonuc) _n((e as Map)['adisyon_id']).toInt()];
+    sonuc.addAll(byId.values); // manuel sirada olmayan (yeni gelen) fisler -> sona
+    _mutfakSira = [for (final e in sonuc) _kartKey(e as Map)];
     return sonuc;
   }
 
   // "Öne Al": bir fisi listenin basina (sol-ust) cek + manuel sirayi kaydet (yenilemelerde korunur)
-  void _oneAl(int adId) {
+  void _oneAl(String kart) {
     setState(() {
-      final idx = siparisler.indexWhere((e) => _n((e as Map)['adisyon_id']).toInt() == adId);
+      final idx = siparisler.indexWhere((e) => _kartKey(e as Map) == kart);
       if (idx > 0) {
         final item = siparisler.removeAt(idx);
         siparisler.insert(0, item);
       }
-      _mutfakSira = [for (final e in siparisler) _n((e as Map)['adisyon_id']).toInt()];
+      _mutfakSira = [for (final e in siparisler) _kartKey(e as Map)];
     });
   }
 
@@ -138,12 +147,16 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
       final res = await Api.mutfak(_token, istasyon: seciliIst);
       if (!mounted) return;
       final gelen = (res['siparisler'] as List?) ?? [];
-      // Yeni siparis tespiti (daha once gormedigimiz adisyon id) -> ses uyarisi
-      final yeniIdler = {for (final s in gelen) _n((s as Map)['adisyon_id']).toInt()};
+      // Yeni siparis tespiti (daha once gormedigimiz fis — 2. tur da yeni fis) -> ses uyarisi
+      final yeniIdler = {for (final s in gelen) _kartKey(s as Map)};
       final yeniGeldi = !_ilkYukleme && yeniIdler.any((id) => !_bilinenSiparis.contains(id));
       _bilinenSiparis = yeniIdler;
       _ilkYukleme = false;
+      // Sunucunun cozdugu istasyon: bar personeli 'hepsi' isteyince 'bar' gelir -> cip onu gostersin
+      final aktif = res['istasyon_aktif']?.toString();
       setState(() {
+        _barAyri = res['bar_ayri'] == true || res['bar_ayri'] == 1;
+        if (seciliIst == 'hepsi' && aktif != null && aktif.isNotEmpty && aktif != 'hepsi') seciliIst = aktif;
         siparisler = _siraUygula(gelen); // elle one alinan sira korunur
         istasyonlar = (res['istasyonlar'] as List?) ?? [];
         toplu = (res['toplu'] as List?) ?? [];
@@ -216,9 +229,10 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
     }
   }
 
-  Future<void> _hazir(int adisyonId) async {
+  // Fis (kart) bazli: kalem_ids + ekranin istasyonu -> yalniz bu fisin kalemleri degisir
+  Future<void> _hazir(Map s) async {
     try {
-      await Api.mutfakHazir(_token, adisyonId: adisyonId);
+      await Api.mutfakHazir(_token, adisyonId: _n(s['adisyon_id']).toInt(), kalemIds: _kartKalemIds(s), istasyon: seciliIst);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: const Text('✓ Hazır — "Servise Hazır" sekmesine taşındı, garson alacak'),
@@ -229,9 +243,9 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
     } catch (e) { _islemHata(e); }
   }
 
-  Future<void> _basla(int adisyonId) async {
+  Future<void> _basla(Map s) async {
     try {
-      await Api.mutfakBasla(_token, adisyonId: adisyonId);
+      await Api.mutfakBasla(_token, adisyonId: _n(s['adisyon_id']).toInt(), kalemIds: _kartKalemIds(s), istasyon: seciliIst);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: const Text('👨‍🍳 Hazırlanmaya başlandı'),
@@ -380,7 +394,7 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(children: [
-                _cip('Tümü', 'hepsi', toplamBekleyen),
+                _cip(_barAyri ? 'Mutfak (tümü)' : 'Tümü', 'hepsi', toplamBekleyen),
                 for (final ist in istasyonlar)
                   _cip((ist as Map)['ad'].toString(), ist['kod'].toString(), _n(ist['bekleyen']).toInt()),
               ]),
@@ -589,7 +603,7 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
               Tooltip(
                 message: 'Öne al (önceliklendir)',
                 child: InkWell(
-                  onTap: () => _oneAl(adId),
+                  onTap: () => _oneAl(_kartKey(s)),
                   borderRadius: BorderRadius.circular(7),
                   child: Container(
                     padding: const EdgeInsets.all(4),
@@ -670,7 +684,7 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
                 child: SizedBox(
                   height: 40,
                   child: OutlinedButton(
-                    onPressed: () => _basla(adId),
+                    onPressed: () => _basla(s),
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(color: _amber, width: 1.4), padding: const EdgeInsets.symmetric(horizontal: 6),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -685,7 +699,7 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
               child: SizedBox(
                 height: 40,
                 child: FilledButton(
-                  onPressed: () => _hazir(adId),
+                  onPressed: () => _hazir(s),
                   style: FilledButton.styleFrom(
                     backgroundColor: _yesil, padding: const EdgeInsets.symmetric(horizontal: 6),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
