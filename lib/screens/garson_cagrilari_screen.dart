@@ -295,6 +295,9 @@ class _GarsonCagrilariScreenState extends State<GarsonCagrilariScreen> {
           Text(tip == 'tasima' && c['hedef'] != null ? '${c['masa']} → ${c['hedef']}' : (c['masa']?.toString() ?? ''), style: TextStyle(color: t.ink, fontSize: 19, fontWeight: FontWeight.w900)),
           const SizedBox(height: 2),
           Text(_tipYazi(tip), style: TextStyle(color: vurgu, fontSize: 13.5, fontWeight: FontWeight.w700)),
+          // Ne hazır / ne sipariş edildi ("Margarita, Kola, Sütlaç")
+          if ((c['detay']?.toString() ?? '').isNotEmpty)
+            Text(c['detay'].toString(), maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.ink, fontSize: 13, fontWeight: FontWeight.w700)),
         ])),
         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
           Text(_sure(sn), style: TextStyle(color: geciken ? t.kirmizi : t.gold, fontSize: 16, fontWeight: FontWeight.w800)),
@@ -311,7 +314,8 @@ class _GarsonCagrilariScreenState extends State<GarsonCagrilariScreen> {
             : FilledButton(
                 onPressed: () => _kapat(c['id'] as int),
                 style: FilledButton.styleFrom(backgroundColor: const Color(0xFF16A34A), padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12)),
-                child: const Text('✓', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
+                // Servise hazır: basınca ürünler SERVİS EDİLDİ olur (web ile aynı); diğer çağrılarda ✓ = karşılandı
+                child: Text(tip == 'servise_hazir' ? 'Servis edildi' : '✓', style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
               ),
       ]),
       // QR "garsona/kasada öde": tutar + yöntem seçip tahsil et (✓ = yalnız karşılandı)
