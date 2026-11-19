@@ -489,7 +489,7 @@ class Api {
     _menuCacheZaman = null;
   }
 
-  static Future<Map<String, dynamic>> adisyonUrunEkle(String token, int adisyonId, List<Map<String, int>> kalemler) async {
+  static Future<Map<String, dynamic>> adisyonUrunEkle(String token, int adisyonId, List<Map<String, dynamic>> kalemler) async {
     if (_pesinOffline()) return YerelMotor.instance.siparisEkle(adisyonId, kalemler);
     try {
       final r = await http.post(
@@ -504,6 +504,13 @@ class Api {
       rethrow;
     }
   }
+
+  // Ürün notu ("Soğansız · ALERJİ: Gluten") — masa alerjisi sunucuda her zaman korunur
+  static Future<Map<String, dynamic>> kalemNot(String token, int kalemId, String not) =>
+      _post('/api/patron/kalem-not', token, {'kalem_id': '$kalemId', 'not': not});
+  // Masa alerjisi: adisyonun bütün (gönderilmiş + sonraki) kalemlerine yazılır. Dönüş: alerji, riskli (ürün adları)
+  static Future<Map<String, dynamic>> adisyonAlerji(String token, int adisyonId, List<String> alerji) =>
+      _post('/api/patron/adisyon-alerji', token, {'adisyon_id': '$adisyonId', 'alerji': alerji.join(',')});
 
   static Future<Map<String, dynamic>> kalemVoid(String token, int adisyonId, int kalemId, {String? sebep, String? onayPin}) async {
     final body = <String, String>{'adisyon_id': '$adisyonId', 'kalem_id': '$kalemId'};

@@ -816,6 +816,21 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
                       style: TextStyle(color: alerji ? _kirmizi : _amber, fontSize: 11.5, fontWeight: (alerji || sonra) ? FontWeight.bold : FontWeight.w600, height: 1.15)),
                 );
               }),
+            // Yemekten sonra istenen ürün: masanın ana yemeği hâlâ hazırlanıyorsa BEKLET (sunucu hesaplar)
+            if (k['bekle'] == true)
+              Container(
+                margin: const EdgeInsets.only(top: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                decoration: BoxDecoration(color: const Color(0xFF64748B).withValues(alpha: 0.16), borderRadius: BorderRadius.circular(6)),
+                child: const Text('⏸ BEKLET · ana yemek hazırlanıyor', style: TextStyle(color: Color(0xFF64748B), fontSize: 11.5, fontWeight: FontWeight.bold)),
+              )
+            else if (k['bekle'] == false && parcalar.any((p) => p.toLowerCase().contains('sonra getir')) && k['durum'] == 'gonderildi')
+              Container(
+                margin: const EdgeInsets.only(top: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                decoration: BoxDecoration(color: _amber.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(6)),
+                child: Text('▶ Şimdi hazırlanabilir', style: TextStyle(color: _amber, fontSize: 11.5, fontWeight: FontWeight.bold)),
+              ),
           ]),
         ),
       ]),

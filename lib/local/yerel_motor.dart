@@ -171,6 +171,7 @@ class YerelMotor {
         urunAdi: (u.first['ad'] as String?) ?? '',
         adet: adet,
         birimFiyat: (u.first['fiyat'] as num?)?.toDouble() ?? 0,
+        not: (k['not']?.toString().isNotEmpty ?? false) ? k['not'].toString() : null, // ürün notu / alerji (sync ile sunucuya gider)
         durum: 'gonderildi', // mutfaga dus
       );
       eklenen++;

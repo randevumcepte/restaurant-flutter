@@ -6,6 +6,7 @@ import '../providers/tema_provider.dart';
 import '../services/api.dart';
 import '../services/yazici_servisi.dart';
 import 'barkod_tarayici.dart';
+import '../widgets/not_alerji_sheet.dart';
 
 /// Sipariş girişi (POS çekirdeği): menüden ürün seç -> sepet -> adisyona ekle.
 /// Hem patron app hem (ileride) garson terminali için ortak.
@@ -23,6 +24,8 @@ class _UrunEkleScreenState extends State<UrunEkleScreen> {
   List urunler = [];
   final Map<int, Map> _urunById = {};
   final Map<int, int> _sepet = {}; // urunId -> adet
+  final Map<int, String> _notlar = {}; // urunId -> "Soğansız · ALERJİ: Gluten"
+  List<String> _masaAlerji = []; // adisyonun alerjisi (her kaleme yazılır)
   int? _kat;
   bool loading = true;
   bool _gonderiliyor = false;
@@ -52,7 +55,9 @@ class _UrunEkleScreenState extends State<UrunEkleScreen> {
     setState(() => loading = true);
     try {
       final res = await Api.menu(auth.token!);
+      final kl = await Api.adisyonKalemleri(auth.token!, widget.adisyonId).catchError((_) => <String, dynamic>{});
       if (!mounted) return;
+      _masaAlerji = ((kl['alerji'] as List?) ?? []).map((e) => e.toString()).toList();
       kategoriler = (res['kategoriler'] as List?) ?? [];
       urunler = (res['urunler'] as List?) ?? [];
       _urunById.clear();
@@ -80,16 +85,20 @@ class _UrunEkleScreenState extends State<UrunEkleScreen> {
     if (_sepet.isEmpty || _gonderiliyor) return;
     setState(() => _gonderiliyor = true);
     final auth = context.read<AuthProvider>();
-    final kalemler = _sepet.entries.map((e) => {'urun_id': e.key, 'adet': e.value}).toList();
+    String notu(int id) => NotAlerji.birlestir(_notlar[id], _masaAlerji);
+    final kalemler = _sepet.entries.map((e) => <String, dynamic>{'urun_id': e.key, 'adet': e.value, if (notu(e.key).isNotEmpty) 'not': notu(e.key)}).toList();
     try {
       final res = await Api.adisyonUrunEkle(auth.token!, widget.adisyonId, kalemler);
       if (!mounted) return;
       if (res['ok'] == 1) {
         // MUTFAK ÇIKTISI: moda göre fiş bas (ekran modunda hiçbir şey olmaz)
         try {
-          final fisKalem = _sepet.entries.map((e) => <String, dynamic>{'adet': e.value, 'ad': _urunById[e.key]?['ad']?.toString() ?? 'Ürün', 'istasyon': _urunById[e.key]?['istasyon']?.toString() ?? 'mutfak'}).toList();
+          final fisKalem = _sepet.entries.map((e) => <String, dynamic>{'adet': e.value, 'ad': _urunById[e.key]?['ad']?.toString() ?? 'Ürün', 'istasyon': _urunById[e.key]?['istasyon']?.toString() ?? 'mutfak', 'not': notu(e.key)}).toList();
           await YaziciServisi().otoMutfakFisi(masa: widget.baslik, kalemler: fisKalem, adisyonNo: widget.adisyonId, tur: int.tryParse('${res['tur'] ?? ''}'));
         } catch (_) {}
+        if (!mounted) return;
+        final riskli = (res['alerji_uyari'] as List?) ?? [];
+        if (riskli.isNotEmpty) await NotAlerji.riskUyari(context, riskli);
         if (!mounted) return;
         Navigator.of(context).pop(true);
       } else {
@@ -103,6 +112,31 @@ class _UrunEkleScreenState extends State<UrunEkleScreen> {
         setState(() => _gonderiliyor = false);
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bağlantı hatası')));
       }
+    }
+  }
+
+  Future<void> _notDuzenle(int id) async {
+    final n = await NotAlerji.kalemNotSec(context, urunAd: _urunById[id]?['ad']?.toString() ?? 'Ürün', mevcut: _notlar[id], masaAlerji: _masaAlerji);
+    if (n == null || !mounted) return;
+    setState(() { if (n.isEmpty) { _notlar.remove(id); } else { _notlar[id] = n; } });
+  }
+
+  Future<void> _alerjiDuzenle() async {
+    final l = await NotAlerji.masaAlerjiSec(context, _masaAlerji);
+    if (l == null || !mounted) return;
+    final auth = context.read<AuthProvider>();
+    try {
+      final r = await Api.adisyonAlerji(auth.token!, widget.adisyonId, l);
+      if (!mounted) return;
+      if (r['ok'] != 1) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r['hata']?.toString() ?? 'Kaydedilemedi'), backgroundColor: NotAlerji.kirmizi));
+        return;
+      }
+      setState(() => _masaAlerji = ((r['alerji'] as List?) ?? []).map((e) => e.toString()).toList());
+      final riskli = (r['riskli'] as List?) ?? [];
+      if (riskli.isNotEmpty) await NotAlerji.riskUyari(context, riskli, ek: 'Müşteriye haber verin, mutfakla konuşun.');
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bağlantı hatası (alerji kaydedilemedi)')));
     }
   }
 
@@ -136,8 +170,24 @@ class _UrunEkleScreenState extends State<UrunEkleScreen> {
         iconTheme: IconThemeData(color: _ink),
         title: Text(widget.baslik, style: TextStyle(color: _ink, fontSize: 17, fontWeight: FontWeight.bold)),
         actions: [
+          IconButton(tooltip: 'Alerji / diyet', onPressed: _alerjiDuzenle, icon: Icon(Icons.health_and_safety_outlined, color: _masaAlerji.isNotEmpty ? NotAlerji.kirmizi : _sub)),
           IconButton(tooltip: 'Barkod okut', onPressed: _barkodOkut, icon: Icon(Icons.qr_code_scanner, color: _mor1)),
         ],
+        bottom: _masaAlerji.isEmpty
+            ? null
+            : PreferredSize(
+                preferredSize: const Size.fromHeight(34),
+                child: InkWell(
+                  onTap: _alerjiDuzenle,
+                  child: Container(
+                    width: double.infinity, height: 34, alignment: Alignment.centerLeft,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    color: NotAlerji.kirmizi,
+                    child: Text('⚠️ ALERJİ: ${_masaAlerji.join(', ')}', maxLines: 1, overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              ),
       ),
       body: loading
           ? const Center(child: CircularProgressIndicator(color: _mor1))
@@ -193,7 +243,7 @@ class _UrunEkleScreenState extends State<UrunEkleScreen> {
     final tukendi = u['tukendi'] == true;
     return GestureDetector(
       onTap: tukendi ? null : () => setState(() => _sepet[id] = adet + 1),
-      onLongPress: adet > 0 ? () => setState(() { if (adet <= 1) { _sepet.remove(id); } else { _sepet[id] = adet - 1; } }) : null,
+      onLongPress: adet > 0 ? () => setState(() { if (adet <= 1) { _sepet.remove(id); _notlar.remove(id); } else { _sepet[id] = adet - 1; } }) : null,
       child: Opacity(
         opacity: tukendi ? 0.4 : 1,
         child: Container(
@@ -219,6 +269,23 @@ class _UrunEkleScreenState extends State<UrunEkleScreen> {
                   child: Text('$adet', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
                 ),
               ),
+            // Sepetteki ürüne not / alerji (mısırsız, az pişmiş, ALERJİ...)
+            if (adet > 0)
+              Positioned(
+                bottom: 0, right: 0,
+                child: GestureDetector(
+                  onTap: () => _notDuzenle(id),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: (_notlar[id]?.contains('ALERJ') ?? false) ? NotAlerji.kirmizi : (_notlar.containsKey(id) ? const Color(0xFFF59E0B) : _mor1.withValues(alpha: 0.14)),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(_notlar.containsKey(id) ? '📝 Notlu' : '+ Not',
+                        style: TextStyle(color: _notlar.containsKey(id) ? Colors.white : _mor1, fontSize: 12, fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              ),
           ]),
         ),
       ),
@@ -236,7 +303,7 @@ class _UrunEkleScreenState extends State<UrunEkleScreen> {
             Text(_tl(_sepetTutar), style: TextStyle(color: _ink, fontSize: 18, fontWeight: FontWeight.bold)),
           ]),
           const Spacer(),
-          TextButton(onPressed: () => setState(() => _sepet.clear()), child: Text('Temizle', style: TextStyle(color: _sub))),
+          TextButton(onPressed: () => setState(() { _sepet.clear(); _notlar.clear(); }), child: Text('Temizle', style: TextStyle(color: _sub))),
           const SizedBox(width: 6),
           FilledButton(
             onPressed: _gonderiliyor ? null : _ekle,

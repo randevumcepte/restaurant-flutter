@@ -12,6 +12,7 @@ import '../responsive.dart';
 import 'cari_hesaplar_screen.dart';
 import 'barkod_tarayici.dart';
 import 'fis.dart';
+import '../widgets/not_alerji_sheet.dart';
 
 /// SATIŞ EKRANI (POS) — masaya tıklayınca: SOLDA resimli ürün ızgarası (kategori sekmeli),
 /// SAĞDA o masanın adisyonu + toplam + hızlı ödeme. Kerzz/Adisyo tarzı tek-ekran POS.
@@ -29,6 +30,8 @@ class _SatisEkraniState extends State<SatisEkrani> {
   List urunler = [];
   final Map<int, Map> _urunById = {};
   final Map<int, int> _pending = {}; // yeni eklenecek: urunId -> adet
+  final Map<int, String> _pendingNot = {}; // yeni eklenecek ürünün notu: "Soğansız · ALERJİ: Gluten"
+  List<String> _masaAlerji = []; // adisyonun masa alerjisi (her kaleme yazılır)
   List _kalemler = []; // KAYITLI kalemler (id + odeme_durum)
   final Set<int> _secili = {}; // kalem-bazlı böl: seçili kalem id'leri
   double _toplamHepsi = 0;
@@ -112,6 +115,7 @@ class _SatisEkraniState extends State<SatisEkrani> {
         _kalemler = (kl['kalemler'] as List?) ?? [];
         _toplamHepsi = _n(kl['toplam']).toDouble();
         _kayitliToplam = _n(kl['kalan']).toDouble();
+        _masaAlerji = ((kl['alerji'] as List?) ?? []).map((e) => e.toString()).toList();
       } else if (fis['ok'] == 1) {
         // Eski sunucu (uç yok): fiş kalemleriyle GÖSTER (seçim/böl deploy olunca açılır)
         _kalemUcuVar = false;
@@ -152,8 +156,53 @@ class _SatisEkraniState extends State<SatisEkrani> {
   void _ekle(int id) => setState(() => _pending[id] = (_pending[id] ?? 0) + 1);
   void _azalt(int id) => setState(() {
         final a = (_pending[id] ?? 0) - 1;
-        if (a <= 0) { _pending.remove(id); } else { _pending[id] = a; }
+        if (a <= 0) { _pending.remove(id); _pendingNot.remove(id); } else { _pending[id] = a; }
       });
+
+  // Henüz kaydedilmemiş ürünün notu (sepette)
+  Future<void> _pendingNotDuzenle(int id) async {
+    final n = await NotAlerji.kalemNotSec(context, urunAd: _urunById[id]?['ad']?.toString() ?? 'Ürün', mevcut: _pendingNot[id], masaAlerji: _masaAlerji);
+    if (n == null || !mounted) return;
+    _yenile(() { if (n.isEmpty) { _pendingNot.remove(id); } else { _pendingNot[id] = n; } });
+  }
+
+  // Kaydedilmiş (mutfağa gitmiş) ürünün notu: mutfak ekranına anında yansır
+  Future<void> _kalemNotDuzenle(Map k) async {
+    final n = await NotAlerji.kalemNotSec(context, urunAd: k['ad'].toString(), mevcut: k['not']?.toString(), masaAlerji: _masaAlerji);
+    if (n == null || !mounted) return;
+    final auth = context.read<AuthProvider>();
+    try {
+      final r = await Api.kalemNot(auth.token!, _n(k['id']).toInt(), n);
+      if (!mounted) return;
+      if (r['ok'] == 1) {
+        _snack(r['uyari']?.toString() ?? '✓ Not mutfak ekranına iletildi', r['uyari'] != null ? _turuncu : _yesil);
+        await _yukle();
+      } else {
+        _snack(r['hata']?.toString() ?? 'Kaydedilemedi', _kirmizi);
+      }
+    } catch (_) {
+      _snack('Bağlantı hatası', _kirmizi);
+    }
+  }
+
+  // Masa alerjisi: gönderilmiş + sonradan eklenecek bütün ürünlere ALERJİ notu
+  Future<void> _masaAlerjiDuzenle() async {
+    final l = await NotAlerji.masaAlerjiSec(context, _masaAlerji);
+    if (l == null || !mounted) return;
+    final auth = context.read<AuthProvider>();
+    try {
+      final r = await Api.adisyonAlerji(auth.token!, widget.adisyonId, l);
+      if (!mounted) return;
+      if (r['ok'] != 1) { _snack(r['hata']?.toString() ?? 'Kaydedilemedi', _kirmizi); return; }
+      _yenile(() => _masaAlerji = ((r['alerji'] as List?) ?? []).map((e) => e.toString()).toList());
+      _snack(l.isEmpty ? 'Masa alerjisi kaldırıldı' : '⚠️ Alerji mutfağa iletildi', l.isEmpty ? _turuncu : _yesil);
+      final riskli = (r['riskli'] as List?) ?? [];
+      if (riskli.isNotEmpty) await NotAlerji.riskUyari(context, riskli, ek: 'Müşteriye haber verin, mutfakla konuşun.');
+      await _yukle();
+    } catch (_) {
+      _snack('Bağlantı hatası (alerji kaydedilemedi)', _kirmizi);
+    }
+  }
 
   // Bekleyen yeni ürünleri adisyona kaydet (yoksa true döner).
   Future<bool> _kaydet() async {
@@ -161,7 +210,9 @@ class _SatisEkraniState extends State<SatisEkrani> {
     if (_mesgul) return false;
     setState(() => _mesgul = true);
     final auth = context.read<AuthProvider>();
-    final kalemler = _pending.entries.map((e) => {'urun_id': e.key, 'adet': e.value}).toList();
+    // Not + masa alerjisi birlikte gider (çevrimdışı kayıtta da alerji kaybolmasın; sunucu tekrarı ayıklar)
+    String notu(int id) => NotAlerji.birlestir(_pendingNot[id], _masaAlerji);
+    final kalemler = _pending.entries.map((e) => <String, dynamic>{'urun_id': e.key, 'adet': e.value, if (notu(e.key).isNotEmpty) 'not': notu(e.key)}).toList();
     try {
       final res = await Api.adisyonUrunEkle(auth.token!, widget.adisyonId, kalemler);
       if (!mounted) return false;
@@ -170,16 +221,18 @@ class _SatisEkraniState extends State<SatisEkrani> {
         try {
           final adMap = {for (final u in urunler) _n((u as Map)['id']).toInt(): u['ad'].toString()};
           final istMap = {for (final u in urunler) _n((u as Map)['id']).toInt(): (u['istasyon']?.toString() ?? 'mutfak')};
-          final fisKalem = _pending.entries.map((e) => <String, dynamic>{'adet': e.value, 'ad': adMap[e.key] ?? 'Ürün', 'istasyon': istMap[e.key] ?? 'mutfak'}).toList();
+          final fisKalem = _pending.entries.map((e) => <String, dynamic>{'adet': e.value, 'ad': adMap[e.key] ?? 'Ürün', 'istasyon': istMap[e.key] ?? 'mutfak', 'not': notu(e.key)}).toList();
           final yr = await YaziciServisi().otoMutfakFisi(masa: widget.masaAd, kalemler: fisKalem, adisyonNo: widget.adisyonId, tur: int.tryParse('${res['tur'] ?? ''}'));
           if (yr != null && yr != 'ok' && mounted) _snack('Mutfak yazıcı: $yr', _turuncu);
         } catch (_) {}
         // setState: "kaydedilmedi" bölümü ANINDA kalksın (clear tek başına rebuild tetiklemiyordu).
-        if (mounted) setState(() => _pending.clear());
+        if (mounted) setState(() { _pending.clear(); _pendingNot.clear(); });
         await _yukle();
         if (mounted) setState(() => _mesgul = false);
         // NET GERİ BİLDİRİM: kaydedildiği belli olsun (çevrimdışıyken ürünler aynı göründüğü için şart).
         _snack(res['offline'] == 1 ? '✓ Sipariş kaydedildi (çevrimdışı)' : '✓ Sipariş kaydedildi', _yesil);
+        final riskli = (res['alerji_uyari'] as List?) ?? [];
+        if (riskli.isNotEmpty && mounted) await NotAlerji.riskUyari(context, riskli);
         return true;
       }
       setState(() => _mesgul = false);
@@ -1118,6 +1171,21 @@ class _SatisEkraniState extends State<SatisEkrani> {
           ])),
         ]),
       ),
+      // Masa alerjisi (sağlık): kırmızı şerit ya da ekleme düğmesi
+      if (_kalemUcuVar)
+        InkWell(
+          onTap: _masaAlerjiDuzenle,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            color: _masaAlerji.isNotEmpty ? _kirmizi : _kirmizi.withValues(alpha: 0.08),
+            child: Row(children: [
+              Expanded(child: Text(_masaAlerji.isNotEmpty ? '⚠️ ALERJİ: ${_masaAlerji.join(', ')}' : '⚠️ Alerji / diyet bilgisi ekle',
+                  style: TextStyle(color: _masaAlerji.isNotEmpty ? Colors.white : _kirmizi, fontSize: 13, fontWeight: FontWeight.w700))),
+              Text(_masaAlerji.isNotEmpty ? 'Düzenle' : '+', style: TextStyle(color: _masaAlerji.isNotEmpty ? Colors.white : _kirmizi, fontSize: 12.5, fontWeight: FontWeight.w700)),
+            ]),
+          ),
+        ),
       // Kalemler
       Expanded(
         child: (_kalemler.isEmpty && _pending.isEmpty)
@@ -1264,6 +1332,7 @@ class _SatisEkraniState extends State<SatisEkrani> {
     final secili = _secili.contains(id);
     final secilebilir = _kalemUcuVar && !odendi && !iptal;
     final cizik = odendi || iptal;
+    final notDuzenlenir = _kalemUcuVar && !iptal && (k['durum']?.toString() ?? '') != 'servis';
     Widget rozet(String s, Color c) => Container(
       margin: const EdgeInsets.only(left: 6),
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -1281,7 +1350,8 @@ class _SatisEkraniState extends State<SatisEkrani> {
             borderRadius: BorderRadius.circular(10),
             border: Border.all(color: secili ? t.mor1 : (iptal ? _kirmizi.withValues(alpha: 0.4) : (ikram ? _turuncu.withValues(alpha: 0.4) : Colors.transparent)), width: 1.4),
           ),
-          child: Row(children: [
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
             // Seçim kutusu / ödendi / iptal işareti
             if (iptal)
               const Padding(padding: EdgeInsets.only(right: 10), child: Icon(Icons.block, color: _kirmizi, size: 20))
@@ -1304,11 +1374,19 @@ class _SatisEkraniState extends State<SatisEkrani> {
             if (ikram) rozet('İKRAM', _turuncu),
             if (iptal) rozet('İPTAL', _kirmizi),
             const Spacer(),
+            if (notDuzenlenir)
+              InkWell(
+                onTap: () => _kalemNotDuzenle(k),
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), child: Icon(Icons.edit_note, size: 22, color: t.mor1)),
+              ),
             const SizedBox(width: 8),
             Text(_tl(_n(k['tutar'])), style: TextStyle(
                 color: iptal ? _kirmizi : (ikram ? _turuncu : (odendi ? t.sub : t.ink)),
                 fontSize: 13.5, fontWeight: FontWeight.w700,
                 decoration: cizik ? TextDecoration.lineThrough : null)),
+          ]),
+          if (!iptal) NotAlerji.rozetler(k['not']?.toString(), sol: 36),
           ]),
         ),
       ),
@@ -1322,13 +1400,19 @@ class _SatisEkraniState extends State<SatisEkrani> {
     return Container(
       margin: const EdgeInsets.only(bottom: 6), padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(color: _turuncu.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(10), border: Border.all(color: _turuncu.withValues(alpha: 0.30))),
-      child: Row(children: [
-        Expanded(child: Text(ad, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.ink, fontSize: 13.5, fontWeight: FontWeight.w500))),
-        _miniIkon(Icons.remove, () => _azalt(id), t),
-        SizedBox(width: 28, child: Text('$adet', textAlign: TextAlign.center, style: TextStyle(color: t.ink, fontSize: 14, fontWeight: FontWeight.bold))),
-        _miniIkon(Icons.add, () => _ekle(id), t),
-        const SizedBox(width: 8),
-        SizedBox(width: 66, child: Text(_tl(tutar), textAlign: TextAlign.right, style: TextStyle(color: t.sub2, fontSize: 13, fontWeight: FontWeight.w600))),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Expanded(child: Text(ad, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.ink, fontSize: 13.5, fontWeight: FontWeight.w500))),
+          // Not / alerji (mısırsız, az pişmiş, ALERJİ...)
+          _miniIkon(Icons.edit_note, () => _pendingNotDuzenle(id), t),
+          const SizedBox(width: 6),
+          _miniIkon(Icons.remove, () => _azalt(id), t),
+          SizedBox(width: 28, child: Text('$adet', textAlign: TextAlign.center, style: TextStyle(color: t.ink, fontSize: 14, fontWeight: FontWeight.bold))),
+          _miniIkon(Icons.add, () => _ekle(id), t),
+          const SizedBox(width: 8),
+          SizedBox(width: 66, child: Text(_tl(tutar), textAlign: TextAlign.right, style: TextStyle(color: t.sub2, fontSize: 13, fontWeight: FontWeight.w600))),
+        ]),
+        NotAlerji.rozetler(NotAlerji.birlestir(_pendingNot[id], _masaAlerji)),
       ]),
     );
   }
