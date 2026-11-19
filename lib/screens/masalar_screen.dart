@@ -418,12 +418,18 @@ class _MasalarScreenState extends State<MasalarScreen> {
     final sonDk = _n(m['son_siparis_dk'] ?? -1).toInt();
     final odenen = _n(m['odenen']);
     final hesap = m['hesap_istendi'] == true;
-    String dkYazi(int d) => d >= 60 ? '${(d / 60).floor()} sa ${d % 60} dk' : '$d dk';
+    final hazir = _n(m['hazir_bekleyen']).toInt();
+    final mutfak = _n(m['mutfakta']).toInt();
+    String dkYazi(int d) => d >= 1440 ? '${(d / 1440).floor()} gün' : (d >= 60 ? '${(d / 60).floor()} sa ${d % 60} dk' : '$d dk');
     // Yumuşak/soft tonlar (göze hoş) — beyaz yazı yine okunur.
     if (odenen > 0) return (renk: const Color(0xFF2ECC71), etiket: 'Ödendi', ikon: Icons.check_circle_rounded);
     if (hesap) return (renk: const Color(0xFF9E7CF0), etiket: 'Hesap istedi', ikon: Icons.request_quote_rounded);
     if (kalemSay == 0 && acilisDk >= 12) return (renk: const Color(0xFFEDA94A), etiket: 'Sipariş bekliyor · ${dkYazi(acilisDk)}', ikon: Icons.hourglass_bottom_rounded);
     if (kalemSay == 0) return (renk: const Color(0xFF5B92F0), etiket: 'Yeni açıldı', ikon: Icons.fiber_new_rounded);
+    // Mutfakta / servis bekleyen ürünü olan masa durgun sayılmaz; günlerdir açık hesap ayrı (gri) görünür (web POS ile aynı)
+    if (hazir > 0) return (renk: const Color(0xFF14B8A6), etiket: 'Servise hazır · $hazir ürün', ikon: Icons.room_service_rounded);
+    if (acilisDk >= 720) return (renk: const Color(0xFF94A3B8), etiket: 'Unutulmuş hesap · ${dkYazi(acilisDk)}', ikon: Icons.history_rounded);
+    if (mutfak > 0) return (renk: const Color(0xFF6366F1), etiket: 'Mutfakta · $mutfak ürün', ikon: Icons.soup_kitchen_rounded);
     if (sonDk >= 45) return (renk: const Color(0xFFF2864F), etiket: 'Durgun · ${dkYazi(sonDk)}', ikon: Icons.notifications_active_rounded);
     return (renk: const Color(0xFF7E7BEF), etiket: 'Serviste', ikon: Icons.restaurant_rounded);
   }
@@ -444,8 +450,11 @@ class _MasalarScreenState extends State<MasalarScreen> {
         child: Row(children: [
           nokta(const Color(0xFF5B92F0), 'Yeni'), const SizedBox(width: 14),
           nokta(const Color(0xFFEDA94A), 'Sipariş bekliyor'), const SizedBox(width: 14),
+          nokta(const Color(0xFF6366F1), 'Mutfakta'), const SizedBox(width: 14),
+          nokta(const Color(0xFF14B8A6), 'Servise hazır'), const SizedBox(width: 14),
           nokta(const Color(0xFF7E7BEF), 'Serviste'), const SizedBox(width: 14),
-          nokta(const Color(0xFFF2864F), 'Durgun'), const SizedBox(width: 14),
+          nokta(const Color(0xFFF2864F), 'Durgun (45 dk sipariş yok)'), const SizedBox(width: 14),
+          nokta(const Color(0xFF94A3B8), 'Unutulmuş hesap (12 sa+)'), const SizedBox(width: 14),
           nokta(const Color(0xFF9E7CF0), 'Hesap istedi'), const SizedBox(width: 14),
           nokta(const Color(0xFF2ECC71), 'Ödendi'), const SizedBox(width: 14),
           nokta(const Color(0xFF9D5DC8), 'Rezerve'), const SizedBox(width: 14),
@@ -575,7 +584,7 @@ class _MasalarScreenState extends State<MasalarScreen> {
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   Icon(ds.ikon, size: 11, color: Colors.white),
                   const SizedBox(width: 4),
-                  Flexible(child: Text(ds.etiket, maxLines: 1, overflow: TextOverflow.ellipsis,
+                  Flexible(child: Text(m['qr'] == true ? '📱 ${ds.etiket}' : ds.etiket, maxLines: 1, overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w500, color: Colors.white))),
                 ]),
               ),
