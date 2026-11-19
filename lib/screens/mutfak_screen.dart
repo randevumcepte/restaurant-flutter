@@ -575,6 +575,15 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
       oncekiTur = t;
       kalemWid.add(_kalemSatir(k));
     }
+    final fisAlerji = <String>[];
+    for (final kk in kalemler) {
+      for (final p in _notParcalari((kk as Map)['not']?.toString() ?? '')) {
+        if (!_alerjiMi(p)) continue;
+        for (final a in p.replaceFirst(RegExp(r'^\s*ALERJ[İI]:\s*', caseSensitive: false), '').split(',')) {
+          if (a.trim().isNotEmpty && !fisAlerji.contains(a.trim())) fisAlerji.add(a.trim());
+        }
+      }
+    }
     final icerik = Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -630,6 +639,14 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
             ]),
           ]),
         ),
+        // ALERJİ şeridi: ürün notlarının arasında kaybolmasın
+        if (fisAlerji.isNotEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            color: _kirmizi,
+            child: Text('⚠️ ALERJİ: ${fisAlerji.join(', ')}', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+          ),
         // SÜRE: baslamadan -> "geldi" sayaci; basladiktan -> HAZIRLIK sayaci (sifirdan) + kucuk toplam
         if (!basladi) ...[
           Padding(
@@ -752,11 +769,13 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
         ]),
       );
 
+  // "QR sipariş · Mısırsız · ALERJİ: Fıstık · Yemekten sonra getirilsin" -> parçalar (QR etiketi mutfağı ilgilendirmez)
+  List<String> _notParcalari(String not) => not.split(' · ').map((p) => p.trim()).where((p) => p.isNotEmpty && !p.startsWith('QR sipariş')).toList();
+  bool _alerjiMi(String p) => p.toLowerCase().contains('alerji') || p.toUpperCase().startsWith('ALERJ');
+
   Widget _kalemSatir(Map k) {
-    final not = (k['not']?.toString() ?? '');
+    final parcalar = _notParcalari(k['not']?.toString() ?? '');
     final kur = (k['kur']?.toString() ?? '');
-    // Alerji/özel istek vurgusu
-    final alerji = not.toLowerCase().contains('alerji') || not.toLowerCase().contains('alerjik');
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -781,18 +800,22 @@ class _MutfakScreenState extends State<MutfakScreen> with TickerProviderStateMix
                 ),
               ],
             ]),
-            if (not.isNotEmpty)
-              Container(
-                margin: const EdgeInsets.only(top: 3),
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                decoration: BoxDecoration(
-                  color: (alerji ? _kirmizi : _amber).withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: (alerji ? _kirmizi : _amber).withValues(alpha: 0.45), width: 1),
-                ),
-                child: Text('${alerji ? '⚠️ ' : '📝 '}$not',
-                    style: TextStyle(color: alerji ? _kirmizi : _amber, fontSize: 11.5, fontWeight: alerji ? FontWeight.bold : FontWeight.w600, height: 1.15)),
-              ),
+            for (final p in parcalar)
+              Builder(builder: (_) {
+                final alerji = _alerjiMi(p);
+                final sonra = p.toLowerCase().contains('sonra getir');
+                return Container(
+                  margin: const EdgeInsets.only(top: 3),
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: (alerji ? _kirmizi : _amber).withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: (alerji ? _kirmizi : _amber).withValues(alpha: 0.45), width: 1),
+                  ),
+                  child: Text('${alerji ? '⚠️ ' : (sonra ? '⏰ ' : '📝 ')}$p',
+                      style: TextStyle(color: alerji ? _kirmizi : _amber, fontSize: 11.5, fontWeight: (alerji || sonra) ? FontWeight.bold : FontWeight.w600, height: 1.15)),
+                );
+              }),
           ]),
         ),
       ]),

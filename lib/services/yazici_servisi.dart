@@ -84,6 +84,7 @@ class YaziciServisi {
   void _hizala(int n) => _b.addAll([0x1B, 0x61, n]); // 0 sol · 1 orta · 2 sağ
   void _kalin(bool v) => _b.addAll([0x1B, 0x45, v ? 1 : 0]);
   void _boyut(int w, int h) => _b.addAll([0x1D, 0x21, ((w & 7) << 4) | (h & 7)]); // GS ! (0=normal, 1=2x)
+  void _ters(bool v) => _b.addAll([0x1D, 0x42, v ? 1 : 0]); // GS B: siyah zemin beyaz yazı (alerji şeridi)
   void _nl() => _b.add(0x0A);
   void _satir(String s) { _b.addAll(_enc(s)); _nl(); }
   void _besle(int n) { for (var i = 0; i < n; i++) { _nl(); } }
@@ -207,16 +208,45 @@ class YaziciServisi {
     _ikiSutun('Masa: ${d['masa'] ?? '-'}${kaynak.isNotEmpty ? ' ($kaynak)' : ''}', (d['no'] != null && '${d['no']}'.isNotEmpty) ? 'Fis #${d['no']}' : (d['tarih']?.toString() ?? ''));
     if (d['no'] != null) _ikiSutun('', d['tarih']?.toString() ?? '');
     if ((d['garson']?.toString() ?? '').isNotEmpty) _satir('Garson: ${d['garson']}');
+    // ALERJİ: kalem notlarındaki "ALERJİ: …" parçaları toplanır; fişin EN ÜSTÜNE ve EN ALTINA ters (siyah) büyük şerit
+    // (notların arasında kaybolmasın). Not parçaları "Mısırsız · ALERJİ: Fıstık · Yemekten sonra getirilsin" biçiminde gelir.
+    final alerjiler = <String>[];
+    for (final k in (d['kalemler'] as List?) ?? []) {
+      for (final p in (k as Map)['not']?.toString().split(' · ') ?? <String>[]) {
+        if (!p.trim().toUpperCase().startsWith('ALERJ')) continue;
+        for (final a in p.replaceFirst(RegExp(r'^\s*ALERJ[İI]:\s*', caseSensitive: false), '').split(',')) {
+          if (a.trim().isNotEmpty && !alerjiler.contains(a.trim())) alerjiler.add(a.trim());
+        }
+      }
+    }
+    void alerjiSerit() {
+      if (alerjiler.isEmpty) return;
+      _hizala(1); _boyut(1, 1); _kalin(true); _ters(true);
+      _satir(' ! ALERJİ: ${alerjiler.join(', ').toUpperCase()} ! ');
+      _ters(false); _kalin(false); _boyut(0, 0); _hizala(0);
+    }
     _cizgi();
+    alerjiSerit();
+    if (alerjiler.isNotEmpty) _cizgi();
     _boyut(1, 1);
     for (final k in (d['kalemler'] as List?) ?? []) {
       final m = k as Map;
       _satir('${_n(m['adet']).toInt()}x ${m['ad'] ?? ''}');
-      final not = m['not']?.toString() ?? '';
-      if (not.isNotEmpty) { _boyut(0, 0); _satir('   > $not'); _boyut(1, 1); }
+      final parcalar = (m['not']?.toString() ?? '').split(' · ').map((p) => p.trim()).where((p) => p.isNotEmpty && !p.startsWith('QR sipariş'));
+      if (parcalar.isNotEmpty) {
+        _boyut(0, 0);
+        for (final p in parcalar) {
+          final alj = p.toUpperCase().startsWith('ALERJ');
+          if (alj) _kalin(true);
+          _satir(alj ? '   ! $p' : '   > $p');
+          if (alj) _kalin(false);
+        }
+        _boyut(1, 1);
+      }
     }
     _boyut(0, 0);
     if ((d['not']?.toString() ?? '').isNotEmpty) { _cizgi(); _satir('NOT: ${d['not']}'); }
+    if (alerjiler.isNotEmpty) { _cizgi(); alerjiSerit(); }
     _besle(3);
     _kes();
     return _gonder(_b, hedefIp: _istasyonHedefIp(ist)); // istasyon yazıcısı (yoksa mutfak/ana)
