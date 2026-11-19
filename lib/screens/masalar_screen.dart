@@ -427,8 +427,8 @@ class _MasalarScreenState extends State<MasalarScreen> {
     if (kalemSay == 0 && acilisDk >= 12) return (renk: const Color(0xFFEDA94A), etiket: 'Sipariş bekliyor · ${dkYazi(acilisDk)}', ikon: Icons.hourglass_bottom_rounded);
     if (kalemSay == 0) return (renk: const Color(0xFF5B92F0), etiket: 'Yeni açıldı', ikon: Icons.fiber_new_rounded);
     // Mutfakta / servis bekleyen ürünü olan masa durgun sayılmaz; günlerdir açık hesap ayrı (gri) görünür (web POS ile aynı)
+    if (acilisDk >= 720 && (sonDk < 0 || sonDk >= 360)) return (renk: const Color(0xFF94A3B8), etiket: 'Unutulmuş hesap · ${dkYazi(acilisDk)}', ikon: Icons.history_rounded); // 12 sa+ açık, 6 sa sipariş yok
     if (hazir > 0) return (renk: const Color(0xFF14B8A6), etiket: 'Servise hazır · $hazir ürün', ikon: Icons.room_service_rounded);
-    if (acilisDk >= 720) return (renk: const Color(0xFF94A3B8), etiket: 'Unutulmuş hesap · ${dkYazi(acilisDk)}', ikon: Icons.history_rounded);
     if (mutfak > 0) return (renk: const Color(0xFF6366F1), etiket: 'Mutfakta · $mutfak ürün', ikon: Icons.soup_kitchen_rounded);
     if (sonDk >= 45) return (renk: const Color(0xFFF2864F), etiket: 'Durgun · ${dkYazi(sonDk)}', ikon: Icons.notifications_active_rounded);
     return (renk: const Color(0xFF7E7BEF), etiket: 'Serviste', ikon: Icons.restaurant_rounded);
