@@ -24,8 +24,9 @@ class KopruCevap {
     if (v is Map) return Map<String, dynamic>.from(v);
     return j;
   }
-  String? get mesaj => _metin(j['mesaj']);
-  String? get hata => _metin(j['hata']) ?? (ok ? null : (_metin(j['message']) ?? 'İşlem tamamlanamadı (HTTP $durum).'));
+  String? get mesaj => ok ? _metin(j['mesaj']) : null;
+  // ok=0 iken bazı uçlar hata metnini 'mesaj' alanında döndürür ({ok:false, mesaj:...})
+  String? get hata => _metin(j['hata']) ?? (ok ? null : (_metin(j['mesaj']) ?? _metin(j['message']) ?? 'İşlem tamamlanamadı (HTTP $durum).'));
   bool get yetkisiz => durum == 403 || j['yetkisiz'] == 1;
   static String? _metin(dynamic v) => (v is String && v.trim().isNotEmpty) ? v.trim() : null;
 }
