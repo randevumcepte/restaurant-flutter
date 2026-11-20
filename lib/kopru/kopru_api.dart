@@ -46,12 +46,19 @@ class KopruApi {
   }
 
   static KopruCevap _coz(http.Response r) {
-    if (r.statusCode == 401) throw ApiYetkiHatasi();
     try {
       final d = jsonDecode(utf8.decode(r.bodyBytes));
+      // 401: yalnız sunucu "giriş gerekli" derse oturum kapanır; eski uçların yetki 401'i "yetkiniz yok" sayılır (kullanıcı atılmaz)
+      if (r.statusCode == 401) {
+        if (d is Map && (d['giris'] == 1 || d['giris'] == true)) throw ApiYetkiHatasi();
+        return KopruCevap(403, {'ok': 0, 'yetkisiz': 1, 'hata': 'Bu işlem için yetkiniz yok.'});
+      }
       if (d is Map) return KopruCevap(r.statusCode, Map<String, dynamic>.from(d));
       return KopruCevap(r.statusCode, {'ok': 1, 'veri': {'liste': d}});
+    } on ApiYetkiHatasi {
+      rethrow;
     } catch (_) {
+      if (r.statusCode == 401) throw ApiYetkiHatasi(); // JSON olmayan 401 = oturum yok
       return KopruCevap(r.statusCode, {'ok': 0, 'hata': 'Sunucu yanıtı okunamadı (HTTP ${r.statusCode}).'});
     }
   }

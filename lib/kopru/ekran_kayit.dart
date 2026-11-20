@@ -12,7 +12,7 @@ import '../screens/z_raporu_screen.dart';
 import '../screens/odul_dogrula_screen.dart';
 import '../screens/bildirim_ayar_screen.dart';
 import '../screens/lan_ayar_screen.dart';
-import '../screens/departman_is_screen.dart';
+import '../moduller/operasyon/kalite_departman_is_screen.dart';
 import '../screens/santral_ses_screen.dart';
 import '../screens/dahili_yonetim_screen.dart';
 import '../screens/freepbx_ayar_screen.dart';
@@ -79,11 +79,11 @@ void ekranlariKaydet() {
   EkranKayit.tam('/dahili-yonetim', (u, a) => const DahiliYonetimScreen());
   EkranKayit.tam('/freepbx-ayar', (u, a) => const FreepbxAyarScreen());
   EkranKayit.tam('/mesai-qr', (u, a) => const MesaiQrScreen());
-  // Departman iş ekranları (web /temizlik, /guvenlik, /teknik, /bulasik ile aynı uçlar)
-  EkranKayit.tam('/temizlik', (u, a) => const DepartmanIsScreen(kod: 'temizlik', baslik: 'Temizlik / Hijyen', renk: Color(0xFF0EA5E9)));
-  EkranKayit.tam('/guvenlik', (u, a) => const DepartmanIsScreen(kod: 'guvenlik', baslik: 'Güvenlik', renk: Color(0xFF475569)));
-  EkranKayit.tam('/teknik', (u, a) => const DepartmanIsScreen(kod: 'teknik', baslik: 'Teknik Servis / Bakım-Onarım', renk: Color(0xFFF97316)));
-  EkranKayit.tam('/bulasik', (u, a) => const DepartmanIsScreen(kod: 'bulasik', baslik: 'Bulaşıkhane / Steward', renk: Color(0xFF06B6D4)));
+  // Departman iş ekranları (web /temizlik, /guvenlik, /teknik, /bulasik): Geçmiş + İptal + son tarih dahil yeni ekran
+  EkranKayit.tam('/temizlik', (u, a) => const KaliteDepartmanIsScreen(kod: 'temizlik', baslik: 'Temizlik / Hijyen', renk: Color(0xFF0EA5E9), ikon: Icons.cleaning_services_outlined));
+  EkranKayit.tam('/guvenlik', (u, a) => const KaliteDepartmanIsScreen(kod: 'guvenlik', baslik: 'Güvenlik', renk: Color(0xFF475569), ikon: Icons.security_outlined));
+  EkranKayit.tam('/teknik', (u, a) => const KaliteDepartmanIsScreen(kod: 'teknik', baslik: 'Teknik Servis / Bakım-Onarım', renk: Color(0xFFF97316), ikon: Icons.build_outlined));
+  EkranKayit.tam('/bulasik', (u, a) => const KaliteDepartmanIsScreen(kod: 'bulasik', baslik: 'Bulaşıkhane / Steward', renk: Color(0xFF06B6D4), ikon: Icons.wash_outlined));
 
   // ── Raporlar (satın alma / mutfak / departman raporları): tek rapor merkezi ──
   for (final o in kRaporOnekleri) {
