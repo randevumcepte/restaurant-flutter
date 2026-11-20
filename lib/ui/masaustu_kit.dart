@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/tema_provider.dart';
 import '../responsive.dart';
+import '../moduller/ai/bildirim_merkezi_screen.dart';
 
 /// ResteOS masaüstü (PC/tablet) ekranları için ORTAK, TEMA-DUYARLI (gece/gündüz)
 /// bileşen kütüphanesi. SepetTakip tarzı: aydınlık/yoğun, tablo + kart ızgara +
@@ -72,6 +73,7 @@ class MasaustuSayfa extends StatelessWidget {
             ),
             const Spacer(),
             ...araclar,
+            const BildirimZili(), // web panel zili ile aynı bildirim kutusu
             // Gece/gündüz her sayfada ulaşılabilir olsun
             const SizedBox(width: 4),
             const TemaButonu(),

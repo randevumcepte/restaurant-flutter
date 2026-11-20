@@ -440,7 +440,7 @@ class _YanMenuState extends State<_YanMenu> {
               width: _YanMenu.genisGenislik,
               child: SafeArea(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  _marka(t, auth, acik),
+                  InkWell(onTap: () => git(EkranKayit.uret('/profilim', 'Profilim')), child: _marka(t, auth, acik)), // → Profilim
                   Divider(height: 1, color: t.line),
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [

@@ -31,7 +31,9 @@ class PanelMenuDrawer extends StatelessWidget {
       width: 320,
       child: SafeArea(
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Container(
+          InkWell(
+            onTap: () => kapatGit(EkranKayit.uret('/profilim', 'Profilim')), // avatar → Profilim (web ile aynı)
+            child: Container(
             padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
             decoration: BoxDecoration(gradient: LinearGradient(colors: [t.mor1, t.mavi])),
             child: Row(children: [
@@ -49,7 +51,9 @@ class PanelMenuDrawer extends StatelessWidget {
                       maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFFE9D5FF), fontSize: 12.5)),
                 ]),
               ),
+              const Icon(Icons.chevron_right, color: Colors.white70),
             ]),
+          ),
           ),
           Expanded(child: PanelMenuListesi(onAc: (o) => kapatGit(EkranKayit.uret(o.url, o.ad)))),
           Divider(height: 1, color: t.line),
