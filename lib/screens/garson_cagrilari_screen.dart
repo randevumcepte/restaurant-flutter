@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
+import '../widgets/canli_uyari.dart' show cagriEkraniAcik;
 import 'menu_hamburger.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -53,6 +54,7 @@ class _GarsonCagrilariScreenState extends State<GarsonCagrilariScreen> {
   @override
   void initState() {
     super.initState();
+    cagriEkraniAcik.value++; // bu ekran açıkken canlı uyarı susar (kendi sesi var)
     if (_sesVar) {
       _tts.setLanguage('tr-TR');
       _tts.setSpeechRate(0.48);
@@ -63,6 +65,7 @@ class _GarsonCagrilariScreenState extends State<GarsonCagrilariScreen> {
 
   @override
   void dispose() {
+    cagriEkraniAcik.value--;
     _timer?.cancel();
     if (_sesVar) _tts.stop();
     try { Vibration.cancel(); } catch (_) {}

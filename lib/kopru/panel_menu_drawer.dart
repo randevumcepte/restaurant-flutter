@@ -7,6 +7,8 @@ import '../screens/mesai_qr_screen.dart';
 import '../screens/santral_ses_screen.dart';
 import '../screens/dahili_yonetim_screen.dart';
 import '../screens/freepbx_ayar_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../widgets/canli_uyari.dart';
 import 'ekran_kayit.dart';
 import 'panel_menu.dart';
 
@@ -97,6 +99,7 @@ class CihazMenusu extends StatelessWidget {
         collapsedIconColor: t.sub,
         children: [
           _oge(t, Icons.lan_outlined, 'LAN / Kasa Sunucu', () => onGit(const LanAyarScreen())),
+          const _CanliUyariAnahtar(),
           if (patron) _oge(t, Icons.qr_code_2, 'Kasa Mesai QR', () => onGit(const MesaiQrScreen())),
           if (santral) _oge(t, Icons.graphic_eq, 'Santral — Ses', () => onGit(const SantralSesScreen())),
           if (santral) _oge(t, Icons.dialpad, 'Dahili Yönetimi', () => onGit(const DahiliYonetimScreen())),
@@ -113,4 +116,42 @@ class CihazMenusu extends StatelessWidget {
         title: Text(ad, style: TextStyle(color: t.ink, fontSize: 13.5, fontWeight: FontWeight.w600)),
         onTap: onTap,
       );
+}
+
+/// Canlı uyarılar (çağrı / servise hazır / yeni sipariş) bu cihazda açık mı — patron/müdürde varsayılan kapalı
+class _CanliUyariAnahtar extends StatefulWidget {
+  const _CanliUyariAnahtar();
+  @override
+  State<_CanliUyariAnahtar> createState() => _CanliUyariAnahtarState();
+}
+
+class _CanliUyariAnahtarState extends State<_CanliUyariAnahtar> {
+  bool? _acik;
+
+  @override
+  void initState() {
+    super.initState();
+    SharedPreferences.getInstance().then((sp) {
+      final v = sp.getString(CanliUyariDinleyici.tercihAnahtar);
+      if (!mounted) return;
+      final a = context.read<AuthProvider>();
+      final patron = a.rol == 'sahip' || a.rol == 'mudur';
+      setState(() => _acik = v == null ? !patron : v == 'acik');
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.watch<TemaProvider>();
+    return SwitchListTile(
+      dense: true,
+      contentPadding: const EdgeInsets.only(left: 30, right: 10),
+      secondary: Icon(Icons.notifications_active_outlined, size: 20, color: t.sub2),
+      title: Text('Canlı uyarılar', style: TextStyle(color: t.ink, fontSize: 13.5, fontWeight: FontWeight.w600)),
+      subtitle: Text('Çağrı, servise hazır, yeni sipariş', style: TextStyle(color: t.sub, fontSize: 11.5)),
+      value: _acik ?? false,
+      activeThumbColor: t.mor1,
+      onChanged: _acik == null ? null : (v) { setState(() => _acik = v); canliUyariTercihKaydet(v ? 'acik' : 'kapali'); },
+    );
+  }
 }

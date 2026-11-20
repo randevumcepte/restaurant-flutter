@@ -9,6 +9,8 @@ import '../kopru/ekran_kayit.dart';
 import '../kopru/panel_menu.dart';
 import '../kopru/panel_menu_drawer.dart';
 import '../widgets/onay_dinleyici.dart';
+import '../widgets/canli_uyari.dart';
+import 'garson_cagrilari_screen.dart';
 import 'dashboard_screen.dart';
 import 'fis.dart';
 import 'garson_ozet_screen.dart';
@@ -113,6 +115,8 @@ class _HomeScreenState extends State<HomeScreen> {
     // Patron sabit panel (Özet/Masalar/Mutfak/Paket); diğerleri departmanKod'a göre.
     final tanim = _sekmeTanimlari(auth, patron);
     final List<Widget> ekranlar = tanim.map((s) => s.ekran).toList();
+    // Canlı uyarı: seçili sekme KDS ise mutfak uyarısı susar (KDS kendisi uyarır)
+    WidgetsBinding.instance.addPostFrameCallback((_) { mutfakSekmesinde.value = _index < tanim.length && tanim[_index].ekran is MutfakScreen; });
 
     if (_index >= ekranlar.length) anaSekme.value = 0;
 
@@ -153,6 +157,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ]),
           Positioned(left: 0, top: 0, bottom: 0, child: yanMenu),
           const OnayDinleyici(),
+          CanliUyariDinleyici(onAc: (e) => _canliAc(e, tanim, _icerikNav)),
         ]),
       );
     }
@@ -180,6 +185,7 @@ class _HomeScreenState extends State<HomeScreen> {
             onGenerateRoute: (s) => MaterialPageRoute(builder: (_) => _TabGovde(ekranlar: ekranlar)),
           ),
           const OnayDinleyici(),
+          CanliUyariDinleyici(onAc: (e) => _canliAc(e, tanim, _govdeNav)),
         ]),
         // Klavye acikken mikrofonu gizle: centerDocked FAB klavyenin ustune cikip
         // alt-ekran butonlarinin (ör. "Kaydet") uzerine biniyordu. Yazarken zaten gerekmez.
@@ -188,6 +194,17 @@ class _HomeScreenState extends State<HomeScreen> {
         bottomNavigationBar: patron ? _patronBar() : _personelBar(tanim),
       ),
     );
+  }
+
+  // Canlı uyarıdan "Aç": mutfak alt sekmeyse ona geç, değilse ekranı aç (çağrılar her zaman açılır)
+  void _canliAc(String ekran, List<_SekmeTanim> tanim, GlobalKey<NavigatorState> nav) {
+    if (ekran == 'mutfak') {
+      final i = tanim.indexWhere((s) => s.ekran is MutfakScreen);
+      if (i >= 0) { nav.currentState?.popUntil((r) => r.isFirst); anaSekme.value = i; return; }
+      nav.currentState?.push(MaterialPageRoute(builder: (_) => const MutfakScreen()));
+      return;
+    }
+    nav.currentState?.push(MaterialPageRoute(builder: (_) => const GarsonCagrilariScreen()));
   }
 
   // DEPARTMAN-BİLİNÇLİ sekme tanımı — her personel kendi departmanının ekranına düşer.

@@ -121,6 +121,7 @@ flutter:
 
   assets:
     - assets/sema/   # Salon şeması görsel kütüphanesi (masa/sandalye/bar/... PNG)
+    - assets/ses/    # Canlı uyarı sesleri (garson çağrısı / yeni sipariş)
 
   # To add assets to your application, add an assets section, like this:
   # assets:
