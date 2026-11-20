@@ -98,4 +98,7 @@ void ekranlariKaydet() {
   kayitCrm();
   kayitOperasyon();
   kayitAi();
+
+  // Eski web adresi /memnuniyet (rotası yoktu) → İtibar / Memnuniyet (brifing kartları ve bildirimler hâlâ verebilir)
+  EkranKayit.tam('/memnuniyet', (u, a) => EkranKayit.uret('/itibar', a));
 }
