@@ -9,6 +9,8 @@ import 'providers/tema_provider.dart';
 import 'services/notification_service.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
+import 'kopru/panel_menu.dart';
+import 'kopru/ekran_kayit.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,11 +23,13 @@ void main() async {
   }
   // Push altyapısı (Firebase yoksa sessizce kapalı kalır, app normal açılır).
   await NotificationService().baslat();
+  ekranlariKaydet(); // web adresi → uygulama ekranı eşlemesi (kopru/ekran_kayit.dart)
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()..yukle()),
         ChangeNotifierProvider(create: (_) => TemaProvider()),
+        ChangeNotifierProvider.value(value: PanelMenuServisi.ben), // web menüsünün aynısı (kopru/panel_menu.dart)
       ],
       child: const RestoOsApp(),
     ),

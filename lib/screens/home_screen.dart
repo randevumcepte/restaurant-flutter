@@ -5,18 +5,12 @@ import '../providers/auth_provider.dart';
 import '../providers/tema_provider.dart';
 import '../ana_sekme.dart';
 import '../responsive.dart';
-import '../services/api.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'yonetim_drawer.dart';
+import '../kopru/ekran_kayit.dart';
+import '../kopru/panel_menu.dart';
+import '../kopru/panel_menu_drawer.dart';
 import '../widgets/onay_dinleyici.dart';
 import 'dashboard_screen.dart';
 import 'fis.dart';
-import 'santral_kayitlar_screen.dart';
-import 'santral_ayar_screen.dart';
-import 'santral_egitim_screen.dart';
-import 'santral_ses_screen.dart';
-import 'dahili_yonetim_screen.dart';
-import 'freepbx_ayar_screen.dart';
 import 'garson_ozet_screen.dart';
 import 'servis_akis_screen.dart';
 import 'karsilama_screen.dart';
@@ -26,37 +20,15 @@ import 'mutfak_screen.dart';
 import 'paket_screen.dart';
 import 'asistan_screen.dart';
 import 'departman_panel_screen.dart';
-import 'bildirim_ayar_screen.dart';
-import 'ik_self_servis_screen.dart';
-import 'patron_ai_brief_screen.dart';
 import 'kasa_screen.dart';
-import 'z_raporu_screen.dart';
 import 'finans_screen.dart';
 import 'isletme_hub_screen.dart';
-import 'menu_yonetimi_screen.dart';
-import 'tema_secim_screen.dart';
 import 'indirimler_screen.dart';
-import 'odeme_modu_screen.dart';
-import 'cari_hesaplar_screen.dart';
-import 'odul_dogrula_screen.dart';
 import 'rezervasyon_screen.dart';
 import 'personel_screen.dart';
-import 'gider_screen.dart';
-import 'raporlar_screen.dart';
-import 'hareketler_screen.dart';
-import 'bagli_cihazlar_screen.dart';
-import 'yazici_ayarlari_screen.dart';
-import 'sebep_yonetimi_screen.dart';
-import 'masa_atama_screen.dart';
-import 'garson_performans_screen.dart';
-import 'salon_sema_screen.dart';
-import 'etiket_merkezi_screen.dart';
 import '../services/adim_servisi.dart';
 import '../services/mesai_servisi.dart';
 import 'mesai_kapisi_screen.dart';
-import 'mesai_qr_screen.dart';
-import 'isletme_konum_screen.dart';
-import 'puantaj_screen.dart';
 import '../services/cihaz_servisi.dart';
 import '../services/qr_fis_servisi.dart';
 
@@ -200,10 +172,8 @@ class _HomeScreenState extends State<HomeScreen> {
         key: anaScaffoldKey,
         // Yonetim menusu HER SAYFADAN acilsin diye drawer dis Scaffold'da.
         // Secilen ekran _govdeNav'a push edilir -> alt bar + mikrofon kalici kalir (mevcut davranis).
-        drawer: YonetimDrawer(
-          onGit: (e) => _govdeNav.currentState?.push(MaterialPageRoute(builder: (_) => e)),
-          onWeb: (p) async { try { await launchUrl(Uri.parse('${Api.base}$p'), mode: LaunchMode.externalApplication); } catch (_) {} },
-        ),
+        // Menü web panelin AYNISI (sunucudan: /panel-menu) — yetki/departman/büyüklük kuralları tek yerde
+        drawer: PanelMenuDrawer(onGit: (e) => _govdeNav.currentState?.push(MaterialPageRoute(builder: (_) => e))),
         body: Stack(children: [
           Navigator(
             key: _govdeNav,
@@ -426,7 +396,6 @@ class _YanMenuState extends State<_YanMenu> {
     final t = context.watch<TemaProvider>();
     final auth = context.watch<AuthProvider>();
     final acik = _acik;
-    final patron = widget.patron;
 
     // Yonetim ekranini SAG bolmede ac (sol menu kalir).
     void git(Widget ekran) => widget.onYonetim?.call(ekran);
@@ -457,76 +426,37 @@ class _YanMenuState extends State<_YanMenu> {
                   _marka(t, auth, acik),
                   Divider(height: 1, color: t.line),
                   Expanded(
-                    child: ListView(padding: const EdgeInsets.symmetric(vertical: 8), children: [
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                      const SizedBox(height: 8),
                       _baslik(t, 'PANEL', acik),
-                      for (int i = 0; i < widget.sekmeler.length; i++) ...[
+                      for (int i = 0; i < widget.sekmeler.length; i++)
                         _tab(t, widget.sekmeler[i], i == widget.aktifIndex, () => widget.onSekme(i)),
-                        // Mutfak'in hemen altina Rezervasyon (icerik panelinde acilir — tab degil)
-                        if (widget.sekmeler[i].label == 'Mutfak' && !auth.kasiyer)
-                          _link(t, Icons.event_available_outlined, 'Rezervasyon', () => git(const RezervasyonScreen()), renk: const Color(0xFF8B5CF6)),
-                      ],
-                      if (auth.kasiyer && auth.kasaSayfaAcik('/rezervasyon'))
-                        _link(t, Icons.event_available_outlined, 'Rezervasyon', () => git(const RezervasyonScreen()), renk: const Color(0xFF8B5CF6)),
-                      if (auth.kasiyer && auth.kasaSayfaAcik('/z-raporu'))
-                        _link(t, Icons.summarize_outlined, 'Z Raporu', () => git(const ZRaporuScreen()), renk: const Color(0xFF0EA5E9)),
                       if (widget.onAsistan != null) ...[
                         const SizedBox(height: 6),
                         _asistanBtn(widget.onAsistan!, acik),
                       ],
-                      const SizedBox(height: 10),
-                      Divider(height: 1, color: t.line, indent: 14, endIndent: 14),
                       const SizedBox(height: 8),
-                      if (!auth.kasiyer) _baslik(t, 'YÖNETİM', acik),
-                      // Ödül Doğrula — hem kasa hem garson (müşteri ödül QR kodunu okut/onayla)
-                      _link(t, Icons.qr_code_scanner, 'Ödül Doğrula', () => git(const OdulDogrulaScreen()), renk: const Color(0xFF22C55E)),
-                      if (patron) _link(t, Icons.point_of_sale, 'Kasa (Vardiya)', () => git(const KasaScreen())),
-                      if (patron) _link(t, Icons.analytics_outlined, 'Finans / Kâr-Zarar', () => git(const FinansScreen())),
-                      if (patron) _link(t, Icons.inventory_2_outlined, 'Stok & Satın Alma', () => git(const IsletmeHubScreen())),
-                      if (!auth.kasiyer && (auth.yetkiVar('gor_demirbas') || auth.yetkiVar('gor_demirbas_duzenle')))
-                        _link(t, Icons.qr_code_scanner, 'Barkod & Etiket', () => git(const EtiketMerkeziScreen()), renk: const Color(0xFF7C3AED)),
-                      if (patron) _link(t, Icons.restaurant_menu, 'Menü Yönetimi', () => git(const MenuYonetimiScreen())),
-                      if (patron) _link(t, Icons.palette_outlined, 'QR Menü Rengi', () => git(const TemaSecimScreen()), renk: t.gold),
-                      if (patron) _link(t, Icons.local_offer_outlined, 'İndirimler', () => git(const IndirimlerScreen()), renk: t.yesil),
-                      if (patron) _link(t, Icons.shield_outlined, 'Kaçak Önleme', () => git(const OdemeModuScreen()), renk: const Color(0xFFF43F5E)),
-                      _link(t, Icons.account_balance_wallet_outlined, 'Cari / Açık Hesaplar', () => git(const CariHesaplarScreen())),
-                      if (patron) _link(t, Icons.badge_outlined, 'Personel & Maaş', () => git(const PersonelScreen())),
-                      if (patron) _link(t, Icons.table_restaurant_outlined, 'Masa & Bölge Atama', () => git(const MasaAtamaScreen())),
-                      if (patron) _link(t, Icons.emoji_events_outlined, 'Garson Performansı', () => git(const GarsonPerformansScreen()), renk: t.yesil),
-                      if (patron) _link(t, Icons.grid_on_outlined, 'Salon Şeması', () => git(const SalonSemaScreen()), renk: const Color(0xFF0EA5E9)),
-                      if (patron) _link(t, Icons.receipt_long_outlined, 'Giderler', () => git(const GiderScreen())),
-                      if (patron) _link(t, Icons.bar_chart_outlined, 'Raporlar', () => git(const RaporlarScreen())),
-                      if (patron) _link(t, Icons.history, 'Hareketler (Log)', () => git(const HareketlerScreen()), renk: const Color(0xFF7C3AED)),
-                      if (patron) _link(t, Icons.devices_other_outlined, 'Bağlı Cihazlar', () => git(const BagliCihazlarScreen()), renk: const Color(0xFF0EA5E9)),
-                      if (patron) _link(t, Icons.print_outlined, 'Yazıcı Ayarları', () => git(const YaziciAyarlariScreen()), renk: const Color(0xFF14B8A6)),
-                      if (patron) _link(t, Icons.rule_folder_outlined, 'İptal / İkram Sebepleri', () => git(const SebepYonetimiScreen())),
-                      if (patron) _link(t, Icons.chat_outlined, 'WhatsApp Yönetimi', () async {
-                        try { await launchUrl(Uri.parse('${Api.base}/whatsapp'), mode: LaunchMode.externalApplication); } catch (_) {}
-                      }, renk: const Color(0xFF25D366)),
-                      if (!patron) _link(t, Icons.dashboard_customize, 'Panelim', () => git(const DepartmanPanelScreen()), renk: const Color(0xFF4F46E5)),
-                      if (patron) _link(t, Icons.wb_sunny_outlined, 'Patron AI — Sabah Brifingi', () => git(const PatronAiBriefScreen()), renk: const Color(0xFF7C3AED)),
-                      _link(t, Icons.notifications_active, 'Bildirim Ayarları', () => git(const BildirimAyarScreen()), renk: const Color(0xFF0EA5E9)),
-                      _link(t, Icons.badge, 'İK Self-Servis', () => git(const IkSelfServisScreen()), renk: const Color(0xFF10B981)),
-                      if (patron) ...[
-                        const SizedBox(height: 10),
-                        Divider(height: 1, color: t.line, indent: 14, endIndent: 14),
-                        const SizedBox(height: 8),
-                        _baslik(t, 'MESAİ', acik),
-                        _link(t, Icons.qr_code_2, 'Kasa Mesai QR', () => git(const MesaiQrScreen()), renk: const Color(0xFF14B8A6)),
-                        _link(t, Icons.my_location, 'İşletme Konumu (Mesai)', () => git(const IsletmeKonumScreen()), renk: const Color(0xFF14B8A6)),
-                        _link(t, Icons.how_to_reg_outlined, 'Puantaj (Mesai)', () => git(const PuantajScreen()), renk: const Color(0xFF10B981)),
-                      ],
-                      if (patron) ...[
-                        const SizedBox(height: 10),
-                        Divider(height: 1, color: t.line, indent: 14, endIndent: 14),
-                        const SizedBox(height: 8),
-                        _baslik(t, 'AI SANTRAL', acik),
-                        _link(t, Icons.support_agent, 'AI Santral — Kayıtlar', () => git(const SantralKayitlarScreen()), renk: const Color(0xFF8B5CF6)),
-                        _link(t, Icons.call_split, 'Aktarma / Teslimat', () => git(const SantralAyarScreen()), renk: const Color(0xFF8B5CF6)),
-                        _link(t, Icons.school_outlined, 'Santral AI Eğitimi', () => git(const SantralEgitimScreen()), renk: const Color(0xFF8B5CF6)),
-                        _link(t, Icons.graphic_eq, 'Santral — Ses', () => git(const SantralSesScreen()), renk: const Color(0xFF8B5CF6)),
-                        _link(t, Icons.dialpad, 'Dahili Yönetimi', () => git(const DahiliYonetimScreen()), renk: const Color(0xFF0EA5E9)),
-                        _link(t, Icons.settings_input_antenna, 'FreePBX API', () => git(const FreepbxAyarScreen()), renk: const Color(0xFF0EA5E9)),
-                      ],
+                      Divider(height: 1, color: t.line, indent: 14, endIndent: 14),
+                      // Menü web panelin AYNISI (sunucudan) — fare üstüne gelince açılır
+                      Expanded(
+                        child: acik
+                            ? PanelMenuListesi(onAc: (o) => git(EkranKayit.uret(o.url, o.ad)))
+                            : Align(
+                                alignment: Alignment.topLeft,
+                                child: SizedBox(
+                                  width: _YanMenu.darGenislik,
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(top: 14),
+                                    child: Column(children: [
+                                      Icon(Icons.apps, color: t.sub2, size: 22),
+                                      const SizedBox(height: 3),
+                                      Text('Menü', style: TextStyle(color: t.sub, fontSize: 11, fontWeight: FontWeight.w700)),
+                                    ]),
+                                  ),
+                                ),
+                              ),
+                      ),
+                      if (acik) CihazMenusu(onGit: git),
                     ]),
                   ),
                   Divider(height: 1, color: t.line),
