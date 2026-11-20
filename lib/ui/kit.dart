@@ -673,6 +673,12 @@ class KSecim<T> extends StatelessWidget {
 IconData ikonAdi(String? ad, [IconData varsayilan = Icons.circle_outlined]) => kIkonHaritasi[ad ?? ''] ?? varsayilan;
 
 const Map<String, IconData> kIkonHaritasi = {
+  'sell': Icons.sell_outlined,
+  'card_giftcard': Icons.card_giftcard,
+  'group': Icons.group_outlined,
+  'beach_access': Icons.beach_access_outlined,
+  'devices_other': Icons.devices_other_outlined,
+  'bakery_dining': Icons.bakery_dining_outlined,
   'wb_sunny': Icons.wb_sunny_outlined, 'dashboard': Icons.dashboard_outlined, 'table_restaurant': Icons.table_restaurant_outlined,
   'soup_kitchen': Icons.soup_kitchen_outlined, 'event_available': Icons.event_available_outlined, 'delivery_dining': Icons.delivery_dining_outlined,
   'room_service': Icons.room_service_outlined, 'co_present': Icons.co_present_outlined, 'notifications_active': Icons.notifications_active_outlined,

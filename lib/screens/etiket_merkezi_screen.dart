@@ -9,6 +9,7 @@ import '../services/etiket_yazici.dart';
 import '../ui/masaustu_kit.dart';
 import 'barkod_tarayici.dart';
 import 'demirbas_screen.dart';
+import '../moduller/stok/etiket_sablon_screen.dart';
 
 /// BARKOD & ETİKET MERKEZİ — web /barkod-etiket ile aynı veri ve uçlar (/api/etiket-merkezi/*).
 /// Etiketli ürünler (menüye bağlı ya da bağımsız) · paket etiketi (üretim/SKT/parti) · tartı etiketi
@@ -231,6 +232,7 @@ class _EtiketMerkeziScreenState extends State<EtiketMerkeziScreen> {
       ('bas', Icons.local_offer_outlined, 'Etiket Bas', 0),
       ('tarti', Icons.scale_outlined, 'Tartılı Ürün', 0),
       ('raf', Icons.style_outlined, 'Raf Kartı', bekleyen),
+      ('tasarim', Icons.design_services_outlined, 'Tasarımlarım', 0),
       ('demirbas', Icons.handyman_outlined, 'Demirbaş', 0),
     ];
     return SingleChildScrollView(
@@ -247,6 +249,10 @@ class _EtiketMerkeziScreenState extends State<EtiketMerkeziScreen> {
                 onTap: () {
                   if (s.$1 == 'demirbas') {
                     Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DemirbasScreen()));
+                    return;
+                  }
+                  if (s.$1 == 'tasarim') {
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const EtiketSablonScreen())).then((_) => _yukle());
                     return;
                   }
                   setState(() => sekme = s.$1);

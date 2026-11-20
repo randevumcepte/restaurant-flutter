@@ -1,8 +1,10 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../kopru/kopru_ekran.dart';
 import '../../providers/tema_provider.dart';
+import '../../responsive.dart';
 import '../../ui/kit.dart';
 import 'ortak.dart';
 
@@ -89,7 +91,12 @@ class _EfaturaGelenScreenState extends State<EfaturaGelenScreen> {
           Text('XML / ZIP dosyası seçin (en doğrusu). Aynı fatura iki kez yüklenirse ETTN\'den tanınır. Satırı ya da toplamı tutmayan faturalar otomatik aktarılmaz, kontrol için bekletilir.',
               style: TextStyle(color: t.sub, fontSize: 12.5)),
           const SizedBox(height: 8),
-          Align(alignment: Alignment.centerLeft, child: KButon('XML / ZIP seç ve yükle', ikon: Icons.upload_file, renk: t.mavi, yukleniyor: _mesgul, onTap: () => _yukle(yenile))),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            KButon('XML / ZIP seç ve yükle', ikon: Icons.upload_file, renk: t.mavi, yukleniyor: _mesgul, onTap: () => _yukle(yenile)),
+            KButon('PDF / fotoğraftan oku', ikon: Icons.document_scanner_outlined, renk: t.mor1, ikincil: true, yukleniyor: _mesgul, onTap: () => _dosyaOku(yenile)),
+          ]),
+          const SizedBox(height: 6),
+          Text('XML\'i olmayan fatura: PDF\'i seçin ya da kâğıt faturanın fotoğrafını çekin, yapay zekâ kalemleri okur (günlük kotalı).', style: TextStyle(color: t.sub, fontSize: 12)),
         ]),
       ),
       KCipler(secenekler: [
@@ -193,6 +200,39 @@ class _EfaturaGelenScreenState extends State<EfaturaGelenScreen> {
         await Future.delayed(const Duration(milliseconds: 1500));
         if (mounted) kToast(context, h, hata: true);
       }
+    }
+    yenile();
+  }
+
+  // XML'i olmayan fatura: PDF ya da fotoğraf sunucuda yapay zekâyla okunur, kayıt web'deki PDF okumayla aynı yoldan
+  Future<void> _dosyaOku(Future<void> Function() yenile) async {
+    final t = context.read<TemaProvider>();
+    final secim = await kAltSayfa<String>(context, baslik: 'Faturayı oku', icerik: (s) => Column(children: [
+          if (!genisMi(context)) KSatir(solIkon: KIkon(Icons.photo_camera_outlined, renk: t.mor1), baslik: 'Fotoğrafını çek', alt: 'Kâğıt faturayı düz ve aydınlık bir yerde çekin', onTap: () => Navigator.pop(s, 'kamera')),
+          KSatir(solIkon: KIkon(Icons.photo_library_outlined, renk: t.mavi), baslik: 'Galeriden fotoğraf seç', onTap: () => Navigator.pop(s, 'galeri')),
+          KSatir(solIkon: KIkon(Icons.picture_as_pdf_outlined, renk: t.kirmizi), baslik: 'PDF seç', alt: 'En çok 6 sayfa', onTap: () => Navigator.pop(s, 'pdf'), cizgi: false),
+        ]));
+    if (secim == null || !mounted) return;
+    (String, List<int>)? dosya;
+    if (secim == 'pdf') {
+      final r = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['pdf'], withData: true);
+      final f = r?.files.firstOrNull;
+      if (f?.bytes != null) dosya = (f!.name, f.bytes!);
+    } else {
+      final x = await ImagePicker().pickImage(source: secim == 'kamera' ? ImageSource.camera : ImageSource.gallery, maxWidth: 2400, maxHeight: 2400, imageQuality: 88);
+      if (x != null) dosya = (x.name, await x.readAsBytes());
+    }
+    if (dosya == null || !mounted) return;
+    setState(() => _mesgul = true);
+    final c = await saDosyaYukle(context, '/efatura-gelen/dosya-oku', [('dosya', dosya.$1, dosya.$2)]);
+    if (!mounted) return;
+    setState(() => _mesgul = false);
+    if (c == null) return;
+    if (c.ok) {
+      final yeni = tamOku(c.j['yeni']), varN = tamOku(c.j['var']), kontrol = tamOku(c.j['kontrol']);
+      kToast(context, yeni > 0 ? '$yeni fatura okundu ve eklendi${kontrol > 0 ? ' · $kontrol tanesi kontrol bekliyor' : ''} · kalan okuma hakkı ${tamOku(c.j['ai_kalan'])}' : (varN > 0 ? 'Bu fatura zaten kayıtlı.' : 'Fatura eklenemedi: ${dizi(c.j['hatalar']).join(', ')}'));
+    } else {
+      kToast(context, metinOku(c.j['hata'], 'Fatura okunamadı.'), hata: true);
     }
     yenile();
   }

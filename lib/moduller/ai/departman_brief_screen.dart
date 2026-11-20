@@ -71,12 +71,40 @@ class _DepartmanBriefScreenState extends State<DepartmanBriefScreen> {
     final rozetler = liste(v['rozetler']);
     final aiLink = harita(v['aiLink']);
     final crm = harita(v['crmRez']);
+    final onayN = tamOku(v['onayBekleyenTalep']);
+    final altDep = liste(v['altDepartmanlar']);
     final genis = genisMi(c);
 
     final aiPanel = _aiPanel(c, deptAd, v, aiLink, hizli);
     final islerKart = _islerKart(c, isler);
 
     return KGovde(yenile: yenile, children: [
+      // ── Departman sorumlusunun onayını bekleyen satın alma talepleri
+      if (onayN > 0)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: () => aiGit(c, '/talep-onaylarim', baslik: 'Talep Onaylarım'),
+              child: Ink(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [Color(0xFFF59E0B), Color(0xFFD97706)]),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [BoxShadow(color: const Color(0xFFF59E0B).withValues(alpha: .28), blurRadius: 20, offset: const Offset(0, 8))],
+                ),
+                child: Row(children: [
+                  const Icon(Icons.fact_check_outlined, color: Colors.white),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text('$onayN satın alma talebi senin onayını bekliyor', style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700))),
+                  const Icon(Icons.chevron_right, color: Colors.white),
+                ]),
+              ),
+            ),
+          ),
+        ),
       // ── HERO
       Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
         Container(
@@ -105,6 +133,34 @@ class _DepartmanBriefScreenState extends State<DepartmanBriefScreen> {
             for (final r in rozetler)
               KRozet(metinOku(r['metin']), renk: r['renk'] == null ? t.sub2 : cssRenk(c, r['renk']), ikon: ikonAdi(metinOku(r['ikon']), Icons.info_outline)),
           ]),
+        ),
+      // ── Mutfak (BOH) alt departman sekmeleri: istasyon çalışanı yalnız kendininkini görür (sunucu süzer)
+      if (altDep.isNotEmpty)
+        Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(children: [
+              for (final a in altDep)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Builder(builder: (_) {
+                    final aktif = a['aktif'] == true;
+                    final r = cssRenk(c, a['renk']);
+                    return ChoiceChip(
+                      selected: aktif,
+                      showCheckmark: false,
+                      selectedColor: r,
+                      backgroundColor: t.card,
+                      side: BorderSide(color: aktif ? r : t.line),
+                      avatar: Icon(ikonAdi(metinOku(a['ikon']), Icons.restaurant), size: 18, color: aktif ? Colors.white : r),
+                      label: Text(metinOku(a['ad']), style: TextStyle(color: aktif ? Colors.white : t.ink, fontSize: 13, fontWeight: FontWeight.w700)),
+                      onSelected: aktif ? null : (_) => _k.currentState?.sorgu({'dep': metinOku(a['kod'])}),
+                    );
+                  }),
+                ),
+            ]),
+          ),
         ),
       const SizedBox(height: 12),
       if (v['demo'] == true)

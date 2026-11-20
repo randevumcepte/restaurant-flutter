@@ -179,6 +179,8 @@ class _ProfilimScreenState extends State<ProfilimScreen> {
     final egitimler = liste(v['egitimler']);
     final vardiya = liste(v['vardiya']);
     final rozetler = liste(v['rozetler']);
+    final yetkiSatir = [...dizi(v['yetkiSol']), ...dizi(v['yetkiSag'])].whereType<List>().toList();
+    final kisayollar = dizi(v['kisayollar']).whereType<List>().where((k) => k.length >= 4).toList();
     final foto = _foto(p);
     final rol = metinOku(p['rol']);
     final kalanIzin = (sayiOku(v['hak']) - sayiOku(v['kullanilan'])).clamp(0, 9999);
@@ -334,13 +336,40 @@ class _ProfilimScreenState extends State<ProfilimScreen> {
 
     final yetkiKart = KKart(
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        const KBaslik('Yetki & Limitlerim', ikon: Icons.star_outline),
-        KSatir(solIkon: Icon(Icons.sell_outlined, color: t.sub), baslik: 'İndirim limiti', sag: _durum(t, sayiOku(yetki['iskonto_limit']) > 0 ? yuzde(yetki['iskonto_limit']) : null)),
-        KSatir(solIkon: Icon(Icons.card_giftcard, color: t.sub), baslik: 'İkram limiti', sag: _durum(t, sayiOku(yetki['ikram_limit']) > 0 ? tl(yetki['ikram_limit'], kisa: true) : null)),
+        const KBaslik('Yetkilerim', ikon: Icons.star_outline),
+        // Web Profilim'deki tablo (sunucudan): true = Aktif, metin = limit, boş = yok
+        for (final y in yetkiSatir)
+          KSatir(
+            solIkon: Icon(ikonAdi(metinOku(y.isNotEmpty ? y[0] : null), Icons.check_circle_outline), color: t.sub),
+            baslik: metinOku(y.length > 1 ? y[1] : null),
+            sag: _durum(t, y.length < 3 || y[2] == null || y[2] == false ? null : (y[2] == true ? 'Aktif' : metinOku(y[2]))),
+          ),
+        if (yetkiSatir.isEmpty) ...[
+          KSatir(solIkon: Icon(Icons.sell_outlined, color: t.sub), baslik: 'İndirim limiti', sag: _durum(t, sayiOku(yetki['iskonto_limit']) > 0 ? yuzde(yetki['iskonto_limit']) : null)),
+          KSatir(solIkon: Icon(Icons.card_giftcard, color: t.sub), baslik: 'İkram limiti', sag: _durum(t, sayiOku(yetki['ikram_limit']) > 0 ? tl(yetki['ikram_limit'], kisa: true) : null)),
+        ],
         KSatir(solIkon: Icon(Icons.location_on_outlined, color: t.sub), baslik: 'Sorumlu olduğun alan', sag: Text(alanMetin, style: TextStyle(color: t.ink, fontWeight: FontWeight.w700, fontSize: 13))),
         KSatir(solIkon: Icon(Icons.apartment, color: t.sub), baslik: 'Departman', sag: Text(metinOku(dep['ad'], '—'), style: TextStyle(color: t.ink, fontWeight: FontWeight.w700, fontSize: 13)), cizgi: false),
       ]),
     );
+
+    final kisayolKart = kisayollar.isEmpty
+        ? null
+        : KKart(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              KBaslik('Kısayollar', ikon: Icons.bolt, renk: const Color(0xFFF59E0B)),
+              Wrap(spacing: 8, runSpacing: 8, children: [
+                for (final k in kisayollar)
+                  ActionChip(
+                    backgroundColor: t.card2,
+                    side: BorderSide(color: t.line),
+                    avatar: Icon(ikonAdi(metinOku(k[1]), Icons.link), size: 18, color: renkOku(k[2])),
+                    label: Text(metinOku(k[3]), style: TextStyle(color: t.ink, fontSize: 13, fontWeight: FontWeight.w700)),
+                    onPressed: () => aiGit(c, metinOku(k[0]), baslik: metinOku(k[3])),
+                  ),
+              ]),
+            ]),
+          );
 
     final akisKart = KKart(
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -428,9 +457,10 @@ class _ProfilimScreenState extends State<ProfilimScreen> {
         iki(yetkiKart, akisKart),
         calisma,
         iki(vardiyaKart, baglanti ?? const SizedBox.shrink()),
+        ?kisayolKart,
       ]);
     }
-    return KGovde(yenile: yenile, children: [hero, kpi, kisisel, guvenlikKart, calisma, vardiyaKart, yetkiKart, akisKart, ?baglanti]);
+    return KGovde(yenile: yenile, children: [hero, kpi, kisisel, guvenlikKart, calisma, vardiyaKart, yetkiKart, akisKart, ?kisayolKart, ?baglanti]);
   }
 
   Widget _meta(TemaProvider t, IconData ik, String e, String d) => Row(mainAxisSize: MainAxisSize.min, children: [

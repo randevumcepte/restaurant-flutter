@@ -47,6 +47,7 @@ class KopruEkranState extends State<KopruEkran> {
   DateTime? _sonYukleme;
 
   Map<String, String>? get q => _q;
+  Map<String, dynamic>? get veri => _veri;
 
   @override
   void initState() {

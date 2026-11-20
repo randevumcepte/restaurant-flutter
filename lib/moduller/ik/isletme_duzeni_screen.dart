@@ -4,6 +4,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
+import 'masa_plan_editor_screen.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../config/app_config.dart';
 import '../../kopru/ekran_kayit.dart';
@@ -102,6 +103,11 @@ class _IkIsletmeDuzeniScreenState extends State<IkIsletmeDuzeniScreen> {
 
   void _ac(BuildContext context, String yol, String ad) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => EkranKayit.uret(yol, ad)));
 
+  Future<void> _planDuzenle(BuildContext context, Map<String, dynamic> v, Future<void> Function() yenile) async {
+    final kaydedildi = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => MasaPlanEditorScreen(veri: v, ilkAlan: _alan)));
+    if (kaydedildi == true) yenile();
+  }
+
   // ═════════════ MASA PLANI ═════════════
   List<Widget> _plan(BuildContext context, Map<String, dynamic> v, Future<void> Function() yenile) {
     final t = context.watch<TemaProvider>();
@@ -127,6 +133,7 @@ class _IkIsletmeDuzeniScreenState extends State<IkIsletmeDuzeniScreen> {
       ]),
       Wrap(spacing: 8, runSpacing: 8, children: [
         KButon('Masa Ekle', ikon: Icons.table_restaurant_outlined, onTap: () => _masaEkle(context, v, yenile)),
+        if (masalar.isNotEmpty) KButon('Planı Düzenle', ikon: Icons.open_with, renk: t.mavi, onTap: () => _planDuzenle(context, v, yenile)),
         KButon('Alan Ekle', ikon: Icons.add_home_work_outlined, ikincil: true, onTap: () => _bolgeEkle(context, yenile)),
         KButon('Masa Taşı', ikon: Icons.swap_horiz, ikincil: true, onTap: () => _masaTasi(context, v, null, yenile)),
         KButon('QR Kodlar', ikon: Icons.qr_code_2, ikincil: true, onTap: () => _ac(context, '/masa-yonetim', 'Masa & QR Yönetimi')),
@@ -177,7 +184,7 @@ class _IkIsletmeDuzeniScreenState extends State<IkIsletmeDuzeniScreen> {
           Icon(Icons.info_outline, color: t.mavi, size: 20),
           const SizedBox(width: 8),
           Expanded(
-            child: Text('Masaların salondaki konum/şekil düzenlemesi (sürükle-bırak plan) şimdilik web panelden ya da Salon Şeması ekranından yapılır.',
+            child: Text('Masaların salondaki yerini, şeklini ve boyunu "Planı Düzenle" ile sürükleyerek değiştirin; kaydedince Salon Şeması ve POS masa haritası da güncellenir.',
                 style: TextStyle(color: t.sub2, fontSize: 12.5)),
           ),
         ]),
@@ -368,7 +375,7 @@ class _IkIsletmeDuzeniScreenState extends State<IkIsletmeDuzeniScreen> {
               return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 KSecim<int>('Masa', deger: masa, secenekler: [for (final x in masalar) (tamOku(x['id']), '${bAd[tamOku(x['bolge_id'])] ?? 'Bölgesiz'} · ${metinOku(x['ad'])}')], onSec: (x) => ss(() => masa = x ?? masa)),
                 KSecim<int>('Taşınacak bölge', deger: bolge, secenekler: [for (final b in bolgeler) (tamOku(b['id']), metinOku(b['ad']))], onSec: (x) => ss(() => bolge = x ?? bolge)),
-                Padding(padding: const EdgeInsets.only(bottom: 12), child: Text('Aynı bölgede konum değiştirmek için Salon Şeması / web plan düzenleyicisi kullanılır.', style: TextStyle(color: t.sub, fontSize: 12.5))),
+                Padding(padding: const EdgeInsets.only(bottom: 12), child: Text('Aynı bölgede konum değiştirmek için "Planı Düzenle"yi kullanın.', style: TextStyle(color: t.sub, fontSize: 12.5))),
                 KButon('Taşı', ikon: Icons.swap_horiz, genis: true, onTap: () => Navigator.pop(sc, true)),
               ]);
             }));
