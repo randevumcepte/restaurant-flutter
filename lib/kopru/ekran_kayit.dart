@@ -17,6 +17,8 @@ import '../screens/santral_ses_screen.dart';
 import '../screens/dahili_yonetim_screen.dart';
 import '../screens/freepbx_ayar_screen.dart';
 import '../screens/mesai_qr_screen.dart';
+import '../screens/alis_fatura_screen.dart';
+import '../screens/ik_self_servis_screen.dart';
 import 'genel_sayfa_screen.dart';
 import 'rapor_merkezi_screen.dart';
 import '../moduller/satinalma/kayit.dart';
@@ -79,6 +81,8 @@ void ekranlariKaydet() {
   EkranKayit.tam('/dahili-yonetim', (u, a) => const DahiliYonetimScreen());
   EkranKayit.tam('/freepbx-ayar', (u, a) => const FreepbxAyarScreen());
   EkranKayit.tam('/mesai-qr', (u, a) => const MesaiQrScreen());
+  EkranKayit.tam('/alis-fatura', (u, a) => const AlisFaturaScreen()); // stok merkezi kartı (web /alis-fatura ile aynı uçlar)
+  EkranKayit.tam('/ik-self-servis', (u, a) => const IkSelfServisScreen()); // çalışanın kendi izin / avans talebi
   // Departman iş ekranları (web /temizlik, /guvenlik, /teknik, /bulasik): Geçmiş + İptal + son tarih dahil yeni ekran
   EkranKayit.tam('/temizlik', (u, a) => const KaliteDepartmanIsScreen(kod: 'temizlik', baslik: 'Temizlik / Hijyen', renk: Color(0xFF0EA5E9), ikon: Icons.cleaning_services_outlined));
   EkranKayit.tam('/guvenlik', (u, a) => const KaliteDepartmanIsScreen(kod: 'guvenlik', baslik: 'Güvenlik', renk: Color(0xFF475569), ikon: Icons.security_outlined));

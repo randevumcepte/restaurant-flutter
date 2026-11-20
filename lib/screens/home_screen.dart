@@ -21,13 +21,8 @@ import 'masalar_screen.dart';
 import 'mutfak_screen.dart';
 import 'paket_screen.dart';
 import 'asistan_screen.dart';
-import 'departman_panel_screen.dart';
 import 'kasa_screen.dart';
-import 'finans_screen.dart';
-import 'isletme_hub_screen.dart';
-import 'indirimler_screen.dart';
 import 'rezervasyon_screen.dart';
-import 'personel_screen.dart';
 import '../services/adim_servisi.dart';
 import '../services/mesai_servisi.dart';
 import 'mesai_kapisi_screen.dart';
@@ -218,7 +213,8 @@ class _HomeScreenState extends State<HomeScreen> {
         _SekmeTanim(Icons.delivery_dining_outlined, Icons.delivery_dining, 'Paket', PaketScreen()),
       ];
     }
-    const panelim = _SekmeTanim(Icons.dashboard_customize_outlined, Icons.dashboard_customize, 'Panelim', DepartmanPanelScreen());
+    // Web'deki gibi: departman çalışanının ana ekranı kendi Sabah Brifingi (/departman-brief)
+    final panelim = _SekmeTanim(Icons.wb_sunny_outlined, Icons.wb_sunny, 'Brifingim', EkranKayit.uret('/departman-brief', 'Sabah Brifingim'));
     const masalar = _SekmeTanim(Icons.table_bar_outlined, Icons.table_bar, 'Masalar', MasalarScreen());
     const mutfak = _SekmeTanim(Icons.restaurant_menu_outlined, Icons.restaurant_menu, 'Mutfak', MutfakScreen());
     // Kasiyer: departmanı ne olursa olsun yalnız kasa noktasında açık Panel sayfaları
@@ -241,31 +237,33 @@ class _HomeScreenState extends State<HomeScreen> {
       case 'kasa':
         return const [_SekmeTanim(Icons.point_of_sale_outlined, Icons.point_of_sale, 'Kasa', KasaScreen()), masalar];
       case 'mutfak': case 'soguk_mutfak': case 'pastane': case 'kasap':
-        return const [mutfak, panelim];
+        return [mutfak, panelim];
       case 'satinalma': case 'depo': case 'mal_kabul':
-        return const [_SekmeTanim(Icons.inventory_2_outlined, Icons.inventory_2, 'Stok', IsletmeHubScreen()), panelim];
+        return [_SekmeTanim(Icons.inventory_2_outlined, Icons.inventory_2, 'Stok', EkranKayit.uret('/stok', 'Stok & Satın Alma')), panelim];
       case 'finans':
-        return const [_SekmeTanim(Icons.analytics_outlined, Icons.analytics, 'Finans', FinansScreen()), panelim];
+        return [_SekmeTanim(Icons.analytics_outlined, Icons.analytics, 'Finans', EkranKayit.uret('/finans', 'Finans')), panelim];
       case 'ik':
-        return const [_SekmeTanim(Icons.badge_outlined, Icons.badge, 'Personel', PersonelScreen()), panelim];
+        return [_SekmeTanim(Icons.badge_outlined, Icons.badge, 'Personel', EkranKayit.uret('/personel', 'Personel & Maaş')), panelim];
       case 'paket_kurye':
-        return const [_SekmeTanim(Icons.delivery_dining_outlined, Icons.delivery_dining, 'Paket', PaketScreen()), panelim];
-      case 'pazarlama': case 'crm':
-        return const [_SekmeTanim(Icons.local_offer_outlined, Icons.local_offer, 'Pazarlama', IndirimlerScreen()), panelim];
+        return [_SekmeTanim(Icons.delivery_dining_outlined, Icons.delivery_dining, 'Paket', PaketScreen()), panelim];
+      case 'pazarlama':
+        return [_SekmeTanim(Icons.campaign_outlined, Icons.campaign, 'Pazarlama', EkranKayit.uret('/kampanya', 'Kampanya Stüdyosu')), panelim];
+      case 'crm':
+        return [_SekmeTanim(Icons.person_search_outlined, Icons.person_search, 'Müşteriler', EkranKayit.uret('/musteri-360', 'Müşteri 360')), panelim];
       case 'kalite':
-        return const [_SekmeTanim(Icons.verified_user_outlined, Icons.verified_user, 'Kalite', KaliteDepartmanIsScreen(kod: 'kalite', baslik: 'Kalite / Gıda Güvenliği (HACCP)', renk: Color(0xFF16A34A))), panelim];
+        return [_SekmeTanim(Icons.verified_user_outlined, Icons.verified_user, 'Kalite', KaliteDepartmanIsScreen(kod: 'kalite', baslik: 'Kalite / Gıda Güvenliği (HACCP)', renk: Color(0xFF16A34A))), panelim];
       case 'temizlik':
-        return const [_SekmeTanim(Icons.cleaning_services_outlined, Icons.cleaning_services, 'Temizlik', KaliteDepartmanIsScreen(kod: 'temizlik', baslik: 'Temizlik / Hijyen', renk: Color(0xFF0EA5E9))), panelim];
+        return [_SekmeTanim(Icons.cleaning_services_outlined, Icons.cleaning_services, 'Temizlik', KaliteDepartmanIsScreen(kod: 'temizlik', baslik: 'Temizlik / Hijyen', renk: Color(0xFF0EA5E9))), panelim];
       case 'guvenlik':
-        return const [_SekmeTanim(Icons.security_outlined, Icons.security, 'Güvenlik', KaliteDepartmanIsScreen(kod: 'guvenlik', baslik: 'Güvenlik', renk: Color(0xFF475569))), panelim];
+        return [_SekmeTanim(Icons.security_outlined, Icons.security, 'Güvenlik', KaliteDepartmanIsScreen(kod: 'guvenlik', baslik: 'Güvenlik', renk: Color(0xFF475569))), panelim];
       case 'teknik':
-        return const [_SekmeTanim(Icons.build_outlined, Icons.build, 'Teknik', KaliteDepartmanIsScreen(kod: 'teknik', baslik: 'Teknik Servis / Bakım-Onarım', renk: Color(0xFFF97316))), panelim];
+        return [_SekmeTanim(Icons.build_outlined, Icons.build, 'Teknik', KaliteDepartmanIsScreen(kod: 'teknik', baslik: 'Teknik Servis / Bakım-Onarım', renk: Color(0xFFF97316))), panelim];
       case 'it':
-        return const [_SekmeTanim(Icons.dns_outlined, Icons.dns, 'IT', KaliteDepartmanIsScreen(kod: 'it', baslik: 'IT / Bilgi İşlem', renk: Color(0xFF6366F1))), panelim];
+        return [_SekmeTanim(Icons.dns_outlined, Icons.dns, 'IT', KaliteDepartmanIsScreen(kod: 'it', baslik: 'IT / Bilgi İşlem', renk: Color(0xFF6366F1))), panelim];
       case 'bulasik':
-        return const [_SekmeTanim(Icons.wash_outlined, Icons.wash, 'Bulaşık', KaliteDepartmanIsScreen(kod: 'bulasik', baslik: 'Bulaşıkhane / Steward', renk: Color(0xFF06B6D4))), panelim];
+        return [_SekmeTanim(Icons.wash_outlined, Icons.wash, 'Bulaşık', KaliteDepartmanIsScreen(kod: 'bulasik', baslik: 'Bulaşıkhane / Steward', renk: Color(0xFF06B6D4))), panelim];
       case 'satis_etkinlik':
-        return const [_SekmeTanim(Icons.celebration_outlined, Icons.celebration, 'Etkinlik', KaliteDepartmanIsScreen(kod: 'satis_etkinlik', baslik: 'Satış / Etkinlik', renk: Color(0xFFA855F7))), panelim];
+        return [_SekmeTanim(Icons.celebration_outlined, Icons.celebration, 'Etkinlik', KaliteDepartmanIsScreen(kod: 'satis_etkinlik', baslik: 'Satış / Etkinlik', renk: Color(0xFFA855F7))), panelim];
       default:
         // Departman atanmamış / bilinmeyen → eski garson düzeni (geriye uyumlu).
         return const [_SekmeTanim(Icons.insights_outlined, Icons.insights, 'Özetim', GarsonOzetScreen()), masalar, mutfak];

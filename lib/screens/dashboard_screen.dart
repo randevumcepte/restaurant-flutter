@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../ana_sekme.dart' show anaScaffoldKey;
+import '../moduller/ai/bildirim_merkezi_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
@@ -6,43 +8,11 @@ import '../providers/tema_provider.dart';
 import '../responsive.dart';
 import '../services/api.dart';
 import 'detay_screen.dart';
-import 'asistan_screen.dart';
-import 'departman_panel_screen.dart';
-import 'bildirim_ayar_screen.dart';
-import 'ik_self_servis_screen.dart';
-import 'patron_ai_brief_screen.dart';
-import 'personel_screen.dart';
-import 'gider_screen.dart';
-import 'isletme_hub_screen.dart';
-import 'finans_screen.dart';
-import 'kasa_screen.dart';
-import 'cari_hesaplar_screen.dart';
-import 'sebep_yonetimi_screen.dart';
-import 'menu_yonetimi_screen.dart';
-import 'masa_atama_screen.dart';
-import 'masa_yonetim_screen.dart';
-import 'garson_performans_screen.dart';
-import 'salon_sema_screen.dart';
-import 'mesai_qr_screen.dart';
-import 'puantaj_screen.dart';
-import 'isletme_konum_screen.dart';
-import 'tema_secim_screen.dart';
-import 'indirimler_screen.dart';
-import 'odeme_modu_screen.dart';
-import 'garson_cagrilari_screen.dart';
 import 'ai_bildirim_screen.dart';
-import 'raporlar_screen.dart';
-import 'bagli_cihazlar_screen.dart';
-import 'hareketler_screen.dart';
-import 'yazici_ayarlari_screen.dart';
 import 'rezervasyon_screen.dart';
-import 'uretim_riski_screen.dart';
-import 'sayim_screen.dart';
 import 'musteri_detay_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../widgets/sync_durum_rozeti.dart';
-import 'lan_ayar_screen.dart';
-import 'cark_yonetim_screen.dart';
 
 /// Patron ana paneli — Kerzz BOSS yogunlugunda: tek ekranda her sey.
 /// Donem secici + karsilastirma + kayip radari + food-cost + odeme/servis dagilimi + 10 gunluk grafik.
@@ -71,7 +41,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Color get _ink => _t.ink;
   Color get _sub => _t.sub;
   Color get _sub2 => _t.sub2;
-  Color get _line => _t.line;
 
   static const _mor1 = Color(0xFF7C3AED);
   static const _mor2 = Color(0xFF9D5DC8);
@@ -177,99 +146,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     } catch (_) {}
   }
 
-  // Sol ust menu (drawer) — yonetim sayfalarina hizli gecis
-  Widget _drawer(BuildContext context, AuthProvider auth) {
-    final patron = auth.rol == 'sahip' || auth.rol == 'mudur';
-    void git(Widget ekran) {
-      Navigator.of(context).pop(); // drawer'i kapat
-      Navigator.of(context).push(MaterialPageRoute(builder: (_) => ekran));
-    }
-
-    Widget oge(IconData ikon, String baslik, VoidCallback onTap, {Color? renk}) {
-      final r = renk ?? _ink;
-      return ListTile(
-        leading: Icon(ikon, color: r, size: 22),
-        title: Text(baslik, style: TextStyle(color: r, fontSize: 15, fontWeight: FontWeight.w600)),
-        onTap: onTap,
-        dense: true,
-        visualDensity: const VisualDensity(vertical: -1),
-      );
-    }
-
-    return Drawer(
-      backgroundColor: _card,
-      child: SafeArea(
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Container(
-            padding: const EdgeInsets.fromLTRB(18, 20, 18, 18),
-            decoration: const BoxDecoration(gradient: LinearGradient(colors: [_mor1, _mavi])),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('ResteOS', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 4),
-              Text(auth.sube ?? '', style: const TextStyle(color: Colors.white, fontSize: 14)),
-              Text('${auth.ad ?? ''} · ${_rolAd(auth.rol)}', style: const TextStyle(color: Color(0xFFE9D5FF), fontSize: 12)),
-            ]),
-          ),
-          const SizedBox(height: 6),
-          Expanded(
-            child: ListView(padding: EdgeInsets.zero, children: [
-              oge(Icons.lan_outlined, 'LAN / Kasa Sunucu', () => git(const LanAyarScreen()), renk: const Color(0xFF6366F1)),
-              if (patron) oge(Icons.point_of_sale, 'Kasa (Vardiya)', () => git(const KasaScreen())),
-              if (patron) oge(Icons.analytics_outlined, 'Finans / Kâr-Zarar', () => git(const FinansScreen())),
-              if (patron) oge(Icons.inventory_2_outlined, 'Stok & Satın Alma', () => git(const IsletmeHubScreen())),
-              if (patron && auth.ortaVeUstu) oge(Icons.warning_amber_outlined, 'Üretim Riski', () => git(const UretimRiskiScreen()), renk: const Color(0xFFF59E0B)),
-              if (patron) oge(Icons.fact_check_outlined, 'Sayım (Envanter)', () => git(const SayimScreen()), renk: const Color(0xFF0EA5E9)),
-              if (patron) oge(Icons.restaurant_menu, 'Menü Yönetimi', () => git(const MenuYonetimiScreen())),
-              if (patron) oge(Icons.palette_outlined, 'QR Menü Rengi', () => git(const TemaSecimScreen()), renk: const Color(0xFFF6CE63)),
-              if (patron) oge(Icons.local_offer_outlined, 'İndirimler', () => git(const IndirimlerScreen()), renk: const Color(0xFF22C55E)),
-              if (patron) oge(Icons.shield_outlined, 'Kaçak Önleme', () => git(const OdemeModuScreen()), renk: const Color(0xFFF43F5E)),
-              oge(Icons.notifications_active, 'Garson Çağrıları', () => git(const GarsonCagrilariScreen()), renk: _kirmizi),
-              oge(Icons.account_balance_wallet_outlined, 'Cari / Açık Hesaplar', () => git(const CariHesaplarScreen())),
-              oge(Icons.event_available_outlined, 'Rezervasyonlar', () => git(const RezervasyonScreen())),
-              if (patron && auth.ortaVeUstu) oge(Icons.map_outlined, 'Canlı Kurye Haritası', () { Navigator.of(context).pop(); _webAc('/kurye-canli'); }, renk: const Color(0xFF10B981)),
-              if (patron && auth.ortaVeUstu) oge(Icons.phone_in_talk_outlined, 'Gelen Çağrı Ekranı', () { Navigator.of(context).pop(); _webAc('/cagri-ekran'); }),
-              if (patron) oge(Icons.qr_code_2, 'Masa & QR Yönetimi', () => git(const MasaYonetimScreen()), renk: const Color(0xFFF6CE63)),
-              if (patron) oge(Icons.badge_outlined, 'Personel & Maaş', () => git(const PersonelScreen())),
-              if (patron) oge(Icons.table_restaurant_outlined, 'Masa & Bölge Atama', () => git(const MasaAtamaScreen())),
-              if (patron && auth.ortaVeUstu) oge(Icons.emoji_events_outlined, 'Garson Performansı', () => git(const GarsonPerformansScreen()), renk: const Color(0xFF10B981)),
-              if (patron && auth.ortaVeUstu) oge(Icons.grid_on_outlined, 'Salon Şeması', () => git(const SalonSemaScreen()), renk: const Color(0xFF0EA5E9)),
-              if (patron) oge(Icons.qr_code_2, 'Kasa Mesai QR', () => git(const MesaiQrScreen()), renk: const Color(0xFF14B8A6)),
-              if (patron) oge(Icons.my_location, 'İşletme Konumu (Mesai)', () => git(const IsletmeKonumScreen()), renk: const Color(0xFF14B8A6)),
-              if (patron) oge(Icons.how_to_reg_outlined, 'Puantaj (Mesai)', () => git(const PuantajScreen()), renk: const Color(0xFF10B981)),
-              if (patron) oge(Icons.receipt_long_outlined, 'Giderler', () => git(const GiderScreen())),
-              if (patron) oge(Icons.bar_chart_outlined, 'Raporlar', () => git(const RaporlarScreen())),
-              if (patron) oge(Icons.devices_other_outlined, 'Bağlı Cihazlar', () => git(const BagliCihazlarScreen()), renk: const Color(0xFF0EA5E9)),
-              if (patron) oge(Icons.history, 'Hareketler (Log)', () => git(const HareketlerScreen()), renk: const Color(0xFF7C3AED)),
-              if (patron) oge(Icons.print_outlined, 'Yazıcı Ayarları', () => git(const YaziciAyarlariScreen()), renk: const Color(0xFF14B8A6)),
-              if (patron) oge(Icons.rule_folder_outlined, 'İptal / İkram Sebepleri', () => git(const SebepYonetimiScreen())),
-              if (patron && auth.ortaVeUstu) oge(Icons.casino_outlined, 'Çarkıfelek Yönetimi', () => git(const CarkYonetimScreen()), renk: const Color(0xFF8B5CF6)),
-              if (patron) oge(Icons.chat_outlined, 'WhatsApp Yönetimi', () { Navigator.of(context).pop(); _webAc('/whatsapp'); }, renk: const Color(0xFF25D366)),
-              oge(Icons.auto_awesome, 'Patron Asistan', () => git(const AsistanScreen()), renk: const Color(0xFFC4B5FD)),
-              if (!patron) oge(Icons.dashboard_customize, 'Panelim', () => git(const DepartmanPanelScreen()), renk: const Color(0xFF4F46E5)),
-              if (patron) oge(Icons.wb_sunny_outlined, 'Patron AI — Sabah Brifingi', () => git(const PatronAiBriefScreen()), renk: const Color(0xFF7C3AED)),
-              oge(Icons.notifications_active, 'Bildirim Ayarları', () => git(const BildirimAyarScreen()), renk: const Color(0xFF0EA5E9)),
-              oge(Icons.badge, 'İK Self-Servis', () => git(const IkSelfServisScreen()), renk: const Color(0xFF10B981)),
-            ]),
-          ),
-          Divider(height: 1, color: _line),
-          oge(Icons.logout, 'Çıkış', () { Navigator.of(context).pop(); context.read<AuthProvider>().cikis(); }, renk: const Color(0xFFF87171)),
-          const SizedBox(height: 8),
-        ]),
-      ),
-    );
-  }
-
-  String _rolAd(String? rol) {
-    switch (rol) {
-      case 'sahip': return 'Sahip';
-      case 'mudur': return 'Müdür';
-      case 'kasa': return 'Kasa';
-      case 'garson': return 'Garson';
-      case 'mutfak': return 'Mutfak';
-      default: return rol ?? '';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
@@ -277,7 +153,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final bildirimler = (data?['bildirimler'] as List?) ?? [];
     return Scaffold(
       backgroundColor: _bg,
-      drawer: _drawer(context, auth),
       appBar: AppBar(
         backgroundColor: _bg,
         elevation: 0,
@@ -309,13 +184,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           _bildirimCani(bildirimler),
           // Masaustunde navigasyon sol sabit menude; hamburger sadece telefonda.
+          // Menü: web panelin aynısı (sunucudan) — ortak çekmece (eski el yazımı iç menü kaldırıldı)
+          const BildirimZili(),
           if (!genisMi(context))
-            Builder(
-              builder: (ctx) => IconButton(
-                tooltip: 'Menü',
-                onPressed: () => Scaffold.of(ctx).openDrawer(),
-                icon: Icon(Icons.menu, color: _sub2, size: 24),
-              ),
+            IconButton(
+              tooltip: 'Menü',
+              onPressed: () => anaScaffoldKey.currentState?.openDrawer(),
+              icon: Icon(Icons.menu, color: _sub2, size: 24),
             ),
         ],
       ),

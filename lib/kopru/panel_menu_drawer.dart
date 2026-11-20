@@ -55,9 +55,16 @@ class PanelMenuDrawer extends StatelessWidget {
             ]),
           ),
           ),
+          ListTile(
+            dense: true,
+            leading: Icon(Icons.badge_outlined, color: t.yesil, size: 21),
+            title: Text('İzin / Avans Talebim', style: TextStyle(color: t.ink, fontSize: 14, fontWeight: FontWeight.w600)),
+            onTap: () => kapatGit(EkranKayit.uret('/ik-self-servis', 'İzin / Avans Talebim')),
+          ),
+          Divider(height: 1, color: t.line),
           Expanded(child: PanelMenuListesi(onAc: (o) => kapatGit(EkranKayit.uret(o.url, o.ad)))),
           Divider(height: 1, color: t.line),
-          CihazMenusu(onGit: kapatGit),
+          CihazMenusu(onGit: kapatGit, kisisel: false),
           ListTile(
             dense: true,
             leading: Icon(t.koyu ? Icons.light_mode : Icons.dark_mode, color: t.gold, size: 21),
@@ -84,7 +91,8 @@ class PanelMenuDrawer extends StatelessWidget {
 /// Web'de olmayan, BU CİHAZA özgü ayarlar (LAN kasa sunucusu, kasa mesai QR'ı, santral telefon ayarları).
 class CihazMenusu extends StatelessWidget {
   final void Function(Widget ekran) onGit;
-  const CihazMenusu({super.key, required this.onGit});
+  final bool kisisel; // izin/avans bağlantısı (telefon çekmecesinde zaten üstte)
+  const CihazMenusu({super.key, required this.onGit, this.kisisel = true});
 
   @override
   Widget build(BuildContext context) {
@@ -102,6 +110,7 @@ class CihazMenusu extends StatelessWidget {
         iconColor: t.sub,
         collapsedIconColor: t.sub,
         children: [
+          if (kisisel) _oge(t, Icons.badge_outlined, 'İzin / Avans Talebim', () => onGit(EkranKayit.uret('/ik-self-servis', 'İzin / Avans Talebim'))),
           _oge(t, Icons.lan_outlined, 'LAN / Kasa Sunucu', () => onGit(const LanAyarScreen())),
           const _CanliUyariAnahtar(),
           if (patron) _oge(t, Icons.qr_code_2, 'Kasa Mesai QR', () => onGit(const MesaiQrScreen())),
